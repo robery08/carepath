@@ -1,7 +1,7 @@
 {
-  "name": "CAREPATH — Your Everyday Health Companion",
+  "name": "CAREPATH — Your health, made simpler",
   "short_name": "CAREPATH",
-  "description": "A private, offline-friendly space for medicine notes, health tracking, and care preparation.",
+  "description": "A simple space to organize medicine notes, personal health records, and care questions.",
   "start_url": "/carepath/",
   "scope": "/carepath/",
   "display": "standalone",

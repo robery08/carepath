@@ -104,6 +104,10 @@ const navItems = [
   { name: "Admin Preview", icon: ShieldCheck },
 ];
 
+const primaryNavItems = navItems.filter((item) => ["Home", "ASK CAREPATH"].includes(item.name));
+const everydayNavItems = navItems.filter((item) => ["My Medicines", "Scan & Upload", "Health Tracker"].includes(item.name));
+const moreNavItems = navItems.filter((item) => !primaryNavItems.includes(item) && !everydayNavItems.includes(item));
+
 type RouteOverlay = "medicines" | "monitor" | null;
 type RouteState = { section: string; overlay: RouteOverlay; scrollY: number };
 
@@ -166,6 +170,7 @@ function readStored<T>(key: string, fallback: T): T {
 function App() {
   const [active, setActive] = useState(() => sectionFromLocation());
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [showMedicines, setShowMedicines] = useState(false);
   const [showHealthMonitor, setShowHealthMonitor] = useState(false);
   const [medicineCount, setMedicineCount] = useState(() => readStored<Medicine[]>("carepath_medicines", SAMPLE_MEDICINES).length);
@@ -459,16 +464,37 @@ function App() {
       <aside className={`sidebar ${mobileMenu ? "open" : ""}`}>
         <div className="brand">
           <div className="brand-logo"><HeartPulse size={25} /></div>
-          <div className="brand-copy"><h1>CarePath</h1><span>Your Everyday Health Companion</span></div>
+          <div className="brand-copy"><h1>CarePath</h1><span>Your health, made simpler</span></div>
           <button className="close-menu" onClick={() => setMobileMenu(false)} aria-label="Close menu"><X size={20} /></button>
         </div>
         <div className="cp-sidebar-caption">YOUR CARE WORKSPACE</div>
         <nav className="sidebar-nav" aria-label="Main navigation">
-          {navItems.map((item) => {
+          <div className="cp-nav-group">
+            <span className="cp-nav-group-label">START HERE</span>
+            {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const selected = active === item.name || (active === "Medicine Passport" && item.name === "My Medicines");
             return <button key={item.name} className={`nav-item ${selected ? "active" : ""}`} onClick={() => openSection(item.name)} aria-current={selected ? "page" : undefined}><Icon size={18} /><span>{item.name}</span>{item.name === "Safety Alerts" && !profile.allergies?.trim() && <span className="cp-nav-dot" />}</button>;
-          })}
+            })}
+          </div>
+          <div className="cp-nav-group">
+            <span className="cp-nav-group-label">EVERYDAY TOOLS</span>
+            {everydayNavItems.map((item) => {
+              const Icon = item.icon;
+              const selected = active === item.name || (active === "Medicine Passport" && item.name === "My Medicines");
+              return <button key={item.name} className={`nav-item ${selected ? "active" : ""}`} onClick={() => openSection(item.name)} aria-current={selected ? "page" : undefined}><Icon size={18} /><span>{item.name}</span></button>;
+            })}
+          </div>
+          <details className="cp-nav-more" open={moreToolsOpen || moreNavItems.some((item) => item.name === active)} onToggle={(event) => setMoreToolsOpen(event.currentTarget.open)}>
+            <summary><span>More tools</span><span className="cp-nav-count">{moreNavItems.length}</span></summary>
+            <div className="cp-nav-group cp-nav-extra">
+              {moreNavItems.map((item) => {
+                const Icon = item.icon;
+                const selected = active === item.name;
+                return <button key={item.name} className={`nav-item ${selected ? "active" : ""}`} onClick={() => openSection(item.name)} aria-current={selected ? "page" : undefined}><Icon size={18} /><span>{item.name}</span>{item.name === "Safety Alerts" && !profile.allergies?.trim() && <span className="cp-nav-dot" />}</button>;
+              })}
+            </div>
+          </details>
         </nav>
         <div className="sidebar-bottom">
           <button className={`emergency-nav ${active === "Emergency Help" ? "selected" : ""}`} onClick={() => openSection("Emergency Help")}><Siren size={18} /><span>Emergency Help</span><ArrowRight size={14} /></button>
@@ -505,11 +531,11 @@ function App() {
             {installPrompt && <button onClick={() => void installApp()}><Plus size={17} /><span>Install app</span></button>}
             <button onClick={() => setShowGuide(true)}><BookOpen size={17} /><span>Show me how</span></button>
           </div>
-        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} allergies={profile.allergies || ""} onNavigate={openSection} onOpenMonitor={openMonitor} onMarkDose={markDose} /> : <>
+        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} /> : <>
             <div className="cp-route-topline"><button onClick={() => openSection("Home")}><Home size={14} /> Home</button><ChevronRight size={13} /><span>{active}</span></div>
             <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onInstallApp={() => void installApp()} /></Suspense>
           </>}
-          <footer className="cp-app-footer"><div><strong>CAREPATH</strong><span>Your health information. Your control.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
+          <footer className="cp-app-footer"><div><strong>CAREPATH</strong><span>Your health, made simpler.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
         </section>
       </main>
 
@@ -569,84 +595,92 @@ function ReminderCenter({ medicines, reminders, onSave, onClose }: { medicines: 
   return <div className="cp-modal-backdrop" role="presentation"><section className="cp-reminder-modal" role="dialog" aria-modal="true" aria-labelledby="cp-reminder-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close reminders"><X size={19} /></button><span className="cp-guide-modal-icon"><BellRing size={22} /></span><span className="cp-eyebrow">PERSONAL TIME NOTES</span><h2 id="cp-reminder-title">Medicine reminders</h2><p>Set a daily reminder time copied from your current instructions. It only runs while this page is open; it is not a background alarm or clinical instruction.</p><div className="cp-reminder-form"><label>Medicine<select value={medicineId} onChange={(event) => setMedicineId(event.target.value)}>{medicines.length ? medicines.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.strength}</option>) : <option value="">Add a medicine first</option>}</select></label><label>Reminder time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label><button className="cp-button primary" onClick={add}><Plus size={16} /> Add reminder</button></div>{message && <p className="cp-voice-status" role="status">{message}</p>}<div className="cp-reminder-list">{reminders.map((item) => <div key={item.id}><span><strong>{item.name}</strong><small>{item.time} · daily personal note</small></span><label className="cp-switch"><input type="checkbox" checked={item.enabled} onChange={(event) => update(item.id, { enabled: event.target.checked, lastFiredDate: undefined })} /><span>{item.enabled ? "On" : "Off"}</span></label><button aria-label={`Remove reminder for ${item.name}`} onClick={() => onSave(reminders.filter((reminder) => reminder.id !== item.id))}><X size={16} /></button></div>)}</div><div className="cp-reminder-actions"><button className="cp-button quiet" onClick={allowNotifications}><Bell size={16} /> Enable browser notifications</button><button className="cp-button quiet" aria-pressed={soundEnabled} onClick={() => { const next = !soundEnabled; setSoundEnabled(next); try { localStorage.setItem("carepath_reminder_sound", JSON.stringify(next)); } catch { /* Optional preference. */ } setMessage(next ? "Reminder sound enabled where the device permits it." : "Reminder sound disabled."); }}>Sound: {soundEnabled ? "On" : "Off"}</button></div><div className="cp-voice-privacy"><Info size={15} /> Notifications need your explicit browser permission. Timing varies by device; no reminder is guaranteed if the browser is closed.</div><div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onClose}>Close</button></div></section></div>;
 }
 
-function HomeDashboard({ name, medicines, readings, medicationLog, allergies, onNavigate, onOpenMonitor, onMarkDose }: {
+function HomeDashboard({ name, medicines, readings, medicationLog, reminders, onNavigate, onOpenMonitor, onOpenReminders, onMarkDose }: {
   name: string;
   medicines: Medicine[];
   readings: HealthReading[];
   medicationLog: MedicationEvent[];
-  allergies: string;
+  reminders: Reminder[];
   onNavigate: (section: string) => void;
   onOpenMonitor: () => void;
+  onOpenReminders: () => void;
   onMarkDose: (medicine: Medicine) => void;
 }) {
   const today = getToday();
-  const recent = readings.filter((reading) => reading.date <= today).slice().sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`));
-  const latest = new Map<string, HealthReading>();
-  recent.forEach((reading) => { if (!latest.has(reading.metric)) latest.set(reading.metric, reading); });
-  const selectedMedicine = medicines[0];
-  const missingInfo = medicines.filter((medicine) => !medicine.schedule || !medicine.instructions).length;
-  const hasPersonalReading = readings.some((reading) => !reading.id.startsWith("demo-"));
-  const nextStep = !allergies.trim()
-    ? { title: "Review your allergy notes", detail: "No allergy details are recorded. Add known details or mark them for discussion with your care team.", action: "Open my profile", route: "Care Circle", icon: <HeartPulse size={18} /> }
-    : missingInfo > 0
-      ? { title: "Check missing medicine details", detail: `${missingInfo} saved entr${missingInfo === 1 ? "y needs" : "ies need"} a time or instruction note from your current source.`, action: "Review my list", route: "Safety Check", icon: <ShieldCheck size={18} /> }
-      : !hasPersonalReading
-        ? { title: "Add your own health reading", detail: "The starter readings are labeled sample data. Record a value from your own device if it is part of your care plan.", action: "Add a reading", route: "Health Tracker", icon: <Activity size={18} /> }
-        : { title: "Prepare for a care conversation", detail: "Collect a question, medicine list, or recent reading for your next appointment.", action: "Build a visit brief", route: "Visit Prep", icon: <Stethoscope size={18} /> };
+  const personalMedicines = medicines.filter((medicine) => medicine.source !== "sample");
+  const personalReadings = readings
+    .filter((reading) => !reading.id.startsWith("demo-"))
+    .slice()
+    .sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
+  const latestReadings = Array.from(new Map(personalReadings.map((reading) => [reading.metric, reading])).values()).slice(0, 3);
+  const todayNotes = medicationLog.filter((entry) => entry.date === today).slice(0, 3);
+  const activeReminders = reminders.filter((reminder) => reminder.enabled).slice().sort((a, b) => a.time.localeCompare(b.time));
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
-  const chart = recent.filter((reading) => reading.metric === "Blood Pressure").slice(0, 7).reverse().map((reading, index) => ({ day: reading.date === today ? "Today" : new Date(`${reading.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" }), systolic: reading.value, diastolic: reading.secondValue ?? 0, fallback: 128 + [0, 4, -2, 2, -4, 1, 0][index % 7] }));
-  const sampleChart = chart.length ? chart : ["M", "T", "W", "T", "F", "S", "S"].map((day, index) => ({ day, systolic: 0, diastolic: 0, fallback: [128, 132, 126, 130, 124, 129, 128][index] }));
-  const bp = latest.get("Blood Pressure");
-  const glucose = latest.get("Blood Glucose");
-  const pulse = latest.get("Pulse");
-  const weight = latest.get("Weight");
-  const temp = latest.get("Temperature");
-  const metrics = [
-    { name: "Blood pressure", value: bp ? `${bp.value} / ${bp.secondValue ?? "—"}` : "No reading", unit: bp?.unit || "mmHg", note: bp ? `${bp.id.startsWith("demo-") ? "Example" : bp.date === today ? "Today" : bp.date} · ${bp.time}` : "Add your first entry", tone: "teal", icon: <HeartPulse size={17} /> },
-    { name: "Blood glucose", value: glucose ? String(glucose.value) : "No reading", unit: glucose?.unit || "mg/dL", note: glucose ? `${glucose.id.startsWith("demo-") ? "Example" : glucose.date === today ? "Today" : glucose.date} · ${glucose.note || glucose.time}` : "Add your first entry", tone: "amber", icon: <Activity size={17} /> },
-    { name: "Pulse", value: pulse ? String(pulse.value) : "No reading", unit: pulse?.unit || "bpm", note: pulse ? `${pulse.id.startsWith("demo-") ? "Example" : pulse.date === today ? "Today" : pulse.date} · ${pulse.time}` : "Add your first entry", tone: "blue", icon: <HeartPulse size={17} /> },
-    { name: "Temperature", value: temp ? String(temp.value) : "No reading", unit: temp?.unit || "°C", note: temp ? `${temp.id.startsWith("demo-") ? "Example" : temp.date === today ? "Today" : temp.date} · ${temp.time}` : "Add your first entry", tone: "violet", icon: <Activity size={17} /> },
-    { name: "Weight", value: weight ? String(weight.value) : "No reading", unit: weight?.unit || "kg", note: weight ? `${weight.id.startsWith("demo-") ? "Example" : weight.date === today ? "Today" : weight.date} · ${weight.time}` : "Add your first entry", tone: "green", icon: <Activity size={17} /> },
-    { name: "Steps", value: latest.get("Steps") ? String(latest.get("Steps")?.value) : "No reading", unit: "steps", note: latest.get("Steps") ? `${latest.get("Steps")?.id.startsWith("demo-") ? "Example" : "Recorded"} · ${latest.get("Steps")?.time}` : "Add your first entry", tone: "blue", icon: <Activity size={17} /> },
-  ];
+  const firstName = name === "Demo User" ? "there" : name.trim().split(/\s+/)[0] || "there";
+  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const nextStep = personalMedicines.length === 0 && personalReadings.length === 0
+    ? { title: "Start with one useful thing", detail: "Add a medicine from its label, scan a report, or simply leave this space empty until you need it.", action: "Scan a document", route: "Scan & Upload", icon: <ScanLine size={20} /> }
+    : personalMedicines.length === 0
+      ? { title: "Keep your current medicine list nearby", detail: "Save details exactly as written on your package or prescription. You can review them later.", action: "Open my medicine list", route: "My Medicines", icon: <Pill size={20} /> }
+      : personalReadings.length === 0
+        ? { title: "Keep a reading when it is useful", detail: "Enter a value from your own device with its date and time. CAREPATH will show it as entered.", action: "Add a reading", route: "__monitor", icon: <HeartPulse size={20} /> }
+        : { title: "Bring your notes to a care visit", detail: "Gather your own saved medicines, readings, and questions into a short visit brief.", action: "Prepare a visit brief", route: "Visit Prep", icon: <Stethoscope size={20} /> };
   return <>
-    <section className="cp-home-hero">
-      <div className="cp-home-hero-copy"><span className="cp-hero-kicker"><span /> YOUR PERSONAL HEALTH SPACE</span><h1>{greeting}, <span>{name}</span></h1><p>Bring your medicines, health notes, and care questions together in one calm place.</p><div className="cp-hero-buttons"><button className="cp-button light" onClick={() => onNavigate("My Medicines")}><Plus size={16} /> Add medicine</button><button className="cp-button glass" onClick={() => onNavigate("ASK CAREPATH")}><Search size={16} /> Find trusted info</button></div><div className="cp-hero-assurance"><ShieldCheck size={14} /> Your CAREPATH notes stay in this browser.</div></div>
-      <div className="cp-hero-art" aria-hidden="true"><div className="cp-orbit orbit-a" /><div className="cp-orbit orbit-b" /><div className="cp-orbit orbit-c" /><div className="cp-art-heart"><HeartPulse size={50} /></div><span className="cp-art-dot dot-a" /><span className="cp-art-dot dot-b" /><span className="cp-art-dot dot-c" /></div>
-      <div className="cp-hero-date"><CalendarDays size={15} /> {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</div>
+    <section className="cp-today-hero">
+      <div className="cp-today-hero-copy">
+        <div className="cp-today-topline"><span className="cp-today-date"><CalendarDays size={15} /> {dateLabel}</span><span className="cp-today-private"><ShieldCheck size={15} /> Saved on this device</span></div>
+        <span className="cp-today-eyebrow">YOUR HEALTH, MADE SIMPLER</span>
+        <h1>{greeting}, <span>{firstName}</span></h1>
+        <p>Get a clear starting point for medicines, health notes, and questions you want to understand.</p>
+        <div className="cp-today-hero-actions">
+          <button className="cp-button cp-today-primary" onClick={() => onNavigate("ASK CAREPATH")}><Search size={17} /> Ask a question</button>
+          <button className="cp-button cp-today-secondary" onClick={() => onNavigate("Scan & Upload")}><ScanLine size={17} /> Scan a document</button>
+          <button className="cp-today-emergency" onClick={() => onNavigate("Emergency Help")}><Siren size={16} /> Need urgent help?</button>
+        </div>
+        <small>General health information and personal organization. Not a diagnosis or emergency service.</small>
+      </div>
+      <div className="cp-today-hero-mark" aria-hidden="true"><span><HeartPulse size={42} /></span><i /><i /><i /></div>
     </section>
 
-    <section className="cp-stat-grid" aria-label="Your CAREPATH overview">
-      <Stat icon={<Pill />} label="My medicines" value={String(medicines.length)} note="Saved in my list" tone="mint" onClick={() => onNavigate("Medicine Passport")} />
-      <Stat icon={<Activity />} label="Health readings" value={String(readings.length)} note={readings.length > 0 && readings.every((reading) => reading.id.startsWith("demo-")) ? "Example set · explore tracker" : "Across my tracker"} tone="blue" onClick={() => onNavigate("Health Tracker")} />
-      <Stat icon={<ShieldCheck />} label="Profile notes" value={allergies.trim() ? "Updated" : "Add details"} note={allergies.trim() ? "Allergy notes on file" : "Allergies not recorded"} tone="amber" onClick={() => onNavigate("Care Circle")} />
-      <Stat icon={<CalendarDays />} label="Visit prep" value="Ready" note="Build a personal brief" tone="violet" onClick={() => onNavigate("Visit Prep")} />
+    <section className="cp-today-grid" aria-label="Today's health workspace">
+      <article className="cp-today-panel cp-today-reminders">
+        <div className="cp-today-panel-heading"><div><span className="cp-eyebrow">TODAY</span><h2>My reminders</h2></div><button className="cp-today-manage" onClick={onOpenReminders}><BellRing size={15} /> Manage</button></div>
+        {activeReminders.length ? <div className="cp-today-reminder-list">{activeReminders.map((reminder) => {
+          const medicine = medicines.find((item) => item.id === reminder.medicineId);
+          const loggedToday = todayNotes.some((entry) => entry.medicine.toLowerCase().includes(reminder.name.toLowerCase()));
+          return <div className="cp-today-reminder" key={reminder.id}><span className="cp-today-reminder-icon"><Pill size={18} /></span><div className="cp-today-reminder-copy"><strong>{reminder.name}</strong><span><Clock3 size={13} /> {reminder.time} · personal time note</span><small>{loggedToday ? "A note is recorded today." : "Check the current package or prescription before acting."}</small></div>{medicine && <button className="cp-today-log" onClick={() => onMarkDose(medicine)}>{loggedToday ? "Log another note" : "I took it · log"}</button>}</div>;
+        })}</div> : <div className="cp-today-empty"><span className="cp-today-empty-icon"><BellRing size={19} /></span><div><strong>No reminders set</strong><p>Create a personal time note using the schedule from your current medicine instructions.</p><button className="cp-text-link" onClick={onOpenReminders}>Set a reminder <ArrowRight size={14} /></button></div></div>}
+        {todayNotes.length > 0 && <div className="cp-today-log-summary"><span>NOTES YOU RECORDED TODAY</span>{todayNotes.map((entry) => <div key={entry.id}><Check size={14} /><span>{entry.status} · {entry.medicine}</span><time>{entry.time}</time></div>)}</div>}
+        <p className="cp-today-reminder-footnote">Reminders depend on this page and device. They are not guaranteed alarms or medicine instructions.</p>
+      </article>
+
+      <article className="cp-today-panel cp-today-next">
+        <div className="cp-today-panel-heading"><div><span className="cp-eyebrow">A GENTLE NEXT STEP</span><h2>Make it yours</h2></div><span className="cp-today-next-icon">{nextStep.icon}</span></div>
+        <strong className="cp-today-next-title">{nextStep.title}</strong>
+        <p>{nextStep.detail}</p>
+        <button className="cp-button cp-today-next-action" onClick={() => nextStep.route === "__monitor" ? onOpenMonitor() : onNavigate(nextStep.route)}>{nextStep.action}<ArrowRight size={16} /></button>
+        <span className="cp-today-next-note">Nothing is required. Add only the information you want to keep.</span>
+      </article>
+    </section>
+
+    <section className="cp-today-actions-section">
+      <div className="cp-today-section-heading"><div><span className="cp-eyebrow">START WITH ONE TAP</span><h2>What would help right now?</h2></div><p>Choose a task. You can always come back here.</p></div>
+      <div className="cp-today-actions-grid">
+        <QuickAction icon={<Search />} label="Ask CAREPATH" detail="Find a clear starting point" tone="violet" onClick={() => onNavigate("ASK CAREPATH")} />
+        <QuickAction icon={<ScanLine />} label="Scan a document" detail="Read and review a file" tone="blue" onClick={() => onNavigate("Scan & Upload")} />
+        <QuickAction icon={<HeartPulse />} label="Add a health reading" detail="Type or speak a value" tone="rose" onClick={onOpenMonitor} />
+        <QuickAction icon={<Pill />} label="My medicines" detail="Review my saved list" tone="mint" onClick={() => onNavigate("My Medicines")} />
+      </div>
     </section>
 
     <DiscoverCarousel onNavigate={onNavigate} />
 
-    <section className="cp-quick-section"><div className="cp-section-heading"><div><span className="cp-eyebrow">START WITH ONE STEP</span><h2>What do you need help with today?</h2></div><span>Shortcuts to your most-used workspaces</span></div><div className="cp-quick-grid"><QuickAction icon={<HeartPulse />} label="Understand a symptom" detail="Build a note for your care team" tone="violet" onClick={() => onNavigate("Symptom Guide")} /><QuickAction icon={<ScanLine />} label="Scan a document" detail="Save review notes" tone="blue" onClick={() => onNavigate("Scan & Upload")} /><QuickAction icon={<HeartPulse />} label="Log a reading" detail="Add date and context" tone="rose" onClick={onOpenMonitor} /><QuickAction icon={<ShieldCheck />} label="Review my list" detail="Check saved details" tone="mint" onClick={() => onNavigate("Safety Check")} /><QuickAction icon={<Stethoscope />} label="Prepare for a visit" detail="Gather questions and notes" tone="amber" onClick={() => onNavigate("Visit Prep")} /><QuickAction icon={<Siren />} label="Emergency card" detail="View local reference" tone="red" onClick={() => onNavigate("Emergency Help")} /></div></section>
-
-    <div className="cp-home-main-grid">
-      <section className="cp-home-card cp-health-card"><div className="cp-card-head"><div><span className="cp-eyebrow">MY HEALTH NOTES</span><h2>Health overview</h2></div><button className="cp-text-link" onClick={() => onNavigate("Health Tracker")}>Open tracker <ArrowRight size={14} /></button></div><div className="cp-home-metrics">{metrics.map((metric) => <button key={metric.name} className={`cp-home-metric ${metric.tone}`} onClick={() => onNavigate("Health Tracker")}><span className="cp-home-metric-icon">{metric.icon}</span><span className="cp-home-metric-name">{metric.name}</span><strong>{metric.value}<small>{metric.unit}</small></strong><em>{metric.note}</em></button>)}</div><div className="cp-health-footnote"><Info size={14} /> Values appear as entered. CAREPATH does not interpret or diagnose.</div></section>
-
-      <section className="cp-home-card cp-safety-home"><div className="cp-card-head"><div><span className="cp-eyebrow">LIST COMPLETENESS</span><h2>Medication safety</h2></div><div className="cp-shield-illustration"><ShieldCheck size={21} /></div></div><div className="cp-safety-summary"><span className={missingInfo ? "warn" : "ok"}>{missingInfo ? <AlertTriangle size={17} /> : <Check size={17} />}</span><div><strong>{missingInfo ? `${missingInfo} item${missingInfo === 1 ? "" : "s"} need notes` : medicines.length ? "Personal list is ready to review" : "Add your current medicine list"}</strong><p>{allergies.trim() ? "Allergy notes are in your profile; confirm they are current." : "Allergy information is not recorded in your profile."}</p></div></div><div className="cp-safety-divider" /><div className="cp-safety-fineprint">Offline review checks saved information only. It does not check interactions or suitability.</div><button className="cp-button dark cp-wide" onClick={() => onNavigate("Safety Check")}>Open Safety Check <ArrowRight size={15} /></button></section>
-    </div>
-
-    <div className="cp-home-lower-grid">
-      <section className="cp-home-card cp-chart-home"><div className="cp-card-head"><div><span className="cp-eyebrow">MY SAVED HISTORY</span><h2>Blood pressure</h2></div><button className="cp-icon-link" onClick={() => onNavigate("Health Timeline")} aria-label="View health timeline"><ArrowRight size={17} /></button></div><div className="cp-chart-summary"><div><strong>{bp ? `${bp.value} / ${bp.secondValue ?? "—"}` : "Sample trend"}</strong><span>{bp ? bp.id.startsWith("demo-") ? "Illustrative latest value" : "Most recent reading" : "Illustrative starter values"}</span></div><span className="cp-chart-tag">Personal tracking</span></div><div className="cp-home-chart"><HealthMiniChart data={sampleChart} showDiastolic={Boolean(bp)} /></div><div className="cp-chart-disclaimer">Sample values are for interface demonstration until you add personal readings.</div><button className="cp-text-link" onClick={onOpenMonitor}><Plus size={15} /> Add a reading</button></section>
-
-      <section className="cp-home-card cp-next-home"><div className="cp-card-head"><div><span className="cp-eyebrow">PERSONAL SCHEDULE NOTE</span><h2>My medicine list</h2></div><span className="cp-next-icon"><Pill size={19} /></span></div>{selectedMedicine ? <><div className="cp-next-medicine"><span className="cp-medicine-symbol"><Pill size={22} /></span><div><strong>{selectedMedicine.name}</strong><span>{selectedMedicine.strength} · {selectedMedicine.form}</span><small>{selectedMedicine.instructions || "Instruction not recorded"}</small></div></div><div className="cp-next-meta"><span><Clock3 size={14} /> {selectedMedicine.schedule || "Schedule not recorded"}</span><span>{medicines.length} saved</span></div><div className="cp-next-actions"><button className="cp-button primary" onClick={() => onMarkDose(selectedMedicine)}><Check size={15} /> Log dose note</button><button className="cp-button quiet" onClick={() => onNavigate("Medicine Passport")}>Details</button></div><div className="cp-reminder-note">{medicationLog[0] ? `Last note: ${medicationLog[0].status} · ${medicationLog[0].medicine} · ${medicationLog[0].date} ${medicationLog[0].time}` : "No dose notes saved yet."} A log is your note only; it does not confirm a dose.</div></> : <div className="cp-no-meds"><p>Your saved medicine list will appear here.</p><button className="cp-button primary" onClick={() => onNavigate("My Medicines")}><Plus size={15} /> Add medicine</button></div>}</section>
-
-      <section className="cp-home-card cp-visit-home"><div className="cp-visit-art"><div><CalendarDays size={25} /></div><span>YOUR NEXT CONVERSATION</span></div><div className="cp-visit-content"><h2>Bring your questions with you.</h2><p>Collect medicine notes, readings and documents in a print-ready visit brief.</p><button className="cp-button quiet" onClick={() => onNavigate("Visit Prep")}>Build visit brief <ArrowRight size={15} /></button></div></section>
-    </div>
-
-    <section className="cp-carepath-next"><div className="cp-next-guidance-icon">{nextStep.icon}</div><div><span className="cp-eyebrow">CAREPATH NEXT · PERSONAL ORGANIZATION</span><h2>{nextStep.title}</h2><p>{nextStep.detail}</p></div><button className="cp-button dark" onClick={() => onNavigate(nextStep.route)}>{nextStep.action}<ArrowRight size={15} /></button></section>
-
-    <section className="cp-feature-strip"><Feature title="One connected record" text="Medicines, documents and readings live in one local workspace." icon={<Activity />} onClick={() => onNavigate("Health Map")} /><Feature title="Private by design" text="Your demo record stays in this browser, with an export when you want one." icon={<ShieldCheck />} onClick={() => onNavigate("Settings")} /><Feature title="Help at hand" text="See your personal emergency reference and trusted contact notes." icon={<Siren />} onClick={() => onNavigate("Emergency Help")} /></section>
+    <section className="cp-today-records">
+      <div className="cp-today-records-heading"><div><span className="cp-eyebrow">YOUR PERSONAL RECORD</span><h2>Recent readings</h2></div>{personalReadings.length > 0 && <button className="cp-today-manage" onClick={() => onNavigate("Health Timeline")}>View timeline <ArrowRight size={14} /></button>}</div>
+      {latestReadings.length ? <div className="cp-today-reading-list">{latestReadings.map((reading) => <button className="cp-today-reading" key={reading.id} onClick={() => onNavigate("Health Tracker")}><span className="cp-today-reading-symbol">{reading.metric === "Blood Pressure" ? <HeartPulse size={18} /> : <Activity size={18} />}</span><span><strong>{reading.metric}</strong><small>{reading.date === today ? "Today" : reading.date} · {reading.time}</small></span><b>{reading.value}{reading.secondValue !== undefined ? " / " + reading.secondValue : ""}<small> {reading.unit}</small></b><ArrowRight size={16} /></button>)}</div> : <div className="cp-today-record-empty"><span className="cp-today-empty-icon"><Activity size={19} /></span><div><strong>No personal readings yet</strong><p>Only values you enter will appear here. CAREPATH will not interpret or label them normal or abnormal.</p></div><button className="cp-button cp-today-outline" onClick={onOpenMonitor}>Add a reading <Plus size={15} /></button></div>}
+    </section>
   </>;
 }
-
 function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => void }) {
   const cards = [
     { title: "CAREPATH EASY", text: "A calmer way to use your health workspace", detail: "Large controls, read-aloud support, and clear next steps.", action: "Turn on Easy mode", route: "__easy", icon: <Accessibility size={24} />, tone: "mint" },
@@ -660,32 +694,17 @@ function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => voi
     { title: "SCAN · REVIEW · CONFIRM", text: "Keep document details under your control", detail: "Add a document reference and review each detail before saving it.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={24} />, tone: "blue" },
   ];
   const [index, setIndex] = useState(() => readStored<number>("carepath_discover_index", 0) % cards.length);
+  const touchStartX = useRef<number | null>(null);
   const card = cards[index];
   const move = (offset: number) => setIndex((current) => {
     const next = (current + offset + cards.length) % cards.length;
     try { localStorage.setItem("carepath_discover_index", JSON.stringify(next)); } catch { /* Optional preference. */ }
     return next;
   });
-  return <section className="cp-discover" aria-roledescription="carousel" aria-label="Discover CAREPATH features"><div className="cp-discover-copy"><span className="cp-eyebrow">DISCOVER CAREPATH ✨</span><h2>{card.text}</h2><p>{card.detail}</p><div className="cp-discover-actions"><button className="cp-button primary" onClick={() => card.route === "__easy" ? document.querySelector<HTMLButtonElement>(".cp-accessibility-bar button")?.click() : onNavigate(card.route)}>{card.action}<ArrowRight size={15} /></button><span>{index + 1} / {cards.length}</span></div></div><div className={`cp-discover-art ${card.tone}`}><span>{card.icon}</span><strong>{card.title}</strong><small>PERSONAL ORGANIZATION · DEMO SAFE</small></div><div className="cp-discover-controls"><button onClick={() => move(-1)} aria-label="Previous CAREPATH feature"><ChevronLeft size={17} /></button><button onClick={() => move(1)} aria-label="Next CAREPATH feature"><ChevronRight size={17} /></button></div><div className="cp-discover-dots" role="tablist" aria-label="Choose a CAREPATH feature">{cards.map((item, itemIndex) => <button key={item.title} className={itemIndex === index ? "active" : ""} role="tab" aria-selected={itemIndex === index} aria-label={`Show ${item.title}`} onClick={() => { setIndex(itemIndex); try { localStorage.setItem("carepath_discover_index", JSON.stringify(itemIndex)); } catch { /* Optional preference. */ } }} />)}</div></section>;
+  return <section className="cp-discover" aria-roledescription="carousel" aria-label="Discover CAREPATH features" onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.screenX ?? null; }} onTouchEnd={(event) => { const startX = touchStartX.current; touchStartX.current = null; const endX = event.changedTouches[0]?.screenX; if (startX === null || endX === undefined) return; const distance = startX - endX; if (Math.abs(distance) > 48) move(distance > 0 ? 1 : -1); }}><div className="cp-discover-copy"><span className="cp-eyebrow">DISCOVER CAREPATH ✨</span><h2 aria-live="polite">{card.text}</h2><p>{card.detail}</p><div className="cp-discover-actions"><button className="cp-button primary" onClick={() => card.route === "__easy" ? document.querySelector<HTMLButtonElement>(".cp-accessibility-bar button")?.click() : onNavigate(card.route)}>{card.action}<ArrowRight size={15} /></button><span>{index + 1} / {cards.length}</span></div></div><div className={`cp-discover-art ${card.tone}`}><span>{card.icon}</span><strong>{card.title}</strong><small>PERSONAL ORGANIZATION · DEMO SAFE</small></div><div className="cp-discover-controls"><button onClick={() => move(-1)} aria-label="Previous CAREPATH feature"><ChevronLeft size={17} /></button><button onClick={() => move(1)} aria-label="Next CAREPATH feature"><ChevronRight size={17} /></button></div><div className="cp-discover-dots" role="tablist" aria-label="Choose a CAREPATH feature">{cards.map((item, itemIndex) => <button key={item.title} className={itemIndex === index ? "active" : ""} role="tab" aria-selected={itemIndex === index} aria-label={`Show ${item.title}`} onClick={() => { setIndex(itemIndex); try { localStorage.setItem("carepath_discover_index", JSON.stringify(itemIndex)); } catch { /* Optional preference. */ } }} />)}</div></section>;
 }
-
-function Stat({ icon, label, value, note, tone, onClick }: { icon: ReactNode; label: string; value: string; note: string; tone: string; onClick: () => void }) { return <button className={`cp-stat ${tone}`} onClick={onClick}><span className="cp-stat-icon">{icon}</span><span className="cp-stat-label">{label}</span><strong>{value}</strong><small>{note}</small><ChevronRight className="cp-stat-arrow" size={15} /></button>; }
 
 function QuickAction({ icon, label, detail, tone, onClick }: { icon: ReactNode; label: string; detail: string; tone: string; onClick: () => void }) { return <button className="cp-quick-action" onClick={onClick}><span className={`cp-quick-icon ${tone}`}>{icon}</span><strong>{label}</strong><small>{detail}</small><ArrowRight size={14} /></button>; }
-
-function Feature({ title, text, icon, onClick }: { title: string; text: string; icon: ReactNode; onClick: () => void }) { return <button className="cp-feature" onClick={onClick}><span>{icon}</span><div><strong>{title}</strong><p>{text}</p></div><ChevronRight size={16} /></button>; }
-
-function HealthMiniChart({ data, showDiastolic }: { data: Array<{ day: string; systolic: number; diastolic: number; fallback: number }>; showDiastolic: boolean }) {
-  const xFor = (index: number) => data.length <= 1 ? 210 : 38 + index * (350 / (data.length - 1));
-  const yFor = (value: number) => 137 - ((value - 70) / 85) * 115;
-  const series = (key: "systolic" | "diastolic" | "fallback") => data.map((item, index) => `${xFor(index)},${yFor(item[key])}`).join(" ");
-  return <svg className="cp-mini-chart" viewBox="0 0 410 160" role="img" aria-label="Example blood pressure trend chart">
-    {[70, 95, 120, 155].map((tick) => <g key={tick}><line x1="34" x2="400" y1={yFor(tick)} y2={yFor(tick)} stroke="#e7eef0" strokeDasharray="3 5" /><text x="2" y={yFor(tick) + 3} fill="#8a9a9f" fontSize="9">{tick}</text></g>)}
-    <polyline points={series(showDiastolic ? "systolic" : "fallback")} fill="none" stroke="#159a7c" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" />
-    {showDiastolic && <polyline points={series("diastolic")} fill="none" stroke="#79a5e9" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />}
-    {data.map((item, index) => <g key={`${item.day}-${index}`}><circle cx={xFor(index)} cy={yFor(showDiastolic ? item.systolic : item.fallback)} r="3" fill="#159a7c" />{showDiastolic && <circle cx={xFor(index)} cy={yFor(item.diastolic)} r="2.5" fill="#79a5e9" />}<text x={xFor(index)} y="155" fill="#8a9a9f" fontSize="9" textAnchor="middle">{item.day}</text></g>)}
-  </svg>;
-}
 
 function ModuleLoading({ overlay = false }: { overlay?: boolean }) { return <div className={`cp-loading ${overlay ? "overlay" : ""}`}><span /><strong>Opening your workspace…</strong></div>; }
 

@@ -1,4 +1,4 @@
-# CAREPATH
+# CAREPATH — Your health, made simpler
 
 CAREPATH is a responsive, offline-friendly health and medication organizer. It connects personal medicine notes, document references, health readings, appointment preparation, emergency details, and accessibility shortcuts in one workspace.
 
@@ -17,8 +17,8 @@ npm.cmd run build
 
 ## Workspaces and features
 
-- **Home** — a connected overview and quick actions.
-- **Discover CAREPATH** — a rotating feature carousel for CAREPATH Easy, ASK CAREPATH, safety review, the health journey, Care Circle, and visit preparation.
+- **Home / Today** — a simpler start page with ask/scan/help actions, personal reminder notes, a context-aware next step, and real user-entered readings. Example readings stay out of the personal summary.
+- **Discover CAREPATH** — a swipeable feature carousel for CAREPATH Easy, ASK CAREPATH, safety review, the health journey, Care Circle, and visit preparation.
 - **Browser navigation** — internal sections use URL hashes and the browser history, including Back/Forward restoration of the section, overlays, and scroll position.
 - **My Medicines & Medicine Passport** — keep personal medicine notes, print a reference, and optionally estimate days of supply from the remaining count and the usage rate you enter from current instructions.
 - **Medication Changes** — save a local medicine-list snapshot and review additions, removals, or changed personal entries with a professional.
