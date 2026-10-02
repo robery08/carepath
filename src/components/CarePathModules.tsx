@@ -4,6 +4,7 @@ import AdminConsole from "./AdminConsole";
 import QuickTour from "./QuickTour";
 import SymptomGuide from "./SymptomGuide";
 import ReadAloudButton from "./ReadAloudButton";
+import AskAssistantChat from "./AskAssistantChat";
 import MedlinePlusLookup from "./MedlinePlusLookup";
 import { findPublishedCareContent, getPublishedCareContent, type CareContent } from "../careContent";
 import { clearDocumentFiles, deleteDocumentFile, getDocumentFile, saveDocumentFile } from "../documentFiles";
@@ -523,7 +524,8 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate }: Sh
     ? (language === "en" ? "General information only. A medicine’s common use does not confirm why it was prescribed to you, whether your exact product is the same, or whether it is suitable for you." : "ಸಾಮಾನ್ಯ ಮಾಹಿತಿ ಮಾತ್ರ. ಔಷಧಿಯ ಸಾಮಾನ್ಯ ಬಳಕೆ ನಿಮಗೆ ಅದನ್ನು ಏಕೆ ನೀಡಿದ್ದಾರೆ, ನಿಮ್ಮ ಉತ್ಪನ್ನ ಇದೇ ಆಗಿದೆಯೇ ಅಥವಾ ಅದು ನಿಮಗೆ ಸೂಕ್ತವೇ ಎಂದು ಖಚಿತಪಡಿಸುವುದಿಲ್ಲ.")
     : "";
   return <>
-    <PageHeader eyebrow={language === "en" ? "ASK IN THE APP · ENGLISH OR ಕನ್ನಡ" : "ಆಪ್‌ನಲ್ಲೇ ಕೇಳಿ · ENGLISH OR ಕನ್ನಡ"} title="ASK CAREPATH" description={language === "en" ? "Get a short, source-linked answer from CAREPATH’s on-device guide. Your symptom question stays here; a medicine-name lookup is optional and requires consent." : "ಲಕ್ಷಣ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ; ಔಷಧಿ ಹೆಸರನ್ನು MedlinePlus ಗೆ ಕಳುಹಿಸಲು ನಿಮ್ಮ ಒಪ್ಪಿಗೆ ಬೇಕು."} icon={<Search size={24} />} action={<span className="cp-local-pill"><span /> {language === "en" ? "No diagnosis · no dose advice" : "ರೋಗ ನಿರ್ಣಯವಿಲ್ಲ · ಡೋಸ್ ಸಲಹೆಯಿಲ್ಲ"}</span>} />
+    <PageHeader eyebrow={language === "en" ? "ASK IN THE APP · ENGLISH OR ಕನ್ನಡ" : "ಆಪ್‌ನಲ್ಲೇ ಕೇಳಿ · ENGLISH OR ಕನ್ನಡ"} title="ASK CAREPATH" description={language === "en" ? "Use the new in-app assistant when a secure server is connected, or get an immediate answer from the curated offline guides below." : "ಸುರಕ್ಷಿತ ಸರ್ವರ್ ಸಂಪರ್ಕವಿದ್ದಾಗ ಆಪ್‌ನಲ್ಲೇ ಸಹಾಯಕ ಬಳಸಿ ಅಥವಾ ಕೆಳಗಿನ ಮಾರ್ಗದರ್ಶಿಗಳಿಂದ ಉತ್ತರ ಪಡೆಯಿರಿ."} icon={<Search size={24} />} action={<span className="cp-local-pill"><span /> {language === "en" ? "No diagnosis · no dose advice" : "ರೋಗ ನಿರ್ಣಯವಿಲ್ಲ · ಡೋಸ್ ಸಲಹೆಯಿಲ್ಲ"}</span>} />
+    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} />
     <div className="cp-ai-layout">
       <Panel title={mode === "medicine" ? (language === "en" ? "Ask about medicines" : "ಔಷಧಿಗಳ ಬಗ್ಗೆ ಕೇಳಿ") : (language === "en" ? "Ask about health topics" : "ಆರೋಗ್ಯ ವಿಷಯಗಳ ಬಗ್ಗೆ ಕೇಳಿ")} eyebrow={language === "en" ? "REVIEWED GUIDES · OPTIONAL MEDICINE LOOKUP" : "ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ · ಔಷಧಿ ಹುಡುಕಾಟಕ್ಕೆ ಒಪ್ಪಿಗೆ ಬೇಕು"}>
         <div className="cp-ai-toolbar"><div className="cp-ai-mode-switch" role="group" aria-label="Choose guide category"><button className={mode === "medicine" ? "selected" : ""} onClick={() => setSearchMode("medicine")}><Pill size={16} /> {language === "en" ? "Medicines" : "ಔಷಧಿ"}</button><button className={mode === "health" ? "selected" : ""} onClick={() => setSearchMode("health")}><Search size={16} /> {language === "en" ? "Health topics" : "ಆರೋಗ್ಯ"}</button></div><div className="cp-language-switch" role="group" aria-label="Answer language"><button className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => setLanguage("en")}>English</button><button className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => setLanguage("kn")}>ಕನ್ನಡ</button></div></div>
