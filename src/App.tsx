@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { getVoiceLanguage, saveVoiceLanguage, speakText, stopReading } from "./voice";
 import type { VoiceLanguage } from "./voice";
+import { readPersonalMedicines } from "./medicineStorage";
 
 const CarePathModules = lazy(() => import("./components/CarePathModules"));
 const HealthMonitor = lazy(() => import("./components/HealthMonitor"));
@@ -47,6 +48,7 @@ type Medicine = {
   form: string;
   schedule: string;
   instructions: string;
+  reason?: string;
   remainingUnits?: number;
   unitsPerDay?: number;
   expiryDate?: string;
@@ -132,12 +134,6 @@ function routeStateFromHistory(): RouteState {
   return { ...route, section: route.section === "ASK CAREPATH" ? "ASK CARE CONNECTED" : route.section };
 }
 
-const SAMPLE_MEDICINES: Medicine[] = [
-  { id: "2", name: "Amlodipine", strength: "5 mg", form: "Tablet", schedule: "8:00 AM", instructions: "Morning", source: "sample" },
-  { id: "3", name: "Atorvastatin", strength: "10 mg", form: "Tablet", schedule: "10:00 PM", instructions: "Night", source: "sample" },
-  { id: "4", name: "Metformin", strength: "500 mg", form: "Tablet", schedule: "1:00 PM", instructions: "After food", source: "sample" },
-];
-
 function getToday() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -177,7 +173,7 @@ function App() {
   const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [showMedicines, setShowMedicines] = useState(false);
   const [showHealthMonitor, setShowHealthMonitor] = useState(false);
-  const [medicineCount, setMedicineCount] = useState(() => readStored<Medicine[]>("carepath_medicines", SAMPLE_MEDICINES).length);
+  const [medicineCount, setMedicineCount] = useState(() => readPersonalMedicines<Medicine>().length);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
   const [refresh, setRefresh] = useState(0);
@@ -200,7 +196,7 @@ function App() {
   const [lastSaved, setLastSaved] = useState(() => readStored<string>("carepath_last_local_save", ""));
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [pendingAskQuestion, setPendingAskQuestion] = useState("");
-  const medicines = useMemo(() => readStored<Medicine[]>("carepath_medicines", SAMPLE_MEDICINES), [medicineCount, refresh]);
+  const medicines = useMemo(() => readPersonalMedicines<Medicine>(), [medicineCount, refresh]);
   const healthReadings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", SAMPLE_READINGS), [refresh]);
   const medicationLog = useMemo(() => readStored<MedicationEvent[]>("carepath_medication_log", []), [refresh]);
   const profile = useMemo(() => readStored<{ name?: string; allergies?: string }>("carepath_profile", {}), [refresh]);
@@ -233,7 +229,7 @@ function App() {
   useEffect(() => {
     const updateLocalSnapshot = () => {
       setRefresh((current) => current + 1);
-      setMedicineCount(readStored<Medicine[]>("carepath_medicines", SAMPLE_MEDICINES).length);
+      setMedicineCount(readPersonalMedicines<Medicine>().length);
       setLastSaved(readStored<string>("carepath_last_local_save", new Date().toISOString()));
     };
     window.addEventListener("carepath:refresh", updateLocalSnapshot);
@@ -556,7 +552,7 @@ function App() {
       {dueReminder && <div className="cp-reminder-toast" role="alert"><div className="cp-reminder-toast-icon"><BellRing size={22} /></div><div><strong>Time for your reminder</strong><p>{dueReminder.name} · {dueReminder.time}</p><small>Check your current package or prescription before acting.</small></div><button onClick={() => { setDueReminder(null); setConfirmDose(true); }}>I took it · log</button><button aria-label="Dismiss reminder" onClick={() => setDueReminder(null)}><X size={16} /></button></div>}
       {dueReviewReminder && <div className="cp-reminder-toast cp-review-reminder-toast" role="alert"><div className="cp-reminder-toast-icon"><Info size={22} /></div><div><strong>Review your missed-dose guidance</strong><p>{dueReviewReminder.medicine}</p><small>This is a reminder to check the package or ask a pharmacist. It is not a dose instruction.</small></div><button onClick={() => finishReviewReminder(true)}>Remind in 1 hour</button><button onClick={() => finishReviewReminder()} aria-label="Dismiss review reminder"><Check size={16} /></button></div>}
       <Suspense fallback={<ModuleLoading overlay />}>
-        {showMedicines && <MedicineCenter onClose={() => { closeOverlay("medicines"); refreshApp(); }} onCountChange={onCountChange} />}
+        {showMedicines && <MedicineCenter onClose={() => { closeOverlay("medicines"); refreshApp(); }} onCountChange={onCountChange} language={getVoiceLanguage()} />}
         {showHealthMonitor && <HealthMonitor voiceEnabled={voiceEnabled} onClose={() => { closeOverlay("monitor"); refreshApp(); }} />}
       </Suspense>
     </div>

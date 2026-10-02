@@ -7,6 +7,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import MedlinePlusLookup from "./MedlinePlusLookup";
+import { readExampleMedicineArchive, readPersonalMedicines, saveExampleMedicineArchive } from "../medicineStorage";
+import type { VoiceLanguage } from "../voice";
 
 type Medicine = {
   id: string;
@@ -15,58 +18,42 @@ type Medicine = {
   form: string;
   schedule: string;
   instructions: string;
+  reason?: string;
   remainingUnits?: number;
   unitsPerDay?: number;
   expiryDate?: string;
+  source?: "sample" | "demo-extraction" | "user";
 };
-
-const defaultMedicines: Medicine[] = [
-  {
-    id: "2",
-    name: "Amlodipine",
-    strength: "5 mg",
-    form: "Tablet",
-    schedule: "8:00 AM",
-    instructions: "Morning",
-  },
-  {
-    id: "3",
-    name: "Atorvastatin",
-    strength: "10 mg",
-    form: "Tablet",
-    schedule: "10:00 PM",
-    instructions: "Night",
-  },
-  {
-    id: "4",
-    name: "Metformin",
-    strength: "500 mg",
-    form: "Tablet",
-    schedule: "1:00 PM",
-    instructions: "After food",
-  },
-];
 
 type Props = {
   onClose: () => void;
   onCountChange: (count: number) => void;
+  language: VoiceLanguage;
 };
+
+function toTimeInput(value: string) {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return "";
+  let hours = Number(match[1]);
+  const minutes = match[2];
+  const meridiem = match[3]?.toUpperCase();
+  if (meridiem) hours = (hours % 12) + (meridiem === "PM" ? 12 : 0);
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
+}
 
 export default function MedicineCenter({
   onClose,
   onCountChange,
+  language,
 }: Props) {
-  const [medicines, setMedicines] = useState<Medicine[]>(() => {
-    try {
-      const saved = localStorage.getItem("carepath_medicines");
-      return saved ? JSON.parse(saved) : defaultMedicines;
-    } catch {
-      return defaultMedicines;
-    }
-  });
+  const [medicines, setMedicines] = useState<Medicine[]>(() => readPersonalMedicines<Medicine>());
+  const [exampleMedicines, setExampleMedicines] = useState<Medicine[]>(() => readExampleMedicineArchive<Medicine>());
 
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showMedicineLookup, setShowMedicineLookup] = useState(false);
+  const [lookupTerm, setLookupTerm] = useState("");
+  const [reviewingExampleId, setReviewingExampleId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -74,6 +61,9 @@ export default function MedicineCenter({
     form: "Tablet",
     schedule: "",
     instructions: "",
+    reason: "",
+    remainingUnits: "",
+    unitsPerDay: "",
     expiryDate: "",
   });
 
@@ -86,9 +76,20 @@ export default function MedicineCenter({
     onCountChange(medicines.length);
   }, [medicines, onCountChange]);
 
+  const resetForm = () => setForm({ name: "", strength: "", form: "Tablet", schedule: "", instructions: "", reason: "", remainingUnits: "", unitsPerDay: "", expiryDate: "" });
+  const openNewMedicineForm = () => { resetForm(); setReviewingExampleId(null); setShowForm(true); };
+  const closeMedicineForm = () => { setShowForm(false); setReviewingExampleId(null); resetForm(); };
+
   const addMedicine = () => {
     if (!form.name.trim() || !form.strength.trim()) {
       alert("Please enter the medicine name and strength.");
+      return;
+    }
+    const remainingUnits = form.remainingUnits.trim() ? Number(form.remainingUnits) : undefined;
+    const unitsPerDay = form.unitsPerDay.trim() ? Number(form.unitsPerDay) : undefined;
+    if ((remainingUnits !== undefined && (!Number.isFinite(remainingUnits) || remainingUnits < 0))
+      || (unitsPerDay !== undefined && (!Number.isFinite(unitsPerDay) || unitsPerDay <= 0))) {
+      alert("Check the supply numbers. Units remaining must be zero or higher; units per day must be greater than zero.");
       return;
     }
 
@@ -99,21 +100,40 @@ export default function MedicineCenter({
       form: form.form,
       schedule: form.schedule || "Not specified",
       instructions: form.instructions || "Follow supplied instructions",
+      reason: form.reason.trim() || undefined,
+      remainingUnits,
+      unitsPerDay,
       expiryDate: form.expiryDate || undefined,
+      source: "user",
     };
 
     setMedicines((current) => [newMedicine, ...current]);
 
-    setForm({
-      name: "",
-      strength: "",
-      form: "Tablet",
-      schedule: "",
-      instructions: "",
-      expiryDate: "",
-    });
+    resetForm();
 
+    if (reviewingExampleId) {
+      const remainingExamples = exampleMedicines.filter((item) => item.id !== reviewingExampleId);
+      setExampleMedicines(remainingExamples);
+      saveExampleMedicineArchive(remainingExamples);
+      setReviewingExampleId(null);
+    }
     setShowForm(false);
+  };
+
+  const reviewExample = (medicine: Medicine) => {
+    setForm({
+      name: medicine.name,
+      strength: medicine.strength,
+      form: medicine.form,
+      schedule: toTimeInput(medicine.schedule),
+      instructions: medicine.instructions,
+      reason: medicine.reason || "",
+      remainingUnits: medicine.remainingUnits === undefined ? "" : String(medicine.remainingUnits),
+      unitsPerDay: medicine.unitsPerDay === undefined ? "" : String(medicine.unitsPerDay),
+      expiryDate: medicine.expiryDate || "",
+    });
+    setReviewingExampleId(medicine.id);
+    setShowForm(true);
   };
 
   const removeMedicine = (id: string) => {
@@ -173,6 +193,14 @@ export default function MedicineCenter({
           </button>
         </div>
 
+        <div className="medicine-info-strip">
+          <div><strong>Want to know what a medicine is generally used for?</strong><span>Search U.S. NIH MedlinePlus here. Only the medicine name is sent, and only after you agree.</span></div>
+          <button type="button" className="medicine-info-toggle" aria-expanded={showMedicineLookup} aria-controls="medicine-info-lookup" onClick={() => { setLookupTerm(search.trim()); setShowMedicineLookup((open) => !open); }}>
+            <Search size={16} /> {showMedicineLookup ? "Close lookup" : "Look up medicine info"}
+          </button>
+        </div>
+        {showMedicineLookup && <div className="medicine-info-panel" id="medicine-info-lookup"><MedlinePlusLookup key={lookupTerm || "medicine-lookup"} question={lookupTerm ? `What is ${lookupTerm} used for?` : ""} initialTerm={lookupTerm} language={language === "kn" ? "kn" : "en"} /></div>}
+
         <div className="medicine-toolbar">
           <div className="medicine-search">
             <Search size={18} />
@@ -185,7 +213,7 @@ export default function MedicineCenter({
 
           <button
             className="medicine-add-button"
-            onClick={() => setShowForm(true)}
+            onClick={openNewMedicineForm}
           >
             <Plus size={18} />
             Add medicine
@@ -196,16 +224,15 @@ export default function MedicineCenter({
           <div className="medicine-form">
             <div className="form-header">
               <div>
-                <p>Add a medicine</p>
+                <p>{reviewingExampleId ? "Review an old example before adding it" : "Add a medicine"}</p>
                 <span>
-                  Enter the information from your package or supplied
-                  prescription instructions.
+                  {reviewingExampleId ? "This was sample data. Check every field against your own current package or prescription. Save only if this medicine is yours." : "Enter the information from your package or supplied prescription instructions."}
                 </span>
               </div>
 
               <button
                 className="form-close"
-                onClick={() => setShowForm(false)}
+                onClick={closeMedicineForm}
               >
                 <X size={18} />
               </button>
@@ -277,6 +304,16 @@ export default function MedicineCenter({
                 />
               </label>
 
+              <label className="wide-field">
+                Why did your care team prescribe it? (optional)
+                <input
+                  value={form.reason}
+                  maxLength={160}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  placeholder="Use your clinician’s words or the written label"
+                />
+              </label>
+
               <label>
                 Package expiry (optional)
                 <input
@@ -285,12 +322,22 @@ export default function MedicineCenter({
                   onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
                 />
               </label>
+
+              <label>
+                Units remaining (optional)
+                <input type="number" min="0" step="1" inputMode="numeric" value={form.remainingUnits} onChange={(e) => setForm({ ...form, remainingUnits: e.target.value })} placeholder="Count from package" />
+              </label>
+
+              <label>
+                Units per day (optional)
+                <input type="number" min="0.01" step="any" inputMode="decimal" value={form.unitsPerDay} onChange={(e) => setForm({ ...form, unitsPerDay: e.target.value })} placeholder="Only from your label" />
+              </label>
             </div>
 
             <div className="form-actions">
               <button
                 className="secondary"
-                onClick={() => setShowForm(false)}
+                onClick={closeMedicineForm}
               >
                 Cancel
               </button>
@@ -306,6 +353,11 @@ export default function MedicineCenter({
           </div>
         )}
 
+        {exampleMedicines.length > 0 && <section className="medicine-example-archive" aria-labelledby="medicine-example-archive-title">
+          <div><h3 id="medicine-example-archive-title">Examples from an older version</h3><p>These were sample entries, so they have been moved out of your personal list. Their saved notes are kept on this device. Add one only after checking it against your current package or prescription.</p></div>
+          {exampleMedicines.map((medicine) => <article key={medicine.id}><span><strong>{medicine.name} · {medicine.strength}</strong><small>Example only · review before adding to your personal list</small></span><button type="button" className="cp-button quiet" onClick={() => reviewExample(medicine)}>Review & add</button></article>)}
+        </section>}
+
         <div className="medicine-list-header">
           <div>
             <strong>{filteredMedicines.length}</strong>
@@ -313,7 +365,7 @@ export default function MedicineCenter({
           </div>
 
           <span className="privacy-note">
-            Demo data is stored locally on this browser.
+            Saved only on this browser · not synced to an account
           </span>
         </div>
 
@@ -339,6 +391,7 @@ export default function MedicineCenter({
                 </p>
 
                 <span>{medicine.instructions}</span>
+                  {medicine.reason && <span className="medicine-reason"><strong>Reason recorded from your care team:</strong> {medicine.reason}</span>}
 
                 <details className="medicine-supply">
                   <summary>Supply watch</summary>
@@ -383,8 +436,9 @@ export default function MedicineCenter({
           {filteredMedicines.length === 0 && (
             <div className="empty-medicines">
               <Pill size={35} />
-              <h3>No medicines found</h3>
-              <p>Try another search or add a new medicine.</p>
+              <h3>{medicines.length ? "No medicines found" : "Your personal list starts here"}</h3>
+              <p>{medicines.length ? "Try another search or add a new medicine." : "Only medicines you add appear here. Record details from your current package or prescription; CARE CONNECTED will not choose a medicine or dose."}</p>
+              {!medicines.length && <button type="button" className="medicine-add-button" onClick={openNewMedicineForm}><Plus size={16} /> Add your medicine</button>}
             </div>
           )}
         </div>

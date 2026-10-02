@@ -3906,3 +3906,61 @@ body { background: radial-gradient(circle at 78% 0%, rgba(104, 190, 164, .08), t
 @media(prefers-reduced-motion:reduce) {
   .cp-action-center *, .cp-action-center *::before, .cp-action-center *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; }
 }
+
+/* Make medicine entry and document next steps easier to spot and read. */
+.medicine-title p{font-size:9px}
+.medicine-title span{font-size:12px;line-height:1.5}
+.medicine-search input,.medicine-add-button,.medicine-info-toggle{font-size:12px}
+.form-grid label{font-size:12px}
+.form-grid input,.form-grid select{font-size:12px}
+.medicine-list-header span{font-size:11px}
+.medicine-row-info h3{font-size:15px}
+.medicine-row-info p,.medicine-row-info>span,.medicine-time{font-size:12px;line-height:1.5}
+.medicine-reason{display:block;margin-top:5px;color:#48656c!important}
+.medicine-reason strong{color:#24564d}
+.medicine-supply summary{font-size:12px}
+.medicine-supply-fields label{font-size:11px}
+.medicine-supply-fields input{font-size:12px}
+.medicine-supply-estimate{font-size:12px}
+.medicine-supply small{font-size:11px;line-height:1.5}
+.empty-medicines p{max-width:590px;margin:0 auto 14px;font-size:12px;line-height:1.6}
+.empty-medicines .medicine-add-button{min-height:42px;margin:0 auto}
+.medicine-safety-note strong{font-size:11px}
+.medicine-safety-note span{font-size:11px;line-height:1.6}
+.medicine-info-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:13px;padding:13px 14px;border:1px solid #d6ece3;border-radius:13px;background:linear-gradient(110deg,#f1fbf6,#f8fcfb)}
+.medicine-info-strip>div{display:grid;gap:4px}
+.medicine-info-strip strong{color:#28554c;font-size:13px}
+.medicine-info-strip span{color:#6d8580;font-size:11px;line-height:1.5}
+.medicine-info-toggle{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 13px;border:1px solid #cde6db;border-radius:10px;color:#087f68;background:white;font-weight:800;white-space:nowrap}
+.medicine-info-panel{margin-top:10px;padding:12px;border:1px solid #e1ece8;border-radius:13px;background:#fff}
+.medicine-example-archive{display:grid;gap:9px;margin-top:14px;padding:14px;border:1px solid #f0dfbd;border-radius:13px;background:#fffaf0}
+.medicine-example-archive h3{margin:0;color:#655331;font-size:13px}
+.medicine-example-archive p{margin:4px 0 0;color:#7c6d4e;font-size:11px;line-height:1.5}
+.medicine-example-archive article{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #efe5cf;border-radius:10px;background:#fff}
+.medicine-example-archive article>span{display:grid;gap:4px}
+.medicine-example-archive article strong{color:#4d5f58;font-size:12px}
+.medicine-example-archive article small{color:#85775d;font-size:10px}
+.medicine-example-archive article .cp-button{min-height:38px;font-size:11px}
+.medicine-form .form-header span{font-size:11px;line-height:1.5}
+.cp-official-lookup-intro{margin:12px 0 8px;padding:13px 14px;border:1px solid #dcece5;border-radius:12px;background:#f7fcf9}
+.cp-official-lookup-intro strong{color:#225c4e;font-size:13px}
+.cp-official-lookup-intro p{margin:4px 0 0;color:#647c78;font-size:12px;line-height:1.55}
+.cp-scan-next-step,.cp-scan-empty-tips{display:grid;gap:4px;margin-top:10px;padding:12px 13px;border:1px solid #d8ece3;border-radius:11px;color:#2e5b4f;background:#f3faf6}
+.cp-scan-next-step strong,.cp-scan-empty-tips strong{font-size:13px}
+.cp-scan-next-step span,.cp-scan-empty-tips span{font-size:12px;line-height:1.55}
+.cp-scan-empty-tips{border-color:#eedfc3;color:#6d5734;background:#fffaf0}
+
+@media (max-width: 640px){
+  .medicine-overlay{align-items:flex-start;padding:8px}
+  .medicine-center{max-height:calc(100dvh - 16px);padding:16px;border-radius:18px}
+  .medicine-toolbar{flex-direction:column}
+  .medicine-toolbar .medicine-add-button{min-height:43px;justify-content:center}
+  .medicine-info-strip{align-items:stretch;flex-direction:column}
+  .medicine-info-toggle{width:100%}
+  .medicine-example-archive article{align-items:stretch;flex-direction:column}
+  .medicine-list-header{align-items:flex-start;flex-direction:column}
+  .medicine-list-header .privacy-note{text-align:left}
+  .medicine-row{align-items:flex-start;flex-wrap:wrap}
+  .medicine-row-info{flex-basis:calc(100% - 60px)}
+  .medicine-time{margin-left:57px}
+}

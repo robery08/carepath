@@ -3,7 +3,7 @@ import { ArrowRight, LoaderCircle, Search } from "lucide-react";
 import ReadAloudButton from "./ReadAloudButton";
 import { searchMedlinePlusDrug, type MedlinePlusDrugResult } from "../medlineplusDrugSearch";
 
-type Props = { question: string; language: "en" | "kn" };
+type Props = { question: string; language: "en" | "kn"; initialTerm?: string };
 function extractName(question: string) {
   return question.trim()
     .replace(/^(?:what is|what's|tell me about|explain|purpose of|use of|medicine info for)\s+/i, "")
@@ -12,8 +12,8 @@ function extractName(question: string) {
     .replace(/[?!.]+$/g, "").trim().slice(0, 100);
 }
 
-export default function MedlinePlusLookup({ question, language }: Props) {
-  const [term, setTerm] = useState(() => extractName(question));
+export default function MedlinePlusLookup({ question, language, initialTerm }: Props) {
+  const [term, setTerm] = useState(() => initialTerm ?? extractName(question));
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
