@@ -26,7 +26,7 @@ function openDatabase() {
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error("Could not open local document storage."));
-    request.onblocked = () => reject(new Error("Close another CAREPATH tab and try again."));
+    request.onblocked = () => reject(new Error("Close another CARE CONNECTED tab and try again."));
   });
 }
 

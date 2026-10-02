@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { AlertTriangle, Bot, Check, ExternalLink, FileText, LoaderCircle, Mic, Send, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
+import { AlertTriangle, Bot, Check, Copy, ExternalLink, FileText, LoaderCircle, Mic, Pencil, Plus, RotateCcw, Search, Send, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
 import ReadAloudButton from "./ReadAloudButton";
 import "./AskAssistantChat.css";
 import { getDocumentFile } from "../documentFiles";
@@ -9,6 +9,8 @@ type AskLanguage = "en" | "kn";
 type ChatDocument = { id: string; name: string; fileStored?: boolean };
 type Source = { title: string; url: string };
 type Message = { id: string; role: "user" | "assistant"; text: string; sources?: Source[]; error?: boolean; pending?: boolean };
+type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
+type RetryRequest = { conversationId: string; question: string; excerpt: string; prior: Message[]; responseId: string };
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
 type SpeechRecognitionLike = {
   lang: string;
@@ -22,44 +24,94 @@ type SpeechRecognitionLike = {
 type SpeechConstructor = new () => SpeechRecognitionLike;
 type SpeechWindow = Window & { SpeechRecognition?: SpeechConstructor; webkitSpeechRecognition?: SpeechConstructor };
 
-const CHAT_STORAGE_KEY = "carepath_ai_chat_v1";
+const SESSION_KEY = "carepath_ai_session_v2";
+const SAVED_KEY = "carepath_ai_chats_v2";
+const LEGACY_KEY = "carepath_ai_chat_v1";
 const ASSISTANT_ENDPOINT = import.meta.env.VITE_CAREPATH_AI_ENDPOINT?.trim() ?? "";
 const short = (text: string, limit: number) => text.length > limit ? `${text.slice(0, limit)}…` : text;
 const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-function restoreChat(): Message[] {
+function cleanMessages(value: unknown): Message[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is Message => Boolean(item && typeof item === "object") && ((item as Message).role === "user" || (item as Message).role === "assistant") && typeof (item as Message).text === "string")
+    .slice(-24).map((item) => ({
+      id: typeof item.id === "string" ? item.id : newId(),
+      role: item.role,
+      text: short(item.text, 5000),
+      error: Boolean(item.error),
+      sources: Array.isArray(item.sources) ? item.sources.filter((source): source is Source => Boolean(source && typeof source.title === "string" && typeof source.url === "string" && /^https:\/\//i.test(source.url))).slice(0, 5) : [],
+    }));
+}
+
+function createConversation(): Conversation {
+  return { id: newId(), title: "New conversation", updatedAt: Date.now(), messages: [] };
+}
+
+function readConversations(storage: Storage, key: string): Conversation[] {
   try {
-    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is Message => item && typeof item === "object" && (item.role === "user" || item.role === "assistant") && typeof item.text === "string")
-      .slice(-20).map((item) => ({ id: typeof item.id === "string" ? item.id : newId(), role: item.role, text: short(item.text, 5000), sources: Array.isArray(item.sources) ? item.sources.filter((source) => source && typeof source.title === "string" && typeof source.url === "string" && /^https:\/\//i.test(source.url)).slice(0, 5) : [] }));
+    const parsed: unknown = JSON.parse(storage.getItem(key) || "null");
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is Conversation => Boolean(item && typeof item === "object" && typeof (item as Conversation).id === "string"))
+        .slice(0, 12).map((item) => ({
+          id: item.id,
+          title: typeof item.title === "string" ? short(item.title, 70) : "New conversation",
+          updatedAt: typeof item.updatedAt === "number" ? item.updatedAt : Date.now(),
+          messages: cleanMessages(item.messages),
+        }));
+    }
+  } catch { /* An unavailable or invalid local history starts a fresh session. */ }
+  return [];
+}
+
+function restoreLegacyConversation(): Conversation[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(LEGACY_KEY) || "null");
+    const messages = cleanMessages(parsed);
+    if (!messages.length) return [];
+    const firstQuestion = messages.find((message) => message.role === "user")?.text || "Saved conversation";
+    return [{ id: newId(), title: short(firstQuestion, 42), updatedAt: Date.now(), messages }];
   } catch { return []; }
+}
+
+function initialWorkspace(saved: boolean): { conversations: Conversation[]; activeId: string } {
+  let conversations: Conversation[] = [];
+  try { conversations = readConversations(sessionStorage, SESSION_KEY); } catch { /* Continue without session storage if unavailable. */ }
+  if (!conversations.length && saved) {
+    try { conversations = readConversations(localStorage, SAVED_KEY); } catch { /* Persistent history is optional. */ }
+  }
+  if (!conversations.length && saved) conversations = restoreLegacyConversation();
+  if (!conversations.length) conversations = [createConversation()];
+  return { conversations, activeId: conversations[0].id };
 }
 
 export default function AskAssistantChat({ language, onLanguageChange, documents, initialQuestion = "" }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[]; initialQuestion?: string }) {
   const [saveHistory, setSaveHistory] = useState(() => {
     try { return localStorage.getItem("carepath_ai_chat_save") === "true"; } catch { return false; }
   });
-  const [messages, setMessages] = useState<Message[]>(() => {
-    try { return localStorage.getItem("carepath_ai_chat_save") === "true" ? restoreChat() : []; } catch { return []; }
-  });
-  const [input, setInput] = useState(() => ASSISTANT_ENDPOINT ? initialQuestion : "");
+  const [workspace, setWorkspace] = useState(() => initialWorkspace(saveHistory));
+  const [input, setInput] = useState(initialQuestion);
+  const [historySearch, setHistorySearch] = useState("");
   const [consent, setConsent] = useState(false);
   const [includeDocument, setIncludeDocument] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState("");
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [status, setStatus] = useState("");
-  const [retry, setRetry] = useState<{ question: string; excerpt: string } | null>(null);
+  const [retry, setRetry] = useState<RetryRequest | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const conversations = workspace.conversations;
+  const activeConversation = conversations.find((item) => item.id === workspace.activeId) ?? conversations[0];
+  const messages = useMemo(() => activeConversation?.messages ?? [], [activeConversation]);
 
   useEffect(() => {
-    if (!saveHistory) return;
-    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages.filter((message) => !message.pending).slice(-20).map(({ id, role, text, sources }) => ({ id, role, text, sources })))); } catch { /* Keep the conversation in memory for this visit. */ }
-  }, [messages, saveHistory]);
+    try {
+      const clean = conversations.slice(0, 12).map((conversation) => ({ ...conversation, messages: conversation.messages.filter((message) => !message.pending).slice(-24).map((message) => ({ ...message, text: short(message.text, 5000) })) }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(clean));
+      if (saveHistory) localStorage.setItem(SAVED_KEY, JSON.stringify(clean));
+      else { localStorage.removeItem(SAVED_KEY); localStorage.removeItem(LEGACY_KEY); }
+    } catch { /* This tab remains usable even when browser storage is unavailable. */ }
+  }, [conversations, saveHistory]);
 
   useEffect(() => {
     const thread = threadRef.current;
@@ -68,64 +120,107 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
 
   useEffect(() => () => { recognitionRef.current?.stop(); }, []);
 
-  useEffect(() => {
-    if (ASSISTANT_ENDPOINT && initialQuestion) setInput(initialQuestion);
-  }, [initialQuestion]);
-
   const copy = language === "en" ? {
-    title: "Ask the CAREPATH assistant", subtitle: "A connected, in-app information chat. Answers can be wrong; check the cited sources.",
-    ready: "AI endpoint configured", offline: "AI assistant is not connected on this deployment", notConfigured: "Live AI is not enabled here yet. The curated English/Kannada CAREPATH guides below still work. Connecting AI needs a server deployment and a private provider key; GitHub Pages alone cannot keep that key secret.",
-    consentTitle: "Review before sending", consent: "When I send, my question and recent chat messages go to CAREPATH’s configured server and its AI provider. CAREPATH does not attach saved health records. If I select a document, its extracted text will also be sent for this request.",
+    title: "Ask CARE CONNECTED", subtitle: "A calm place to ask, explore, and follow up. Check sources for current facts.",
+    ready: "Server endpoint configured", offline: "AI is not connected on this deployment", notConfigured: "You can write a question here, but this public GitHub Pages version has no server AI connection, so it cannot generate a live answer. The offline guides below still work. To enable live Gemini answers, deploy the server function and configure its private key; never put an API key in this page.",
+    consentTitle: "Review before sending", consent: "Your question and recent messages will go to the configured server and its AI provider. Saved health records are not attached. If you select a document, its extracted text will also be sent for this request.",
     docToggle: "Ask about a saved document", selectDoc: "Choose a saved document", noDocs: "No saved documents with reviewed text are available.",
-    save: "Save this chat on this device", saveHint: "Off by default. Saved chat stays in this browser; clear it any time.",
-    placeholder: "Ask in English or Kannada…", send: "Send question", listen: "Speak your question", stopMic: "Stop voice input", listenHint: "Check the recognized words before sending. Browser speech recognition may use its own online service.",
-    sourceLabel: "Web sources to review", noSources: "No web citations came back with this answer. Please verify it with a trusted health professional or official source.",
-    intro: "Ask a general health or medicine-information question. You can also choose a saved document and explicitly share its extracted text for one question.",
-    noDiagnosis: "General education only · no diagnosis, prescribing, or personal dose advice", urgent: "If this may be an emergency, contact your local emergency service now. Do not wait for an AI reply.",
-    failure: "The assistant could not answer. Check your connection and try again.", retry: "Try again", clear: "Clear chat", clearLabel: "Clear this chat and any saved copy", sending: "Checking current information…", storageError: "This browser could not save the chat. It is still available until you leave this page.",
-    consentNeeded: "Please review and agree before sending a question to the AI service.", docReadError: "I could not read that saved document. Open Scan & Understand and review the saved text first.", askHint: "For a medicine you take, follow your package or prescription and ask a pharmacist about personal safety. This assistant cannot identify a tablet or check interactions.",
+    save: "Save conversation history on this device", saveHint: "Off by default. Without this, chats stay in this browser tab only.",
+    placeholder: "Ask anything in English or Kannada…", send: "Send question", listen: "Speak your question", stopMic: "Stop voice input", listenHint: "Review recognized words before sending. Browser voice recognition may use its own service.",
+    sourceLabel: "Sources to review", noSources: "No web citations came back. Check current facts with a reliable source.", intro: "Ask an open question, attach a reviewed document excerpt, or continue a conversation. Start a new chat to keep topics separate.",
+    noDiagnosis: "Health answers are educational · no diagnosis or personal medicine instructions", urgent: "If someone may be in immediate danger, contact local emergency services now. Do not wait for an AI reply.",
+    failure: "The assistant could not answer. Check the connection and try again.", credentials: "The AI server is online, but its provider key is not configured yet. Ask the site administrator to finish server setup.", rateLimited: "The assistant is busy right now. Wait a little and retry.", retry: "Retry", clear: "Clear conversation", clearLabel: "Clear this conversation", sending: "Preparing an answer…", storageError: "This browser could not save the chat history.",
+    consentNeeded: "Review and agree before sending your question to the AI service.", docReadError: "I could not read that saved document. Open Scan & Upload and review its extracted text first.", askHint: "AI answers can be wrong. For personal health decisions, follow your current care plan and ask a qualified professional.",
+    newChat: "New chat", history: "Recent chats", searchHistory: "Search chats", emptyHistory: "Your conversations will appear here.", rename: "Rename", delete: "Delete", copyAnswer: "Copy answer", regenerate: "Regenerate answer", saved: "Saved on this device", temporary: "This tab only",
   } : {
-    title: "CAREPATH ಸಹಾಯಕನನ್ನು ಕೇಳಿ", subtitle: "ಆಪ್‌ನಲ್ಲೇ ಮಾಹಿತಿ ಚಾಟ್. ಉತ್ತರ ತಪ್ಪಿರಬಹುದು; ಮೂಲಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
-    ready: "AI ಎಂಡ್‌ಪಾಯಿಂಟ್ ಹೊಂದಿಸಲಾಗಿದೆ", offline: "ಈ ಪ್ರಕಟಿತ ಆವೃತ್ತಿಯಲ್ಲಿ AI ಸಂಪರ್ಕವಿಲ್ಲ", notConfigured: "ಇಲ್ಲಿ ಲೈವ್ AI ಇನ್ನೂ ಸಕ್ರಿಯವಾಗಿಲ್ಲ. ಕೆಳಗಿನ CAREPATH ಕನ್ನಡ/English ಮಾರ್ಗದರ್ಶಿಗಳು ಕೆಲಸ ಮಾಡುತ್ತವೆ. AI ಗೆ ಸರ್ವರ್ ಮತ್ತು ಖಾಸಗಿ provider ಕೀ ಬೇಕು; GitHub Pages ಮಾತ್ರ ಆ ಕೀಲಿಯನ್ನು ರಹಸ್ಯವಾಗಿಡಲು ಸಾಧ್ಯವಿಲ್ಲ.",
-    consentTitle: "ಕಳುಹಿಸುವ ಮೊದಲು ಓದಿ", consent: "ನಾನು ಕಳುಹಿಸಿದಾಗ ನನ್ನ ಪ್ರಶ್ನೆ ಮತ್ತು ಇತ್ತೀಚಿನ ಚಾಟ್ CAREPATH ಸರ್ವರ್ ಮತ್ತು ಅದರ AI ಸೇವೆಗೆ ಹೋಗುತ್ತದೆ. ಉಳಿಸಿದ ಆರೋಗ್ಯ ದಾಖಲೆಗಳನ್ನು CAREPATH ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸೇರಿಸುವುದಿಲ್ಲ. ದಾಖಲೆಯನ್ನು ಆರಿಸಿದರೆ, ಅದರ ಹೊರತೆಗೆದ ಪಠ್ಯ ಈ ಪ್ರಶ್ನೆಗೆ ಮಾತ್ರ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
-    docToggle: "ಉಳಿಸಿದ ದಾಖಲೆಯ ಬಗ್ಗೆ ಕೇಳಿ", selectDoc: "ಉಳಿಸಿದ ದಾಖಲೆ ಆರಿಸಿ", noDocs: "ಪರಿಶೀಲಿಸಿದ ಪಠ್ಯವಿರುವ ಉಳಿಸಿದ ದಾಖಲೆ ಇಲ್ಲ.",
-    save: "ಈ ಸಾಧನದಲ್ಲಿ ಚಾಟ್ ಉಳಿಸಿ", saveHint: "ಮೊದಲಿನಿಂದ ಆಫ್. ಚಾಟ್ ಈ ಬ್ರೌಸರ್‌ನಲ್ಲೇ ಉಳಿಯುತ್ತದೆ; ಯಾವಾಗ ಬೇಕಾದರೂ ಅಳಿಸಿ.",
-    placeholder: "ಕನ್ನಡ ಅಥವಾ English ನಲ್ಲಿ ಕೇಳಿ…", send: "ಪ್ರಶ್ನೆ ಕಳುಹಿಸಿ", listen: "ಪ್ರಶ್ನೆ ಮಾತನಾಡಿ", stopMic: "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ನಿಲ್ಲಿಸಿ", listenHint: "ಕಳುಹಿಸುವ ಮೊದಲು ಗುರುತಿಸಿದ ಪದಗಳನ್ನು ಪರಿಶೀಲಿಸಿ. ಬ್ರೌಸರ್ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ತನ್ನ ಆನ್‌ಲೈನ್ ಸೇವೆಯನ್ನು ಬಳಸಬಹುದು.",
-    sourceLabel: "ಪರಿಶೀಲಿಸಲು ವೆಬ್ ಮೂಲಗಳು", noSources: "ಈ ಉತ್ತರದ ಜೊತೆ ವೆಬ್ ಉಲ್ಲೇಖ ಬಂದಿಲ್ಲ. ಆರೋಗ್ಯ ವೃತ್ತಿಪರ ಅಥವಾ ಅಧಿಕೃತ ಮೂಲದೊಂದಿಗೆ ಪರಿಶೀಲಿಸಿ.",
-    intro: "ಸಾಮಾನ್ಯ ಆರೋಗ್ಯ ಅಥವಾ ಔಷಧಿ ಮಾಹಿತಿ ಕೇಳಿ. ಉಳಿಸಿದ ದಾಖಲೆಯನ್ನು ಆಯ್ದು ಅದರ ಹೊರತೆಗೆದ ಪಠ್ಯವನ್ನು ಒಂದು ಪ್ರಶ್ನೆಗೆ ಹಂಚಬಹುದು.",
-    noDiagnosis: "ಸಾಮಾನ್ಯ ಮಾಹಿತಿ ಮಾತ್ರ · ರೋಗನಿರ್ಣಯ, ಔಷಧಿ ಸೂಚನೆ ಅಥವಾ ವೈಯಕ್ತಿಕ ಡೋಸ್ ಸಲಹೆ ಇಲ್ಲ", urgent: "ಇದು ತುರ್ತು ಪರಿಸ್ಥಿತಿ ಆಗಿರಬಹುದು ಎಂದರೆ ಈಗಲೇ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ. AI ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಬೇಡಿ.",
-    failure: "ಸಹಾಯಕ ಉತ್ತರಿಸಲಿಲ್ಲ. ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ", clear: "ಚಾಟ್ ಅಳಿಸಿ", clearLabel: "ಚಾಟ್ ಮತ್ತು ಉಳಿಸಿದ ಪ್ರತಿಯನ್ನು ಅಳಿಸಿ", sending: "ಪ್ರಸ್ತುತ ಮಾಹಿತಿ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…", storageError: "ಈ ಬ್ರೌಸರ್ ಚಾಟ್ ಉಳಿಸಲಿಲ್ಲ. ಈ ಪುಟ ತೆರೆಯಿರುವವರೆಗೆ ಅದು ಲಭ್ಯ.",
-    consentNeeded: "AI ಸೇವೆಗೆ ಪ್ರಶ್ನೆ ಕಳುಹಿಸುವ ಮೊದಲು ಓದಿ ಒಪ್ಪಿಕೊಳ್ಳಿ.", docReadError: "ಉಳಿಸಿದ ದಾಖಲೆಯನ್ನು ಓದಲು ಆಗಲಿಲ್ಲ. Scan & Understand ತೆರೆಯಿರಿ, ಪಠ್ಯ ಪರಿಶೀಲಿಸಿ.", askHint: "ನೀವು ತೆಗೆದುಕೊಳ್ಳುವ ಔಷಧಿಗೆ ಪ್ಯಾಕೆಟ್ ಅಥವಾ ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ಅನುಸರಿಸಿ; ವೈಯಕ್ತಿಕ ಸುರಕ್ಷತೆಗಾಗಿ ಫಾರ್ಮಸಿಸ್ಟ್ ಕೇಳಿ. ಈ ಸಹಾಯಕ ಮಾತ್ರೆ ಗುರುತಿಸುವುದಿಲ್ಲ ಅಥವಾ interactions ಪರಿಶೀಲಿಸುವುದಿಲ್ಲ.",
+    title: "CARE CONNECTED ಗೆ ಕೇಳಿ", subtitle: "ಪ್ರಶ್ನೆ, ಅನ್ವೇಷಣೆ ಮತ್ತು ಮುಂದಿನ ಪ್ರಶ್ನೆಗಳಿಗೆ ಶಾಂತ ಸ್ಥಳ. ಇತ್ತೀಚಿನ ಮಾಹಿತಿಗೆ ಮೂಲ ಪರಿಶೀಲಿಸಿ.",
+    ready: "ಸರ್ವರ್ ಎಂಡ್‌ಪಾಯಿಂಟ್ ಹೊಂದಿಸಲಾಗಿದೆ", offline: "ಈ ಪ್ರಕಟಣೆಯಲ್ಲಿ AI ಸಂಪರ್ಕವಿಲ್ಲ", notConfigured: "ಇಲ್ಲಿ ಪ್ರಶ್ನೆ ಬರೆಯಬಹುದು; ಆದರೆ ಈ ಸಾರ್ವಜನಿಕ GitHub Pages ಆವೃತ್ತಿಗೆ ಸರ್ವರ್ AI ಸಂಪರ್ಕವಿಲ್ಲ, ಆದ್ದರಿಂದ ಲೈವ್ ಉತ್ತರ ರಚಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಕೆಳಗಿನ ಆಫ್‌ಲೈನ್ ಮಾರ್ಗದರ್ಶಿಗಳು ಕೆಲಸ ಮಾಡುತ್ತವೆ. Gemini ಸಕ್ರಿಯಗೊಳಿಸಲು ಸರ್ವರ್ ಫಂಕ್ಷನ್ ಮತ್ತು ಖಾಸಗಿ ಕೀ ಹೊಂದಿಸಿ; API ಕೀಲಿಯನ್ನು ಈ ಪುಟದಲ್ಲಿ ಎಂದಿಗೂ ಇಡಬೇಡಿ.",
+    consentTitle: "ಕಳುಹಿಸುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿ", consent: "ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಮತ್ತು ಇತ್ತೀಚಿನ ಸಂದೇಶಗಳು ಹೊಂದಿಸಿದ ಸರ್ವರ್ ಮತ್ತು AI ಸೇವೆಗೆ ಹೋಗುತ್ತವೆ. ಉಳಿಸಿದ ಆರೋಗ್ಯ ದಾಖಲೆಗಳನ್ನು ಸೇರಿಸುವುದಿಲ್ಲ. ದಾಖಲೆಯನ್ನು ಆರಿಸಿದರೆ ಅದರ ಹೊರತೆಗೆದ ಪಠ್ಯ ಈ ವಿನಂತಿಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
+    docToggle: "ಉಳಿಸಿದ ದಾಖಲೆಯ ಬಗ್ಗೆ ಕೇಳಿ", selectDoc: "ಉಳಿಸಿದ ದಾಖಲೆ ಆಯ್ಕೆಮಾಡಿ", noDocs: "ಪರಿಶೀಲಿಸಿದ ಪಠ್ಯವಿರುವ ಉಳಿಸಿದ ದಾಖಲೆಗಳಿಲ್ಲ.",
+    save: "ಈ ಸಾಧನದಲ್ಲಿ ಚಾಟ್ ಇತಿಹಾಸ ಉಳಿಸಿ", saveHint: "ಮೊದಲಿನಿಂದ ಆಫ್. ಇಲ್ಲದಿದ್ದರೆ ಚಾಟ್ ಈ ಟ್ಯಾಬ್‌ನಲ್ಲಷ್ಟೇ ಇರುತ್ತದೆ.",
+    placeholder: "English ಅಥವಾ ಕನ್ನಡದಲ್ಲಿ ಏನನ್ನಾದರೂ ಕೇಳಿ…", send: "ಪ್ರಶ್ನೆ ಕಳುಹಿಸಿ", listen: "ಪ್ರಶ್ನೆ ಮಾತನಾಡಿ", stopMic: "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ನಿಲ್ಲಿಸಿ", listenHint: "ಕಳುಹಿಸುವ ಮೊದಲು ಗುರುತಿಸಿದ ಪದಗಳನ್ನು ಪರಿಶೀಲಿಸಿ. ಬ್ರೌಸರ್ ಧ್ವನಿ ಸೇವೆ ಬಳಸಬಹುದು.",
+    sourceLabel: "ಪರಿಶೀಲಿಸಬೇಕಾದ ಮೂಲಗಳು", noSources: "ವೆಬ್ ಮೂಲಗಳು ಬಂದಿಲ್ಲ. ಇತ್ತೀಚಿನ ಮಾಹಿತಿಯನ್ನು ವಿಶ್ವಾಸಾರ್ಹ ಮೂಲದಿಂದ ಪರಿಶೀಲಿಸಿ.", intro: "ಮುಕ್ತ ಪ್ರಶ್ನೆ ಕೇಳಿ, ಪರಿಶೀಲಿಸಿದ ದಾಖಲೆಯ ಪಠ್ಯ ಸೇರಿಸಿ ಅಥವಾ ಚಾಟ್ ಮುಂದುವರಿಸಿ. ವಿಷಯಗಳನ್ನು ಪ್ರತ್ಯೇಕಿಸಲು ಹೊಸ ಚಾಟ್ ಪ್ರಾರಂಭಿಸಿ.",
+    noDiagnosis: "ಆರೋಗ್ಯ ಉತ್ತರಗಳು ಮಾಹಿತಿ ಮಾತ್ರ · ರೋಗನಿರ್ಣಯ ಅಥವಾ ವೈಯಕ್ತಿಕ ಔಷಧಿ ಸೂಚನೆ ಇಲ್ಲ", urgent: "ಯಾರಿಗಾದರೂ ತಕ್ಷಣದ ಅಪಾಯವಿದ್ದರೆ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ. AI ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಬೇಡಿ.",
+    failure: "ಸಹಾಯಕ ಉತ್ತರಿಸಲಿಲ್ಲ. ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", credentials: "AI ಸರ್ವರ್ ಸಂಪರ್ಕದಲ್ಲಿದೆ, ಆದರೆ AI ಸೇವೆಯ ಖಾಸಗಿ ಕೀ ಹೊಂದಿಸಿಲ್ಲ. ಸೈಟ್ ನಿರ್ವಾಹಕರನ್ನು ಸಂಪರ್ಕಿಸಿ.", rateLimited: "ಸಹಾಯಕ ಈಗ ಬ್ಯುಸಿಯಾಗಿದೆ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ", clear: "ಚಾಟ್ ಅಳಿಸಿ", clearLabel: "ಈ ಚಾಟ್ ಅಳಿಸಿ", sending: "ಉತ್ತರ ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ…", storageError: "ಈ ಬ್ರೌಸರ್ ಚಾಟ್ ಇತಿಹಾಸ ಉಳಿಸಲಿಲ್ಲ.",
+    consentNeeded: "AI ಸೇವೆಗೆ ಪ್ರಶ್ನೆ ಕಳುಹಿಸುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿ ಒಪ್ಪಿಗೆ ನೀಡಿ.", docReadError: "ಉಳಿಸಿದ ದಾಖಲೆಯನ್ನು ಓದಲು ಆಗಲಿಲ್ಲ. Scan & Upload ತೆರೆಯಿರಿ ಮತ್ತು ಹೊರತೆಗೆದ ಪಠ್ಯ ಪರಿಶೀಲಿಸಿ.", askHint: "AI ಉತ್ತರ ತಪ್ಪಿರಬಹುದು. ವೈಯಕ್ತಿಕ ಆರೋಗ್ಯ ನಿರ್ಧಾರಗಳಿಗೆ ಪ್ರಸ್ತುತ ಆರೈಕೆ ಯೋಜನೆ ಅನುಸರಿಸಿ ಮತ್ತು ಅರ್ಹ ವೃತ್ತಿಪರರನ್ನು ಕೇಳಿ.",
+    newChat: "ಹೊಸ ಚಾಟ್", history: "ಇತ್ತೀಚಿನ ಚಾಟ್‌ಗಳು", searchHistory: "ಚಾಟ್ ಹುಡುಕಿ", emptyHistory: "ನಿಮ್ಮ ಚಾಟ್‌ಗಳು ಇಲ್ಲಿ ಕಾಣುತ್ತವೆ.", rename: "ಹೆಸರು ಬದಲಿಸಿ", delete: "ಅಳಿಸಿ", copyAnswer: "ಉತ್ತರ ನಕಲಿಸಿ", regenerate: "ಮತ್ತೆ ಉತ್ತರಿಸಿ", saved: "ಈ ಸಾಧನದಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ", temporary: "ಈ ಟ್ಯಾಬ್ ಮಾತ್ರ",
   };
 
-  const clearChat = () => {
-    setMessages([]); setInput(""); setStatus(""); setRetry(null);
-    try { localStorage.removeItem(CHAT_STORAGE_KEY); } catch { /* The in-memory chat is still cleared. */ }
+  const filteredConversations = useMemo(() => conversations.filter((conversation) => `${conversation.title} ${conversation.messages.find((item) => item.role === "user")?.text ?? ""}`.toLowerCase().includes(historySearch.trim().toLowerCase())).sort((a, b) => b.updatedAt - a.updatedAt), [conversations, historySearch]);
+
+  const patchConversation = (id: string, update: (current: Conversation) => Conversation) => {
+    setWorkspace((current) => ({ ...current, conversations: current.conversations.map((conversation) => conversation.id === id ? update(conversation) : conversation) }));
   };
 
-  const sendQuestion = async (question: string, excerpt = "") => {
-    if (!consent) { setStatus(copy.consentNeeded); return; }
-    if (!ASSISTANT_ENDPOINT || busy) return;
-    const prior = messages.filter((message) => !message.error && !message.pending).slice(-5).map(({ role, text }) => ({ role, text: short(text, 1000) }));
-    const userMessage: Message = { id: newId(), role: "user", text: question };
-    const responseMessage: Message = { id: newId(), role: "assistant", text: "", pending: true };
-    setMessages((current) => [...current, userMessage, responseMessage]);
-    setInput(""); setStatus(""); setRetry({ question, excerpt }); setBusy(true);
+  const updateMessages = (id: string, update: (current: Message[]) => Message[]) => {
+    patchConversation(id, (conversation) => ({ ...conversation, updatedAt: Date.now(), messages: update(conversation.messages) }));
+  };
+
+  const createNewChat = () => {
+    const conversation = createConversation();
+    setWorkspace((current) => ({ conversations: [conversation, ...current.conversations].slice(0, 40), activeId: conversation.id }));
+    setInput(""); setStatus(""); setRetry(null); setHistorySearch("");
+  };
+
+  const clearConversation = () => {
+    if (!activeConversation) return;
+    updateMessages(activeConversation.id, () => []);
+    setInput(""); setStatus(""); setRetry(null);
+  };
+
+  const deleteConversation = (conversation: Conversation) => {
+    if (!window.confirm(language === "en" ? `Delete “${conversation.title}” from this browser?` : `“${conversation.title}” ಚಾಟ್ ಅನ್ನು ಈ ಬ್ರೌಸರ್‌ನಿಂದ ಅಳಿಸಬೇಕೇ?`)) return;
+    setWorkspace((current) => {
+      const remaining = current.conversations.filter((item) => item.id !== conversation.id);
+      const next = remaining.length ? remaining : [createConversation()];
+      return { conversations: next, activeId: current.activeId === conversation.id ? next[0].id : current.activeId };
+    });
+    setRetry(null); setStatus("");
+  };
+
+  const renameConversation = (conversation: Conversation) => {
+    const title = window.prompt(language === "en" ? "Conversation name" : "ಚಾಟ್ ಹೆಸರು", conversation.title);
+    if (title?.trim()) patchConversation(conversation.id, (current) => ({ ...current, title: short(title.trim(), 70), updatedAt: Date.now() }));
+  };
+
+  const copyAnswer = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); setStatus(language === "en" ? "Answer copied." : "ಉತ್ತರ ನಕಲಿಸಲಾಗಿದೆ."); }
+    catch { setStatus(language === "en" ? "Copy is not available in this browser." : "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ನಕಲು ಲಭ್ಯವಿಲ್ಲ."); }
+  };
+
+  const requestAnswer = async ({ conversationId, question, excerpt, prior, responseId }: RetryRequest) => {
+    if (!ASSISTANT_ENDPOINT) return;
+    setRetry({ conversationId, question, excerpt, prior, responseId }); setBusy(true); setStatus("");
     try {
       const response = await fetch(ASSISTANT_ENDPOINT, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, messages: prior, language, documentExcerpt: excerpt }),
+        body: JSON.stringify({ question, messages: prior.slice(-5).map(({ role, text }) => ({ role, text: short(text, 1000) })), language, documentExcerpt: excerpt }),
         signal: AbortSignal.timeout(35000),
       });
       const payload: unknown = await response.json().catch(() => null);
       const data = payload && typeof payload === "object" ? payload as { answer?: unknown; sources?: unknown; error?: unknown } : {};
       if (!response.ok || typeof data.answer !== "string") throw new Error(typeof data.error === "string" ? data.error : "request_failed");
-      const sources = Array.isArray(data.sources) ? data.sources.filter((source): source is Source => source && typeof source === "object" && typeof (source as Source).title === "string" && typeof (source as Source).url === "string" && /^https:\/\//i.test((source as Source).url)).slice(0, 5) : [];
-      setMessages((current) => current.map((message) => message.id === responseMessage.id ? { ...message, text: data.answer as string, sources, pending: false } : message));
+      const sources = Array.isArray(data.sources) ? data.sources.filter((source): source is Source => Boolean(source && typeof source === "object" && typeof (source as Source).title === "string" && typeof (source as Source).url === "string" && /^https:\/\//i.test((source as Source).url))).slice(0, 5) : [];
+      updateMessages(conversationId, (current) => current.map((message) => message.id === responseId ? { ...message, text: data.answer as string, sources, pending: false, error: false } : message));
       setRetry(null);
-    } catch {
-      setMessages((current) => current.map((message) => message.id === responseMessage.id ? { ...message, text: copy.failure, pending: false, error: true } : message));
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "";
+      const failure = reason === "assistant_not_configured" ? copy.credentials : reason === "provider_rate_limited" ? copy.rateLimited : copy.failure;
+      updateMessages(conversationId, (current) => current.map((message) => message.id === responseId ? { ...message, text: failure, pending: false, error: true } : message));
     } finally { setBusy(false); }
+  };
+
+  const sendQuestion = async (question: string, excerpt = "") => {
+    if (!consent) { setStatus(copy.consentNeeded); return; }
+    if (!ASSISTANT_ENDPOINT || busy || !activeConversation) return;
+    const prior = messages.filter((message) => !message.error && !message.pending);
+    const userMessage: Message = { id: newId(), role: "user", text: question };
+    const responseMessage: Message = { id: newId(), role: "assistant", text: "", pending: true };
+    const conversationId = activeConversation.id;
+    updateMessages(conversationId, (current) => [...current, userMessage, responseMessage]);
+    patchConversation(conversationId, (current) => ({ ...current, title: messages.some((message) => message.role === "user") ? current.title : short(question, 42) }));
+    setInput(""); setRetry(null);
+    await requestAnswer({ conversationId, question, excerpt, prior, responseId: responseMessage.id });
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -143,9 +238,27 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     await sendQuestion(question, excerpt);
   };
 
+  const retryQuestion = (item: RetryRequest) => {
+    updateMessages(item.conversationId, (current) => current.map((message) => message.id === item.responseId ? { ...message, text: "", pending: true, error: false } : message));
+    void requestAnswer(item);
+  };
+
+  const regenerateLast = () => {
+    if (!activeConversation || busy) return;
+    let questionIndex = -1;
+    for (let index = messages.length - 1; index >= 0; index -= 1) if (messages[index].role === "user") { questionIndex = index; break; }
+    const question = messages[questionIndex];
+    const answer = messages.slice(questionIndex + 1).find((message) => message.role === "assistant");
+    if (!question || !answer) return;
+    const prior = messages.slice(0, questionIndex).filter((message) => !message.error && !message.pending);
+    const request = { conversationId: activeConversation.id, question: question.text, excerpt: retry?.conversationId === activeConversation.id ? retry.excerpt : "", prior, responseId: answer.id };
+    updateMessages(activeConversation.id, (current) => current.map((message) => message.id === answer.id ? { ...message, text: "", sources: [], pending: true, error: false } : message));
+    void requestAnswer(request);
+  };
+
   const toggleVoice = () => {
     if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
-    try { if (localStorage.getItem("carepath_voice_support") === "false") { setStatus("Turn on Voice Assistance in CAREPATH settings first."); return; } } catch { /* Continue when storage is unavailable. */ }
+    try { if (localStorage.getItem("carepath_voice_support") === "false") { setStatus("Turn on Voice Assistance in Settings first."); return; } } catch { /* Continue when storage is unavailable. */ }
     const Speech = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
     if (!Speech) { setStatus("Voice input is not available in this browser. You can type instead."); return; }
     const recognition = new Speech();
@@ -161,47 +274,62 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     setStatus(copy.listenHint); setListening(true); recognition.start();
   };
 
-  return <section className="cp-assistant-card" aria-labelledby="cp-assistant-title">
-    <header className="cp-assistant-heading">
-      <span className="cp-assistant-icon"><Bot size={22} /></span>
-      <div><span className="cp-eyebrow">{language === "en" ? "IN-APP AI · OPTIONAL SERVER CONNECTION" : "ಆಪ್‌ನ AI · ಸರ್ವರ್ ಸಂಪರ್ಕ ಐಚ್ಛಿಕ"}</span><h2 id="cp-assistant-title">{copy.title}</h2><p>{copy.subtitle}</p></div>
-      <span className={`cp-assistant-connection ${ASSISTANT_ENDPOINT ? "connected" : "offline"}`}><i />{ASSISTANT_ENDPOINT ? copy.ready : copy.offline}</span>
-    </header>
-    {!ASSISTANT_ENDPOINT && <div className="cp-assistant-not-configured" role="status"><AlertTriangle size={18} /><p>{copy.notConfigured}</p></div>}
-    <div className="cp-assistant-chat" ref={threadRef} aria-live="polite" aria-label={language === "en" ? "Chat messages" : "ಚಾಟ್ ಸಂದೇಶಗಳು"}>
-      {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p></div>}
-      {messages.map((message) => <article key={message.id} className={`cp-assistant-message ${message.role}`}>
-        <div className="cp-assistant-bubble">
-          <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : (language === "en" ? "CAREPATH assistant · AI generated" : "CAREPATH ಸಹಾಯಕ · AI ರಚಿಸಿದ ಉತ್ತರ")}</strong>
-          {message.pending ? <span className="cp-assistant-thinking"><LoaderCircle size={15} />{copy.sending}</span> : <p>{message.text}</p>}
-          {message.error && retry && messages.at(-1)?.id === message.id && <button type="button" className="cp-button quiet" onClick={() => void sendQuestion(retry.question, retry.excerpt)} disabled={busy}>{copy.retry}</button>}
-          {message.role === "assistant" && !message.pending && !message.error && <ReadAloudButton text={message.text} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} language={language === "kn" ? "kn" : "en"} />}
-          {message.role === "assistant" && !message.pending && !message.error && message.sources?.length ? <div className="cp-assistant-sources"><strong>{copy.sourceLabel}</strong>{message.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.title}<ExternalLink size={13} /></a>)}</div> : null}
-          {message.role === "assistant" && !message.pending && !message.error && !message.sources?.length ? <small className="cp-assistant-no-sources">{copy.noSources}</small> : null}
-        </div>
-      </article>)}
-    </div>
-    <div className="cp-assistant-safety"><ShieldCheck size={16} /><span>{copy.noDiagnosis}<br /><small>{copy.urgent}</small></span></div>
-    {documents.some((document) => document.fileStored) && <div className="cp-assistant-document">
-      <label className="cp-assistant-check"><input type="checkbox" checked={includeDocument} onChange={(event) => setIncludeDocument(event.target.checked)} /><FileText size={17} /><span>{copy.docToggle}</span></label>
-      {includeDocument && <label className="cp-assistant-doc-select">{copy.selectDoc}<select value={selectedDocument} onChange={(event) => setSelectedDocument(event.target.value)}><option value="">—</option>{documents.filter((document) => document.fileStored).map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label>}
-    </div>}
-    {!documents.some((document) => document.fileStored) && <p className="cp-assistant-document-hint">{copy.noDocs}</p>}
-    <form className="cp-assistant-composer" onSubmit={(event) => void submit(event)}>
-      <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={copy.placeholder} rows={2} maxLength={1200} aria-label={copy.placeholder} disabled={!ASSISTANT_ENDPOINT || busy} />
-      <button type="button" className={`cp-assistant-mic ${listening ? "listening" : ""}`} onClick={toggleVoice} aria-label={listening ? copy.stopMic : copy.listen} disabled={!ASSISTANT_ENDPOINT || busy}>{listening ? <X size={17} /> : <Mic size={17} />}</button>
-      <button type="submit" aria-label={copy.send} disabled={!ASSISTANT_ENDPOINT || !consent || !input.trim() || busy}>{busy ? <LoaderCircle className="cp-spin" size={17} /> : <Send size={17} />}</button>
-    </form>
-    <p className="cp-assistant-voice-note"><Volume2 size={14} />{copy.listenHint}</p>
-    <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>{copy.consentTitle}</strong>{copy.consent}</span></label>
-    <div className="cp-assistant-footer">
-      <label className="cp-assistant-save"><input type="checkbox" checked={saveHistory} onChange={(event) => { const enabled = event.target.checked; setSaveHistory(enabled); try { localStorage.setItem("carepath_ai_chat_save", String(enabled)); if (!enabled) localStorage.removeItem(CHAT_STORAGE_KEY); } catch { setStatus(copy.storageError); } }} /><span><strong>{copy.save}</strong><small>{copy.saveHint}</small></span></label>
-      <div className="cp-assistant-actions">
-        <div className="cp-language-switch" role="group" aria-label="Assistant response language"><button type="button" className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => onLanguageChange("en")}>English</button><button type="button" className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => onLanguageChange("kn")}>ಕನ್ನಡ</button></div>
-        <button type="button" className="cp-button quiet" onClick={clearChat} aria-label={copy.clearLabel}><Trash2 size={14} />{copy.clear}</button>
+  return <section className="cp-connected-chat" aria-label={copy.title}>
+    <aside className="cp-chat-history" aria-label={copy.history}>
+      <button type="button" className="cp-chat-new" onClick={createNewChat}><Plus size={16} />{copy.newChat}</button>
+      <label className="cp-chat-history-search"><Search size={15} /><input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder={copy.searchHistory} aria-label={copy.searchHistory} /></label>
+      <div className="cp-chat-history-heading"><span>{copy.history}</span><small>{saveHistory ? copy.saved : copy.temporary}</small></div>
+      <div className="cp-chat-history-list">
+        {filteredConversations.map((conversation) => <div key={conversation.id} className={`cp-chat-history-item ${conversation.id === activeConversation?.id ? "active" : ""}`}>
+          <button type="button" className="cp-chat-history-open" onClick={() => { setWorkspace((current) => ({ ...current, activeId: conversation.id })); setStatus(""); setRetry(null); }}><span>{conversation.title}</span><small>{conversation.messages.find((message) => message.role === "user")?.text || (language === "en" ? "New conversation" : "ಹೊಸ ಚಾಟ್")}</small></button>
+          <button type="button" className="cp-chat-history-action" aria-label={`${copy.rename}: ${conversation.title}`} title={copy.rename} onClick={() => renameConversation(conversation)}><Pencil size={13} /></button>
+          <button type="button" className="cp-chat-history-action delete" aria-label={`${copy.delete}: ${conversation.title}`} title={copy.delete} onClick={() => deleteConversation(conversation)}><Trash2 size={13} /></button>
+        </div>)}
+        {!filteredConversations.length && <p className="cp-chat-history-empty">{copy.emptyHistory}</p>}
       </div>
+    </aside>
+
+    <div className="cp-assistant-card cp-chat-workspace">
+      <header className="cp-assistant-heading">
+        <span className="cp-assistant-icon"><Bot size={22} /></span>
+        <div className="cp-assistant-title"><span className="cp-eyebrow">{language === "en" ? "YOUR PRIVATE CHAT WORKSPACE" : "ನಿಮ್ಮ ಚಾಟ್ ಕಾರ್ಯಸ್ಥಳ"}</span><h2>{activeConversation?.title || copy.title}</h2><p>{copy.subtitle}</p></div>
+        <span className={`cp-assistant-connection ${ASSISTANT_ENDPOINT ? "connected" : "offline"}`}><i />{ASSISTANT_ENDPOINT ? copy.ready : copy.offline}</span>
+      </header>
+
+      {!ASSISTANT_ENDPOINT && <div className="cp-assistant-not-configured" role="status"><AlertTriangle size={18} /><p>{copy.notConfigured}</p></div>}
+      <div className="cp-assistant-chat" ref={threadRef} aria-live="polite" aria-label={language === "en" ? "Chat messages" : "ಚಾಟ್ ಸಂದೇಶಗಳು"}>
+        {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p></div>}
+        {messages.map((message, index) => <article key={message.id} className={`cp-assistant-message ${message.role}`}>
+          <div className="cp-assistant-bubble">
+            <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>
+            {message.pending ? <span className="cp-assistant-thinking"><LoaderCircle size={15} />{copy.sending}</span> : <p>{message.text}</p>}
+            {message.error && retry?.responseId === message.id && <button type="button" className="cp-button quiet" onClick={() => retryQuestion(retry)} disabled={busy}><RotateCcw size={14} />{copy.retry}</button>}
+            {message.role === "assistant" && !message.pending && !message.error && <div className="cp-assistant-answer-tools"><ReadAloudButton text={message.text} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} language={language === "kn" ? "kn" : "en"} /><button type="button" className="cp-answer-tool" onClick={() => void copyAnswer(message.text)}><Copy size={14} />{copy.copyAnswer}</button>{index === messages.length - 1 && <button type="button" className="cp-answer-tool" onClick={regenerateLast} disabled={busy}><RotateCcw size={14} />{copy.regenerate}</button>}</div>}
+            {message.role === "assistant" && !message.pending && !message.error && message.sources?.length ? <div className="cp-assistant-sources"><strong>{copy.sourceLabel}</strong>{message.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.title}<ExternalLink size={13} /></a>)}</div> : null}
+            {message.role === "assistant" && !message.pending && !message.error && !message.sources?.length ? <small className="cp-assistant-no-sources">{copy.noSources}</small> : null}
+          </div>
+        </article>)}
+      </div>
+
+      <div className="cp-assistant-safety"><ShieldCheck size={16} /><span>{copy.noDiagnosis}<br /><small>{copy.urgent}</small></span></div>
+      {documents.some((document) => document.fileStored) && <div className="cp-assistant-document">
+        <label className="cp-assistant-check"><input type="checkbox" checked={includeDocument} onChange={(event) => setIncludeDocument(event.target.checked)} /><FileText size={17} /><span>{copy.docToggle}</span></label>
+        {includeDocument && <label className="cp-assistant-doc-select">{copy.selectDoc}<select value={selectedDocument} onChange={(event) => setSelectedDocument(event.target.value)}><option value="">—</option>{documents.filter((document) => document.fileStored).map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label>}
+      </div>}
+      {!documents.some((document) => document.fileStored) && <p className="cp-assistant-document-hint">{copy.noDocs}</p>}
+      <form className="cp-assistant-composer" onSubmit={(event) => void submit(event)}>
+        <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={copy.placeholder} rows={2} maxLength={1200} aria-label={copy.placeholder} disabled={busy} />
+        <button type="button" className={`cp-assistant-mic ${listening ? "listening" : ""}`} onClick={toggleVoice} aria-label={listening ? copy.stopMic : copy.listen} disabled={busy}>{listening ? <X size={17} /> : <Mic size={17} />}</button>
+        <button type="submit" aria-label={copy.send} disabled={!ASSISTANT_ENDPOINT || !consent || !input.trim() || busy}>{busy ? <LoaderCircle className="cp-spin" size={17} /> : <Send size={17} />}</button>
+      </form>
+      <p className="cp-assistant-voice-note"><Volume2 size={14} />{copy.listenHint}</p>
+      <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>{copy.consentTitle}</strong>{copy.consent}</span></label>
+      <div className="cp-assistant-footer">
+        <label className="cp-assistant-save"><input type="checkbox" checked={saveHistory} onChange={(event) => { const enabled = event.target.checked; setSaveHistory(enabled); try { localStorage.setItem("carepath_ai_chat_save", String(enabled)); if (!enabled) { localStorage.removeItem(SAVED_KEY); localStorage.removeItem(LEGACY_KEY); } } catch { setStatus(copy.storageError); } }} /><span><strong>{copy.save}</strong><small>{copy.saveHint}</small></span></label>
+        <div className="cp-assistant-actions"><div className="cp-language-switch" role="group" aria-label="Assistant response language"><button type="button" className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => onLanguageChange("en")}>English</button><button type="button" className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => onLanguageChange("kn")}>ಕನ್ನಡ</button></div><button type="button" className="cp-button quiet" onClick={clearConversation} aria-label={copy.clearLabel}><Trash2 size={14} />{copy.clear}</button></div>
+      </div>
+      {status && <p className="cp-ai-status" role="status"><Check size={15} />{status}</p>}
+      <p className="cp-assistant-bottom-hint"><Volume2 size={13} />{copy.askHint}</p>
     </div>
-    {status && <p className="cp-ai-status" role="status"><Check size={15} />{status}</p>}
-    <p className="cp-assistant-bottom-hint">{copy.askHint}</p>
   </section>;
 }

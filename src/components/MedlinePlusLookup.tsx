@@ -33,7 +33,7 @@ export default function MedlinePlusLookup({ question, language }: Props) {
   };
 
   return <div className="cp-official-search-choice cp-live-med-search">
-    <strong>{language === "en" ? "Search official medicine information inside CAREPATH" : "CAREPATH ಒಳಗೆ ಅಧಿಕೃತ ಔಷಧಿ ಮಾಹಿತಿ ಹುಡುಕಿ"}</strong>
+    <strong>{language === "en" ? "Search official medicine information inside CARE CONNECTED" : "CARE CONNECTED ಒಳಗೆ ಅಧಿಕೃತ ಔಷಧಿ ಮಾಹಿತಿ ಹುಡುಕಿ"}</strong>
     <p>{language === "en" ? "MedlinePlus Connect can return general information for many medicine names. It is not a complete worldwide catalogue or a check of local approvals." : "MedlinePlus Connect ಅನೇಕ ಔಷಧಿ ಹೆಸರುಗಳಿಗೆ ಸಾಮಾನ್ಯ ಮಾಹಿತಿ ನೀಡಬಹುದು. ಇದು ವಿಶ್ವದ ಎಲ್ಲಾ ಔಷಧಿಗಳ ಪಟ್ಟಿ ಅಥವಾ ಸ್ಥಳೀಯ ಅನುಮೋದನೆ ಪರಿಶೀಲನೆ ಅಲ್ಲ."}</p>
     <label>{language === "en" ? "Medicine name to search" : "ಹುಡುಕಬೇಕಾದ ಔಷಧಿಯ ಹೆಸರು"}<input value={term} maxLength={100} onChange={(event) => { setTerm(event.target.value); setConsent(false); setResults([]); setMessage(""); }} /></label>
     <label className="cp-live-med-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>{language === "en" ? "I agree to send only this medicine name to U.S. NIH MedlinePlus. My saved medicines, allergies, profile, and the rest of my question are not included." : "ಈ ಔಷಧಿ ಹೆಸರನ್ನು ಮಾತ್ರ U.S. NIH MedlinePlus ಗೆ ಕಳುಹಿಸಲು ಒಪ್ಪುತ್ತೇನೆ. ಉಳಿಸಿದ ಔಷಧಿ, ಅಲರ್ಜಿ, ಪ್ರೊಫೈಲ್ ಅಥವಾ ಉಳಿದ ಪ್ರಶ್ನೆ ಕಳುಹಿಸುವುದಿಲ್ಲ."}</span></label>

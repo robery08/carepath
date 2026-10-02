@@ -122,7 +122,7 @@ export default function MedicineCenter({
     if (!medicine) return;
 
     const confirmed = window.confirm(
-      `Remove ${medicine.name} from your CAREPATH medicine list?`
+      `Remove ${medicine.name} from your CARE CONNECTED medicine list?`
     );
 
     if (confirmed) {
@@ -160,7 +160,7 @@ export default function MedicineCenter({
             </div>
 
             <div>
-              <p>CAREPATH</p>
+              <p>CARE CONNECTED</p>
               <h2>My Medicines</h2>
               <span>
                 Keep your confirmed medicine information organized.
@@ -361,7 +361,7 @@ export default function MedicineCenter({
                     : daysLeft !== null
                       ? <p className={`medicine-supply-estimate${daysLeft <= 7 ? " low" : ""}`}>About {daysLeft} day{daysLeft === 1 ? "" : "s"} at the usage rate you entered. This is a rough count only.</p>
                       : <p className="medicine-supply-estimate">Enter both values from your current package or instructions to see a rough supply estimate.</p>}
-                  <small>{medicine.expiryDate ? `Expiry recorded: ${medicine.expiryDate}. ` : ""}Optional on-device estimate. It does not set a dose or schedule. CAREPATH cannot verify the entered count or your instructions.</small>
+                  <small>{medicine.expiryDate ? `Expiry recorded: ${medicine.expiryDate}. ` : ""}Optional on-device estimate. It does not set a dose or schedule. CARE CONNECTED cannot verify the entered count or your instructions.</small>
                 </details>
               </div>
 
@@ -392,7 +392,7 @@ export default function MedicineCenter({
         <div className="medicine-safety-note">
           <strong>Important</strong>
           <span>
-            CAREPATH stores the information you enter. It does not
+            CARE CONNECTED stores the information you enter. It does not
             independently prescribe, change, or stop a medicine.
             Always verify medicine details against the original
             package or professional instructions.

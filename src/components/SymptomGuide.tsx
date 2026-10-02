@@ -44,7 +44,7 @@ const copy = {
   en: {
     eyebrow: "A SIMPLE WAY TO PREPARE",
     title: "Symptom Guide",
-    intro: "Describe what you have noticed. CAREPATH will help organize your notes for you or your care team, not assess or diagnose the symptom.",
+    intro: "Describe what you have noticed. CARE CONNECTED will help organize your notes for you or your care team, not assess or diagnose the symptom.",
     urgent: "Could someone be in immediate danger? Contact local emergency services now. Do not wait for this form.",
     emergency: "Open Emergency Help",
     step: "Step",
@@ -60,7 +60,7 @@ const copy = {
     when: "When did it start?",
     whenOptions: ["Choose if known", "Today", "1–2 days ago", "3–7 days ago", "More than a week ago", "Not sure"],
     measure: "Optional reading",
-    measureHelp: "Copy a value from your own device or report. CAREPATH will not interpret it.",
+    measureHelp: "Copy a value from your own device or report. CARE CONNECTED will not interpret it.",
     value: "Value",
     units: "Units",
     notesTitle: "What else would you like to remember?",
@@ -78,7 +78,7 @@ const copy = {
     reviewTitle: "Check your note",
     reviewHelp: "Make sure this says what you want to remember. Nothing is sent to a clinic.",
     recorded: "Your symptom note is saved in this browser.",
-    notSent: "Saved only on this device. CAREPATH does not diagnose, rate urgency, or recommend treatment.",
+    notSent: "Saved only on this device. CARE CONNECTED does not diagnose, rate urgency, or recommend treatment.",
     recent: "My recent notes",
     empty: "Your saved symptom notes will appear here.",
     remove: "Remove",
@@ -92,7 +92,7 @@ const copy = {
   kn: {
     eyebrow: "ಸರಳವಾಗಿ ತಯಾರಾಗಿರಿ",
     title: "ಲಕ್ಷಣಗಳ ಮಾರ್ಗದರ್ಶಿ",
-    intro: "ನೀವು ಗಮನಿಸಿದುದನ್ನು ಬರೆಯಿರಿ. CAREPATH ನಿಮ್ಮ ಅಥವಾ ಆರೈಕೆ ತಂಡದೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಲು ಟಿಪ್ಪಣಿಗಳನ್ನು ಸಂಘಟಿಸುತ್ತದೆ; ಲಕ್ಷಣವನ್ನು ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ.",
+    intro: "ನೀವು ಗಮನಿಸಿದುದನ್ನು ಬರೆಯಿರಿ. CARE CONNECTED ನಿಮ್ಮ ಅಥವಾ ಆರೈಕೆ ತಂಡದೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಲು ಟಿಪ್ಪಣಿಗಳನ್ನು ಸಂಘಟಿಸುತ್ತದೆ; ಲಕ್ಷಣವನ್ನು ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ.",
     urgent: "ಯಾರಿಗಾದರೂ ತಕ್ಷಣದ ಅಪಾಯವಿದೆಯೇ? ಈಗಲೇ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಗಳನ್ನು ಸಂಪರ್ಕಿಸಿ. ಈ ಫಾರ್ಮ್‌ಗಾಗಿ ಕಾಯಬೇಡಿ.",
     emergency: "ತುರ್ತು ಸಹಾಯ ತೆರೆಯಿರಿ",
     step: "ಹಂತ",
@@ -108,7 +108,7 @@ const copy = {
     when: "ಇದು ಯಾವಾಗ ಪ್ರಾರಂಭವಾಯಿತು?",
     whenOptions: ["ತಿಳಿದಿದ್ದರೆ ಆಯ್ಕೆಮಾಡಿ", "ಇಂದು", "1–2 ದಿನಗಳ ಹಿಂದೆ", "3–7 ದಿನಗಳ ಹಿಂದೆ", "ಒಂದು ವಾರಕ್ಕಿಂತ ಹೆಚ್ಚು", "ತಿಳಿದಿಲ್ಲ"],
     measure: "ಐಚ್ಛಿಕ ಅಳತೆ",
-    measureHelp: "ನಿಮ್ಮ ಸಾಧನ ಅಥವಾ ವರದಿಯಲ್ಲಿರುವ ಮೌಲ್ಯವನ್ನು ನಕಲಿಸಿ. CAREPATH ಅದನ್ನು ಅರ್ಥೈಸುವುದಿಲ್ಲ.",
+    measureHelp: "ನಿಮ್ಮ ಸಾಧನ ಅಥವಾ ವರದಿಯಲ್ಲಿರುವ ಮೌಲ್ಯವನ್ನು ನಕಲಿಸಿ. CARE CONNECTED ಅದನ್ನು ಅರ್ಥೈಸುವುದಿಲ್ಲ.",
     value: "ಮೌಲ್ಯ",
     units: "ಘಟಕ",
     notesTitle: "ಇನ್ನೇನು ನೆನಪಿಡಲು ಬಯಸುತ್ತೀರಿ?",
@@ -126,7 +126,7 @@ const copy = {
     reviewTitle: "ನಿಮ್ಮ ಟಿಪ್ಪಣಿಯನ್ನು ಪರಿಶೀಲಿಸಿ",
     reviewHelp: "ನೀವು ನೆನಪಿಡಲು ಬಯಸಿದುದನ್ನೇ ಇದು ಹೇಳುತ್ತದೆಯೇ ನೋಡಿ. ಯಾವುದನ್ನೂ ಕ್ಲಿನಿಕ್‌ಗೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.",
     recorded: "ನಿಮ್ಮ ಲಕ್ಷಣದ ಟಿಪ್ಪಣಿ ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ.",
-    notSent: "ಈ ಸಾಧನದಲ್ಲೇ ಉಳಿಸಲಾಗಿದೆ. CAREPATH ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ, ತುರ್ತು ಮಟ್ಟ ಅಳೆಯುವುದಿಲ್ಲ ಅಥವಾ ಚಿಕಿತ್ಸೆಯನ್ನು ಶಿಫಾರಸು ಮಾಡುವುದಿಲ್ಲ.",
+    notSent: "ಈ ಸಾಧನದಲ್ಲೇ ಉಳಿಸಲಾಗಿದೆ. CARE CONNECTED ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ, ತುರ್ತು ಮಟ್ಟ ಅಳೆಯುವುದಿಲ್ಲ ಅಥವಾ ಚಿಕಿತ್ಸೆಯನ್ನು ಶಿಫಾರಸು ಮಾಡುವುದಿಲ್ಲ.",
     recent: "ನನ್ನ ಇತ್ತೀಚಿನ ಟಿಪ್ಪಣಿಗಳು",
     empty: "ಉಳಿಸಿದ ಲಕ್ಷಣದ ಟಿಪ್ಪಣಿಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
     remove: "ತೆಗೆದುಹಾಕಿ",
@@ -410,7 +410,7 @@ export default function SymptomGuide({ onNavigate }: { onNavigate: (section: str
         {status && <div className="cp-symptom-saved" role="status"><CheckCircle2 size={17} /><span>{status}<small>{t.notSent}</small></span></div>}
       </section>
 
-      <p className="cp-symptom-boundary">CAREPATH does not diagnose, decide how urgent a symptom is, interpret readings, or recommend treatment. Use a qualified professional for personal medical decisions.</p>
+      <p className="cp-symptom-boundary">CARE CONNECTED does not diagnose, decide how urgent a symptom is, interpret readings, or recommend treatment. Use a qualified professional for personal medical decisions.</p>
 
       <section className="cp-panel cp-symptom-history">
         <div className="cp-panel-heading"><div><span className="cp-eyebrow">{entries.length} SAVED ON THIS DEVICE</span><h2>{t.recent}</h2></div></div>

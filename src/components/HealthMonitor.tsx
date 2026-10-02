@@ -452,7 +452,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
       recognition.onresult = (event) => {
         const transcript = event.results[0]?.[0]?.transcript?.trim() || "";
         setVoiceTranscript(transcript);
-        setVoiceNotice(transcript ? "Review what CAREPATH heard, then choose Use numbers. Nothing is saved yet." : "No words were heard. Try again or type the numbers.");
+        setVoiceNotice(transcript ? "Review what CARE CONNECTED heard, then choose Use numbers. Nothing is saved yet." : "No words were heard. Try again or type the numbers.");
         setListening(false);
       };
       recognition.onerror = () => { setListening(false); setVoiceNotice("The microphone did not capture a clear reading. Try again or type it."); };
@@ -477,7 +477,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
     setSecondValue(parsed.length === 2 ? String(parsed[1]) : "");
     setEntrySource("voice");
     setFormError("");
-    setVoiceNotice("Numbers filled in for review. CAREPATH will not save until you confirm the values and press Save reading.");
+    setVoiceNotice("Numbers filled in for review. CARE CONNECTED will not save until you confirm the values and press Save reading.");
   }
 
   function handleAddReading() {
@@ -533,7 +533,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
           <div>
             <div className="health-monitor-kicker">
               <Activity size={15} />
-              CAREPATH HEALTH MONITOR
+              CARE CONNECTED HEALTH MONITOR
             </div>
 
             <h2>Track your health information</h2>
@@ -845,7 +845,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
           <HeartPulse size={20} />
 
           <div>
-            <strong>CAREPATH safety note</strong>
+            <strong>CARE CONNECTED safety note</strong>
 
             <p>
               These records are for organization and

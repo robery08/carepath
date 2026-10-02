@@ -6,7 +6,7 @@ import App from './App.tsx'
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
-      // CAREPATH remains usable online if offline caching is unavailable.
+      // CARE CONNECTED remains usable online if offline caching is unavailable.
     })
   })
 }

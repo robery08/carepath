@@ -1,7 +1,7 @@
 {
-  "name": "CAREPATH — Your health, made simpler",
-  "short_name": "CAREPATH",
-  "description": "A simple space to organize medicine notes, personal health records, and care questions.",
+  "name": "CARE CONNECTED — Ask anything. Understand better. Stay connected.",
+  "short_name": "CARE CONNECTED",
+  "description": "Ask questions, understand information, and organize personal health notes.",
   "start_url": "/carepath/",
   "scope": "/carepath/",
   "display": "standalone",

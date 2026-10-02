@@ -11,7 +11,7 @@ const copy = {
   en: {
     eyebrow: "LEARN WITH YOUR OWN MEDIA",
     title: "Play a health video or audio. Find the useful moment.",
-    intro: "Choose a short clip stored on this device, then add its captions or transcript. CAREPATH can find matching lines for you.",
+    intro: "Choose a short clip stored on this device, then add its captions or transcript. CARE CONNECTED can find matching lines for you.",
     private: "Stays on this device",
     pick: "Choose video or audio",
     empty: "Your clip will play here",
@@ -37,7 +37,7 @@ const copy = {
   kn: {
     eyebrow: "ನಿಮ್ಮ ಮಾಧ್ಯಮದೊಂದಿಗೆ ಕಲಿಯಿರಿ",
     title: "ಆರೋಗ್ಯ ವೀಡಿಯೊ ಅಥವಾ ಧ್ವನಿಯನ್ನು ಪ್ಲೇ ಮಾಡಿ. ಬೇಕಾದ ಭಾಗವನ್ನು ಹುಡುಕಿ.",
-    intro: "ಈ ಸಾಧನದಲ್ಲಿರುವ ಚಿಕ್ಕ ಕ್ಲಿಪ್ ಆಯ್ಕೆಮಾಡಿ, ನಂತರ ಅದರ ಉಪಶೀರ್ಷಿಕೆ ಅಥವಾ ಪಠ್ಯವನ್ನು ಸೇರಿಸಿ. CAREPATH ಹೊಂದುವ ಸಾಲುಗಳನ್ನು ಹುಡುಕುತ್ತದೆ.",
+    intro: "ಈ ಸಾಧನದಲ್ಲಿರುವ ಚಿಕ್ಕ ಕ್ಲಿಪ್ ಆಯ್ಕೆಮಾಡಿ, ನಂತರ ಅದರ ಉಪಶೀರ್ಷಿಕೆ ಅಥವಾ ಪಠ್ಯವನ್ನು ಸೇರಿಸಿ. CARE CONNECTED ಹೊಂದುವ ಸಾಲುಗಳನ್ನು ಹುಡುಕುತ್ತದೆ.",
     private: "ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ",
     pick: "ವೀಡಿಯೊ ಅಥವಾ ಧ್ವನಿ ಆಯ್ಕೆ",
     empty: "ನಿಮ್ಮ ಕ್ಲಿಪ್ ಇಲ್ಲಿ ಪ್ಲೇ ಆಗುತ್ತದೆ",

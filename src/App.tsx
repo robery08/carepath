@@ -87,7 +87,7 @@ const navItems = [
   { name: "Care Guide", icon: BookOpen },
   { name: "Symptom Guide", icon: Activity },
   { name: "Official Sources", icon: Search },
-  { name: "ASK CAREPATH", icon: Search },
+  { name: "ASK CARE CONNECTED", icon: Search },
   { name: "My Medicines", icon: Pill },
   { name: "Medicine Passport", icon: FileCheck2 },
   { name: "Scan & Upload", icon: ScanLine },
@@ -105,7 +105,7 @@ const navItems = [
   { name: "Admin Preview", icon: ShieldCheck },
 ];
 
-const primaryNavItems = navItems.filter((item) => ["Home", "ASK CAREPATH"].includes(item.name));
+const primaryNavItems = navItems.filter((item) => ["Home", "ASK CARE CONNECTED"].includes(item.name));
 const everydayNavItems = navItems.filter((item) => ["My Medicines", "Scan & Upload", "Health Tracker"].includes(item.name));
 const moreNavItems = navItems.filter((item) => !primaryNavItems.includes(item) && !everydayNavItems.includes(item));
 
@@ -120,13 +120,16 @@ function sectionFromLocation() {
   let raw = "";
   try { raw = decodeURIComponent(window.location.hash.replace(/^#/, "")); } catch { raw = ""; }
   raw = raw.replace(/-/g, " ").trim();
+  if (raw.toLowerCase() === "ask carepath") raw = "ASK CARE CONNECTED";
   const match = ["Home", ...navItems.map((item) => item.name), "Emergency Help", "Settings"].find((item) => item.toLowerCase() === raw.toLowerCase());
   return match || "Home";
 }
 
 function routeStateFromHistory(): RouteState {
   const state = window.history.state as { carepath?: RouteState } | null;
-  return state?.carepath || { section: sectionFromLocation(), overlay: null, scrollY: 0 };
+  if (!state?.carepath) return { section: sectionFromLocation(), overlay: null, scrollY: 0 };
+  const route = state.carepath;
+  return { ...route, section: route.section === "ASK CAREPATH" ? "ASK CARE CONNECTED" : route.section };
 }
 
 const SAMPLE_MEDICINES: Medicine[] = [
@@ -249,7 +252,7 @@ function App() {
       setReminders(updated);
       setDueReminder(due[0]);
       if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted" && "serviceWorker" in navigator) {
-        void navigator.serviceWorker.ready.then((registration) => Promise.all(due.map((reminder) => registration.showNotification("CAREPATH reminder", { body: `${reminder.name} · ${reminder.time}. Check your current instructions.`, icon: `${import.meta.env.BASE_URL}favicon.svg`, tag: reminder.id })))).catch(() => { /* Browser notifications are optional; the in-app reminder remains available. */ });
+        void navigator.serviceWorker.ready.then((registration) => Promise.all(due.map((reminder) => registration.showNotification("CARE CONNECTED reminder", { body: `${reminder.name} · ${reminder.time}. Check your current instructions.`, icon: `${import.meta.env.BASE_URL}favicon.svg`, tag: reminder.id })))).catch(() => { /* Browser notifications are optional; the in-app reminder remains available. */ });
       }
       try { if (navigator.vibrate) navigator.vibrate([180, 90, 180]); } catch { /* Vibration is optional and device-specific. */ }
       if (readStored<boolean>("carepath_reminder_sound", false)) {
@@ -344,7 +347,7 @@ function App() {
   const readAloud = (text?: string) => {
     if (!voiceEnabled) { setNotice("Turn on voice support in the accessibility bar to listen."); return; }
     const selected = window.getSelection()?.toString().trim();
-    const content = text || selected || document.querySelector(".content")?.textContent || "Welcome to CAREPATH. Your personal health organizer.";
+    const content = text || selected || document.querySelector(".content")?.textContent || "Welcome to CARE CONNECTED. Your personal health organizer.";
     if (!speakText(content, { rate: easyMode ? 0.82 : undefined })) setNotice("Read aloud is not available in this browser.");
   };
   const toggleVoiceSupport = () => {
@@ -367,8 +370,8 @@ function App() {
       await installPrompt.prompt();
       const result = await installPrompt.userChoice;
       setInstallPrompt(null);
-      if (result.outcome === "accepted") setNotice("CAREPATH is being added to your device.");
-    } catch { setNotice("Use your browser menu to install CAREPATH on this device."); }
+      if (result.outcome === "accepted") setNotice("CARE CONNECTED is being added to your device.");
+    } catch { setNotice("Use your browser menu to install CARE CONNECTED on this device."); }
   };
   const startVoice = () => {
     if (!voiceEnabled) { setNotice("Turn on voice support in the accessibility bar to use voice input."); return; }
@@ -426,14 +429,14 @@ function App() {
         return { ...reminder, at };
       }).sort((a, b) => a.at.getTime() - b.at.getTime())[0];
       const when = next?.at.toDateString() === now.toDateString() ? "today" : "tomorrow";
-      const answer = next ? `Your next saved reminder for ${next.name} is ${when} at ${next.time}. Please confirm timing with the current prescription.` : "You have no CAREPATH reminders set up. Open reminders to create a personal time note from your current instructions.";
+      const answer = next ? `Your next saved reminder for ${next.name} is ${when} at ${next.time}. Please confirm timing with the current prescription.` : "You have no CARE CONNECTED reminders set up. Open reminders to create a personal time note from your current instructions.";
       setNotice(answer); readAloud(answer); return;
     }
     if (/\b(show|list|my)\b/.test(command) && /medicine|medication|pills/.test(command)) { openSection("Medicine Passport"); return; }
     if (/remind|reminder/.test(command)) { setShowReminders(true); return; }
     setPendingAskQuestion(raw.trim());
-    openSection("ASK CAREPATH");
-    setNotice("Your spoken question is ready in ASK CAREPATH. Review it before sending anything to an AI service.");
+    openSection("ASK CARE CONNECTED");
+    setNotice("Your spoken question is ready in ASK CARE CONNECTED. Review it before sending anything to an AI service.");
   };
   const markDose = (medicine: Medicine) => {
     const current = readStored<MedicationEvent[]>("carepath_medication_log", []);
@@ -459,7 +462,7 @@ function App() {
 
   const results = query.trim()
     ? [
-        ...navItems.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).map((item) => ({ label: item.name, detail: "Open CAREPATH workspace", action: () => openSection(item.name), icon: item.icon })),
+        ...navItems.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).map((item) => ({ label: item.name, detail: "Open CARE CONNECTED workspace", action: () => openSection(item.name), icon: item.icon })),
         ...medicines.filter((item) => `${item.name} ${item.strength}`.toLowerCase().includes(query.toLowerCase())).slice(0, 4).map((item) => ({ label: item.name, detail: `${item.strength} · ${item.form}`, action: () => openSection("Medicine Passport"), icon: Pill })),
       ].slice(0, 7)
     : [];
@@ -470,7 +473,7 @@ function App() {
       <aside className={`sidebar ${mobileMenu ? "open" : ""}`}>
         <div className="brand">
           <div className="brand-logo"><HeartPulse size={25} /></div>
-          <div className="brand-copy"><h1>CarePath</h1><span>Your health, made simpler</span></div>
+          <div className="brand-copy"><h1>CARE CONNECTED</h1><span>Understand better. Stay connected.</span></div>
           <button className="close-menu" onClick={() => setMobileMenu(false)} aria-label="Close menu"><X size={20} /></button>
         </div>
         <div className="cp-sidebar-caption">YOUR CARE WORKSPACE</div>
@@ -516,14 +519,14 @@ function App() {
           <button className="mobile-menu" onClick={() => setMobileMenu(true)} aria-label="Open menu"><Menu size={22} /></button>
           <div className="search cp-search-wrap">
             <Search size={18} />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); if (event.key === "Enter" && results[0]) results[0].action(); }} placeholder="Search your CAREPATH workspace…" aria-label="Search medicines and sections" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); if (event.key === "Enter" && results[0]) results[0].action(); }} placeholder="Search your CARE CONNECTED workspace…" aria-label="Search medicines and sections" />
             <span className="search-shortcut">/</span>
             {results.length > 0 && <div className="cp-search-results">{results.map((result, index) => { const Icon = result.icon; return <button key={`${result.label}-${index}`} onClick={result.action}><span><Icon size={17} /></span><span><strong>{result.label}</strong><small>{result.detail}</small></span><ChevronRight size={15} /></button>; })}</div>}
           </div>
           <div className="top-actions">
             <span className={`cp-device-status ${online ? "" : "offline"}`}><i /> {online ? "Online · local workspace" : "Offline · saved locally"}{lastSaved ? ` · ${new Date(lastSaved).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</span>
             <button className="icon-button notification-button" aria-label="Review safety notes" onClick={() => openSection("Safety Alerts")}><Bell size={19} /><span className="notification-dot">!</span></button>
-            <button className="cp-user-button" onClick={() => openSection("Care Circle")} aria-label="Open my care profile"><span className="avatar">{name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CP"}</span><span className="user-mini"><strong>{name}</strong><small>CAREPATH ID</small></span></button>
+            <button className="cp-user-button" onClick={() => openSection("Care Circle")} aria-label="Open my care profile"><span className="avatar">{name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CP"}</span><span className="user-mini"><strong>{name}</strong><small>CARE CONNECTED ID</small></span></button>
           </div>
         </header>
 
@@ -531,17 +534,17 @@ function App() {
           <div className="cp-accessibility-bar" aria-label="Accessibility and quick help">
             <button className={easyMode ? "selected" : ""} aria-pressed={easyMode} onClick={() => { const next = !easyMode; setEasyMode(next); try { localStorage.setItem("carepath_easy_mode", JSON.stringify(next)); } catch { /* Optional preference. */ } }}><Accessibility size={17} /><span>{easyMode ? "Easy mode on" : "Easy mode"}</span></button>
             <button className={voiceEnabled ? "selected" : ""} aria-pressed={voiceEnabled} onClick={toggleVoiceSupport}><Volume2 size={17} /><span>Voice {voiceEnabled ? "on" : "off"}</span></button>
-            <button onClick={startVoice} disabled={!voiceEnabled}><Mic size={17} /><span>Tell CAREPATH</span></button>
+            <button onClick={startVoice} disabled={!voiceEnabled}><Mic size={17} /><span>Tell CARE CONNECTED</span></button>
             <button onClick={() => readAloud()} disabled={!voiceEnabled}><Volume2 size={17} /><span>Read this to me</span></button>
             <button onClick={() => setShowReminders(true)}><BellRing size={17} /><span>Reminders{reminders.filter((item) => item.enabled).length ? ` · ${reminders.filter((item) => item.enabled).length}` : ""}</span></button>
             {installPrompt && <button onClick={() => void installApp()}><Plus size={17} /><span>Install app</span></button>}
             <button onClick={() => setShowGuide(true)}><BookOpen size={17} /><span>Show me how</span></button>
           </div>
-        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} onAskQuestion={(question) => { setPendingAskQuestion(question); openSection("ASK CAREPATH"); }} onStartVoice={startVoice} onUploadFile={(file) => { setPendingUploadFile(file); openSection("Scan & Upload"); }} /> : <>
+        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} onAskQuestion={(question) => { setPendingAskQuestion(question); openSection("ASK CARE CONNECTED"); }} onStartVoice={startVoice} onUploadFile={(file) => { setPendingUploadFile(file); openSection("Scan & Upload"); }} /> : <>
             <div className="cp-route-topline"><button onClick={() => openSection("Home")}><Home size={14} /> Home</button><ChevronRight size={13} /><span>{active}</span></div>
             <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} initialQuestion={pendingAskQuestion} onQuestionConsumed={clearPendingAskQuestion} initialFile={pendingUploadFile} onInitialFileHandled={clearPendingUploadFile} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onInstallApp={() => void installApp()} /></Suspense>
           </>}
-          <footer className="cp-app-footer"><div><strong>CAREPATH</strong><span>Your health, made simpler.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
+          <footer className="cp-app-footer"><div><strong>CARE CONNECTED</strong><span>Ask anything. Understand better. Stay connected.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
         </section>
       </main>
 
@@ -562,22 +565,22 @@ function App() {
 
 function StartGuide({ onClose, onNavigate }: { onClose: () => void; onNavigate: (section: string) => void }) {
   const steps = [
-    { title: "Save a medicine", text: "Record what is written on your current package or prescription. CAREPATH won’t choose a dose for you.", action: "Open My Medicines", route: "My Medicines", icon: <Pill size={22} /> },
-    { title: "Capture and read a document", text: "Choose a photo or PDF. CAREPATH can extract text in this browser; review every word against the original before keeping it.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={22} /> },
-    { title: "Set a personal reminder", text: "Add a time from your existing instructions. Reminders only run while CAREPATH is open.", action: "Open reminders", route: "__reminders", icon: <BellRing size={22} /> },
+    { title: "Save a medicine", text: "Record what is written on your current package or prescription. CARE CONNECTED won’t choose a dose for you.", action: "Open My Medicines", route: "My Medicines", icon: <Pill size={22} /> },
+    { title: "Capture and read a document", text: "Choose a photo or PDF. CARE CONNECTED can extract text in this browser; review every word against the original before keeping it.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={22} /> },
+    { title: "Set a personal reminder", text: "Add a time from your existing instructions. Reminders only run while CARE CONNECTED is open.", action: "Open reminders", route: "__reminders", icon: <BellRing size={22} /> },
     { title: "Keep urgent details nearby", text: "Add a trusted contact and review your emergency card. In an emergency, contact local services directly.", action: "Open Emergency Help", route: "Emergency Help", icon: <Siren size={22} /> },
   ];
-  return <div className="cp-modal-backdrop" role="presentation"><section className="cp-guide-modal" role="dialog" aria-modal="true" aria-labelledby="cp-guide-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close start guide"><X size={19} /></button><span className="cp-eyebrow">A SHORT, HANDS-ON TOUR</span><h2 id="cp-guide-title">Welcome to your CAREPATH</h2><p className="cp-guide-intro">Choose a first step. Each button opens the real workspace so you can try it when you’re ready.</p><div className="cp-guide-modal-grid">{steps.map((step, index) => <button key={step.title} onClick={() => onNavigate(step.route)}><span className="cp-guide-modal-icon">{step.icon}</span><small>STEP 0{index + 1}</small><strong>{step.title}</strong><p>{step.text}</p><em>{step.action}<ArrowRight size={14} /></em></button>)}</div><div className="cp-guide-modal-footer"><span>Demo information is illustrative. Verify medicine details with their source.</span><button className="cp-button primary" onClick={onClose}>Start exploring <ArrowRight size={15} /></button></div></section></div>;
+  return <div className="cp-modal-backdrop" role="presentation"><section className="cp-guide-modal" role="dialog" aria-modal="true" aria-labelledby="cp-guide-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close start guide"><X size={19} /></button><span className="cp-eyebrow">A SHORT, HANDS-ON TOUR</span><h2 id="cp-guide-title">Welcome to your CARE CONNECTED</h2><p className="cp-guide-intro">Choose a first step. Each button opens the real workspace so you can try it when you’re ready.</p><div className="cp-guide-modal-grid">{steps.map((step, index) => <button key={step.title} onClick={() => onNavigate(step.route)}><span className="cp-guide-modal-icon">{step.icon}</span><small>STEP 0{index + 1}</small><strong>{step.title}</strong><p>{step.text}</p><em>{step.action}<ArrowRight size={14} /></em></button>)}</div><div className="cp-guide-modal-footer"><span>Demo information is illustrative. Verify medicine details with their source.</span><button className="cp-button primary" onClick={onClose}>Start exploring <ArrowRight size={15} /></button></div></section></div>;
 }
 
 function VoiceDialog({ text, status, listening, onText, onListen, onUse, onClose }: { text: string; status: string; listening: boolean; onText: (text: string) => void; onListen: () => void; onUse: () => void; onClose: () => void }) {
   const examples = ["Show my medicines", "I took my medicine", "I forgot a dose", "Prepare my doctor visit", "Read this to me"];
-  return <div className="cp-modal-backdrop" role="presentation"><section className="cp-voice-modal" role="dialog" aria-modal="true" aria-labelledby="cp-voice-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close voice help"><X size={19} /></button><div className={`cp-voice-orb${listening ? " listening" : ""}`}><Mic size={29} /></div><span className="cp-eyebrow">VOICE-FIRST SHORTCUTS</span><h2 id="cp-voice-title">Tell CAREPATH</h2><p>Try a short command. You can review the words before CAREPATH opens anything or saves a dose note.</p><button className="cp-button primary cp-voice-listen" onClick={onListen} disabled={listening}><Mic size={17} />{listening ? "Listening…" : "Start listening"}</button><label className="cp-voice-field">Your words<textarea value={text} onChange={(event) => onText(event.target.value)} rows={2} placeholder="Or type: show my medicines" /></label><p className="cp-voice-status" aria-live="polite">{status || "Commands: medicines, scan, readings, reminders, visit prep, emergency help, or read this aloud."}</p><div className="cp-voice-examples">{examples.map((example) => <button key={example} onClick={() => onText(example)}>{example}</button>)}</div><div className="cp-voice-privacy"><Info size={15} /> Voice recognition depends on your browser; some browsers send audio to their recognition service. CAREPATH does not save audio or transcripts.</div><div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onClose}>Cancel</button><button className="cp-button primary" onClick={onUse} disabled={!text.trim()}>Use command <ArrowRight size={15} /></button></div></section></div>;
+  return <div className="cp-modal-backdrop" role="presentation"><section className="cp-voice-modal" role="dialog" aria-modal="true" aria-labelledby="cp-voice-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close voice help"><X size={19} /></button><div className={`cp-voice-orb${listening ? " listening" : ""}`}><Mic size={29} /></div><span className="cp-eyebrow">VOICE-FIRST SHORTCUTS</span><h2 id="cp-voice-title">Tell CARE CONNECTED</h2><p>Try a short command. You can review the words before CARE CONNECTED opens anything or saves a dose note.</p><button className="cp-button primary cp-voice-listen" onClick={onListen} disabled={listening}><Mic size={17} />{listening ? "Listening…" : "Start listening"}</button><label className="cp-voice-field">Your words<textarea value={text} onChange={(event) => onText(event.target.value)} rows={2} placeholder="Or type: show my medicines" /></label><p className="cp-voice-status" aria-live="polite">{status || "Commands: medicines, scan, readings, reminders, visit prep, emergency help, or read this aloud."}</p><div className="cp-voice-examples">{examples.map((example) => <button key={example} onClick={() => onText(example)}>{example}</button>)}</div><div className="cp-voice-privacy"><Info size={15} /> Voice recognition depends on your browser; some browsers send audio to their recognition service. CARE CONNECTED does not save audio or transcripts.</div><div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onClose}>Cancel</button><button className="cp-button primary" onClick={onUse} disabled={!text.trim()}>Use command <ArrowRight size={15} /></button></div></section></div>;
 }
 
 function DoseConfirm({ medicines, onCancel, onConfirm }: { medicines: Medicine[]; onCancel: () => void; onConfirm: (medicine: Medicine) => void }) {
   const [selected, setSelected] = useState(medicines[0]?.id || "");
-  return <div className="cp-modal-backdrop" role="presentation"><section className="cp-dose-modal" role="dialog" aria-modal="true" aria-labelledby="cp-dose-title"><button className="cp-modal-close" onClick={onCancel} aria-label="Close dose confirmation"><X size={19} /></button><span className="cp-guide-modal-icon"><Check size={22} /></span><span className="cp-eyebrow">PERSONAL NOTE ONLY</span><h2 id="cp-dose-title">Which medicine did you take?</h2><p>Choose one to save a time-stamped note. CAREPATH cannot confirm a dose or change your prescription.</p>{medicines.length ? <div className="cp-dose-options">{medicines.map((medicine) => <label key={medicine.id}><input type="radio" name="voice-dose" value={medicine.id} checked={selected === medicine.id} onChange={() => setSelected(medicine.id)} /><span><strong>{medicine.name}</strong><small>{medicine.strength} · {medicine.schedule || "No time note"}</small></span></label>)}</div> : <p>No medicines are saved yet. Add details from your current source first.</p>}<div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onCancel}>Cancel</button><button className="cp-button primary" disabled={!medicines.length} onClick={() => { const medicine = medicines.find((item) => item.id === selected); if (medicine) onConfirm(medicine); }}>Save dose note</button></div></section></div>;
+  return <div className="cp-modal-backdrop" role="presentation"><section className="cp-dose-modal" role="dialog" aria-modal="true" aria-labelledby="cp-dose-title"><button className="cp-modal-close" onClick={onCancel} aria-label="Close dose confirmation"><X size={19} /></button><span className="cp-guide-modal-icon"><Check size={22} /></span><span className="cp-eyebrow">PERSONAL NOTE ONLY</span><h2 id="cp-dose-title">Which medicine did you take?</h2><p>Choose one to save a time-stamped note. CARE CONNECTED cannot confirm a dose or change your prescription.</p>{medicines.length ? <div className="cp-dose-options">{medicines.map((medicine) => <label key={medicine.id}><input type="radio" name="voice-dose" value={medicine.id} checked={selected === medicine.id} onChange={() => setSelected(medicine.id)} /><span><strong>{medicine.name}</strong><small>{medicine.strength} · {medicine.schedule || "No time note"}</small></span></label>)}</div> : <p>No medicines are saved yet. Add details from your current source first.</p>}<div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onCancel}>Cancel</button><button className="cp-button primary" disabled={!medicines.length} onClick={() => { const medicine = medicines.find((item) => item.id === selected); if (medicine) onConfirm(medicine); }}>Save dose note</button></div></section></div>;
 }
 
 function ReminderCenter({ medicines, reminders, onSave, onClose }: { medicines: Medicine[]; reminders: Reminder[]; onSave: (next: Reminder[]) => void; onClose: () => void }) {
@@ -593,9 +596,9 @@ function ReminderCenter({ medicines, reminders, onSave, onClose }: { medicines: 
     setMessage("Reminder saved on this device.");
   };
   const allowNotifications = async () => {
-    if (!("Notification" in window)) { setMessage("This browser does not support notifications. CAREPATH can still show reminders while open."); return; }
-    try { const permission = await Notification.requestPermission(); setMessage(permission === "granted" ? "Browser notifications are enabled for this device." : "Notifications were not enabled. In-app reminders still work while CAREPATH is open."); }
-    catch { setMessage("Notifications could not be enabled here. In-app reminders still work while CAREPATH is open."); }
+    if (!("Notification" in window)) { setMessage("This browser does not support notifications. CARE CONNECTED can still show reminders while open."); return; }
+    try { const permission = await Notification.requestPermission(); setMessage(permission === "granted" ? "Browser notifications are enabled for this device." : "Notifications were not enabled. In-app reminders still work while CARE CONNECTED is open."); }
+    catch { setMessage("Notifications could not be enabled here. In-app reminders still work while CARE CONNECTED is open."); }
   };
   const update = (id: string, patch: Partial<Reminder>) => onSave(reminders.map((item) => item.id === id ? { ...item, ...patch } : item));
   return <div className="cp-modal-backdrop" role="presentation"><section className="cp-reminder-modal" role="dialog" aria-modal="true" aria-labelledby="cp-reminder-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close reminders"><X size={19} /></button><span className="cp-guide-modal-icon"><BellRing size={22} /></span><span className="cp-eyebrow">PERSONAL TIME NOTES</span><h2 id="cp-reminder-title">Medicine reminders</h2><p>Set a daily reminder time copied from your current instructions. It only runs while this page is open; it is not a background alarm or clinical instruction.</p><div className="cp-reminder-form"><label>Medicine<select value={medicineId} onChange={(event) => setMedicineId(event.target.value)}>{medicines.length ? medicines.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.strength}</option>) : <option value="">Add a medicine first</option>}</select></label><label>Reminder time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label><button className="cp-button primary" onClick={add}><Plus size={16} /> Add reminder</button></div>{message && <p className="cp-voice-status" role="status">{message}</p>}<div className="cp-reminder-list">{reminders.map((item) => <div key={item.id}><span><strong>{item.name}</strong><small>{item.time} · daily personal note</small></span><label className="cp-switch"><input type="checkbox" checked={item.enabled} onChange={(event) => update(item.id, { enabled: event.target.checked, lastFiredDate: undefined })} /><span>{item.enabled ? "On" : "Off"}</span></label><button aria-label={`Remove reminder for ${item.name}`} onClick={() => onSave(reminders.filter((reminder) => reminder.id !== item.id))}><X size={16} /></button></div>)}</div><div className="cp-reminder-actions"><button className="cp-button quiet" onClick={allowNotifications}><Bell size={16} /> Enable browser notifications</button><button className="cp-button quiet" aria-pressed={soundEnabled} onClick={() => { const next = !soundEnabled; setSoundEnabled(next); try { localStorage.setItem("carepath_reminder_sound", JSON.stringify(next)); } catch { /* Optional preference. */ } setMessage(next ? "Reminder sound enabled where the device permits it." : "Reminder sound disabled."); }}>Sound: {soundEnabled ? "On" : "Off"}</button></div><div className="cp-voice-privacy"><Info size={15} /> Notifications need your explicit browser permission. Timing varies by device; no reminder is guaranteed if the browser is closed.</div><div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onClose}>Close</button></div></section></div>;
@@ -630,26 +633,26 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
   const [actionLanguage, setActionLanguage] = useState<VoiceLanguage>(() => getVoiceLanguage());
   const savedDocuments = readStored<Array<{ id: string; name: string; kind: string; status: string; fileStored?: boolean }>>("carepath_documents", []);
   const actionCopy = actionLanguage === "kn" ? {
-    heading: "ಇಂದು ನಿಮಗೆ ಏನು ಸಹಾಯ ಬೇಕು?", intro: "ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ, ಮಾತನಾಡಿ ಅಥವಾ ಫೋಟೋ/PDF ಸೇರಿಸಿ. CAREPATH ಒಳಗೇ ಮುಂದುವರಿಯಿರಿ.",
-    placeholder: "ಉದಾಹರಣೆ: ಈ ಔಷಧಿ ಯಾವುದಕ್ಕೆ? ನನ್ನ ವರದಿಯನ್ನು ವಿವರಿಸಿ…", ask: "CAREPATH ಕೇಳಿ", showRecords: "ಉಳಿಸಿದ ಮಾಹಿತಿ ತೋರಿಸಿ", speak: "ಮಾತನಾಡಿ", upload: "ಫೋಟೋ ಅಥವಾ PDF ಸೇರಿಸಿ",
-    consent: "ಈ ಪ್ರಶ್ನೆಗೆ ನನ್ನ ಉಳಿಸಿದ ದಾಖಲೆಗಳನ್ನು ಬಳಸಿ", consentHint: "CAREPATH ಸಂಬಂಧಿತ ದಾಖಲೆಗಳನ್ನು ಈ ಸಾಧನದಲ್ಲೇ ತೋರಿಸುತ್ತದೆ. AI ಸೇವೆಗೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.",
-    prompts: ["ಈ ಔಷಧಿ ಯಾವುದಕ್ಕೆ?", "ನನ್ನ ಪರೀಕ್ಷಾ ವರದಿ ವಿವರಿಸಿ", "ಡೋಸ್ ಮರೆತರೆ ಸೂಚನೆ ಎಲ್ಲಿ ನೋಡಲಿ?"], recordTitle: "ನಿಮ್ಮ CAREPATH ದಾಖಲೆಗಳಿಂದ",
+    heading: "ಇಂದು ಏನನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಹಾಯ ಬೇಕು?", intro: "ಪ್ರಶ್ನೆ ಕೇಳಿ, ಹೊಸ ವಿಷಯ ಅನ್ವೇಷಿಸಿ ಅಥವಾ ಫೋಟೋ/PDF ಸೇರಿಸಿ. CARE CONNECTED ಒಳಗೇ ಮುಂದುವರಿಯಿರಿ.",
+    placeholder: "ಉದಾಹರಣೆ: ಈ ಔಷಧಿ ಯಾವುದಕ್ಕೆ? ನನ್ನ ವರದಿಯನ್ನು ವಿವರಿಸಿ…", ask: "CARE CONNECTED ಕೇಳಿ", showRecords: "ಉಳಿಸಿದ ಮಾಹಿತಿ ತೋರಿಸಿ", speak: "ಮಾತನಾಡಿ", upload: "ಫೋಟೋ ಅಥವಾ PDF ಸೇರಿಸಿ",
+    consent: "ಈ ಪ್ರಶ್ನೆಗೆ ನನ್ನ ಉಳಿಸಿದ ದಾಖಲೆಗಳನ್ನು ಬಳಸಿ", consentHint: "CARE CONNECTED ಸಂಬಂಧಿತ ದಾಖಲೆಗಳನ್ನು ಈ ಸಾಧನದಲ್ಲೇ ತೋರಿಸುತ್ತದೆ. AI ಸೇವೆಗೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.",
+    prompts: ["ಈ ಔಷಧಿ ಯಾವುದಕ್ಕೆ?", "ನನ್ನ ಪರೀಕ್ಷಾ ವರದಿ ವಿವರಿಸಿ", "ಡೋಸ್ ಮರೆತರೆ ಸೂಚನೆ ಎಲ್ಲಿ ನೋಡಲಿ?"], recordTitle: "ನಿಮ್ಮ CARE CONNECTED ದಾಖಲೆಗಳಿಂದ",
     readBp: "ರಕ್ತದೊತ್ತಡ ದಾಖಲಿಸಿ", visit: "ವೈದ್ಯರ ಭೇಟಿಗೆ ತಯಾರಿ", alsoAsk: "ಸಾಮಾನ್ಯ ಮಾಹಿತಿಯನ್ನೂ ಕೇಳಿ",
     noMedicines: "ಈ ಸಾಧನದಲ್ಲಿ ನಿಮ್ಮದೇ ಆದ ಔಷಧಿ ದಾಖಲೆ ಇಲ್ಲ.", sampleMedicines: "ಆ್ಯಪ್‌ನಲ್ಲಿ ಉದಾಹರಣೆ ಔಷಧಿಗಳಿವೆ; ಅವು ನಿಮ್ಮ ದೃಢೀಕೃತ ಪಟ್ಟಿಯಲ್ಲ.",
     savedMedicines: "ಉಳಿಸಿದ ಔಷಧಿಗಳು:",
     recentReadings: "ನೀವು ನಮೂದಿಸಿದ ಇತ್ತೀಚಿನ ಅಳತೆಗಳು:", noReadings: "ವೈಯಕ್ತಿಕ ಅಳತೆಗಳಿಲ್ಲ. ಬೇರೆಡೆ ಕಾಣುವ ಉದಾಹರಣೆಗಳು ನಿಮ್ಮ ಅಳತೆಗಳಲ್ಲ.",
-    documents: "ಉಳಿಸಿದ ದಾಖಲೆಗಳು:", noDocuments: "ಈ ಸಾಧನದಲ್ಲಿ ಮೂಲ ದಾಖಲೆಗಳನ್ನು ಉಳಿಸಿಲ್ಲ.", noMatch: "ಉಳಿಸಿದ ದಾಖಲೆಗಳು ಈ ಪ್ರಶ್ನೆಗೆ ಉತ್ತರಿಸುವುದಿಲ್ಲ. ಸಂಬಂಧವಿಲ್ಲದ ದಾಖಲೆಗಳಿಂದ ನಾನು ಊಹಿಸುವುದಿಲ್ಲ. ಸಂಬಂಧಿತ ದಾಖಲೆ ತೆರೆಯಿರಿ ಅಥವಾ ಸಾಮಾನ್ಯ ಮಾಹಿತಿಗಾಗಿ CAREPATH ಕೇಳಿ.",
+    documents: "ಉಳಿಸಿದ ದಾಖಲೆಗಳು:", noDocuments: "ಈ ಸಾಧನದಲ್ಲಿ ಮೂಲ ದಾಖಲೆಗಳನ್ನು ಉಳಿಸಿಲ್ಲ.", noMatch: "ಉಳಿಸಿದ ದಾಖಲೆಗಳು ಈ ಪ್ರಶ್ನೆಗೆ ಉತ್ತರಿಸುವುದಿಲ್ಲ. ಸಂಬಂಧವಿಲ್ಲದ ದಾಖಲೆಗಳಿಂದ ನಾನು ಊಹಿಸುವುದಿಲ್ಲ. ಸಂಬಂಧಿತ ದಾಖಲೆ ತೆರೆಯಿರಿ ಅಥವಾ ಸಾಮಾನ್ಯ ಮಾಹಿತಿಗಾಗಿ CARE CONNECTED ಕೇಳಿ.",
     medicinesSource: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ಔಷಧಿ ದಾಖಲೆಗಳು", readingsSource: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ನೀವು ನಮೂದಿಸಿದ ಅಳತೆಗಳು", docsSource: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ದಾಖಲೆ ಹೆಸರು ಮತ್ತು ಪರಿಶೀಲನಾ ಸ್ಥಿತಿ",
   } : {
-    heading: "What do you need help with today?", intro: "Type a question, speak it, or add a document. CAREPATH keeps you in the app.",
-    placeholder: "For example: What is this medicine used for? · Explain my report · I have a cough", ask: "Ask CAREPATH", showRecords: "Show my saved information", speak: "Speak", upload: "Add photo or PDF",
-    consent: "Use my saved records for this question on this device", consentHint: "CAREPATH only shows matching entries here. It does not send records to an AI service.",
-    prompts: ["What is this medicine used for?", "Explain my test report", "I forgot a dose — where can I check?"], recordTitle: "From your saved CAREPATH records",
+    heading: "What can I help you understand today?", intro: "Ask a question, explore an idea, speak naturally, or share a document.",
+    placeholder: "For example: What is this medicine used for? · Explain my report · I have a cough", ask: "Ask CARE CONNECTED", showRecords: "Show my saved information", speak: "Speak", upload: "Add photo or PDF",
+    consent: "Use my saved records for this question on this device", consentHint: "CARE CONNECTED only shows matching entries here. It does not send records to an AI service.",
+    prompts: ["What is this medicine used for?", "Explain my test report", "I forgot a dose — where can I check?"], recordTitle: "From your saved CARE CONNECTED records",
     readBp: "Record blood pressure", visit: "Prepare for a doctor visit", alsoAsk: "Also ask for general information",
     noMedicines: "No personal medicine entry was found in this browser.", sampleMedicines: "Illustrative sample medicines are shown in the app; they are not your confirmed medicine list.",
     savedMedicines: "Saved medicines:",
     recentReadings: "Recent readings you entered:", noReadings: "No personal readings were found. Example values shown elsewhere are not your measurements.",
-    documents: "Saved documents:", noDocuments: "No original documents are saved in this browser.", noMatch: "Your saved records do not answer this question. I will not guess from unrelated records. Open the relevant record, or ask CAREPATH for general information.",
+    documents: "Saved documents:", noDocuments: "No original documents are saved in this browser.", noMatch: "Your saved records do not answer this question. I will not guess from unrelated records. Open the relevant record, or ask CARE CONNECTED for general information.",
     medicinesSource: "Medicine entries saved in this browser", readingsSource: "Health readings entered in this browser", docsSource: "Document names and review status saved in this browser",
   };
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
@@ -660,7 +663,7 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
     : personalMedicines.length === 0
       ? { title: "Keep your current medicine list nearby", detail: "Save details exactly as written on your package or prescription. You can review them later.", action: "Open my medicine list", route: "My Medicines", icon: <Pill size={20} /> }
       : personalReadings.length === 0
-        ? { title: "Keep a reading when it is useful", detail: "Enter a value from your own device with its date and time. CAREPATH will show it as entered.", action: "Add a reading", route: "__monitor", icon: <HeartPulse size={20} /> }
+        ? { title: "Keep a reading when it is useful", detail: "Enter a value from your own device with its date and time. CARE CONNECTED will show it as entered.", action: "Add a reading", route: "__monitor", icon: <HeartPulse size={20} /> }
         : { title: "Bring your notes to a care visit", detail: "Gather your own saved medicines, readings, and questions into a short visit brief.", action: "Prepare a visit brief", route: "Visit Prep", icon: <Stethoscope size={20} /> };
   const submitActionQuestion = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -716,7 +719,7 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
         <h1>{greeting}, <span>{firstName}</span></h1>
         <p>Get a clear starting point for medicines, health notes, and questions you want to understand.</p>
         <div className="cp-today-hero-actions">
-          <button className="cp-button cp-today-primary" onClick={() => onNavigate("ASK CAREPATH")}><Search size={17} /> Ask a question</button>
+          <button className="cp-button cp-today-primary" onClick={() => onNavigate("ASK CARE CONNECTED")}><Search size={17} /> Ask a question</button>
           <button className="cp-button cp-today-secondary" onClick={() => onNavigate("Scan & Upload")}><ScanLine size={17} /> Scan a document</button>
           <button className="cp-today-emergency" onClick={() => onNavigate("Emergency Help")}><Siren size={16} /> Need urgent help?</button>
         </div>
@@ -768,7 +771,7 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
     <section className="cp-today-actions-section">
       <div className="cp-today-section-heading"><div><span className="cp-eyebrow">START WITH ONE TAP</span><h2>What would help right now?</h2></div><p>Choose a task. You can always come back here.</p></div>
       <div className="cp-today-actions-grid">
-        <QuickAction icon={<Search />} label="Ask CAREPATH" detail="Find a clear starting point" tone="violet" onClick={() => onNavigate("ASK CAREPATH")} />
+        <QuickAction icon={<Search />} label="Ask CARE CONNECTED" detail="Find a clear starting point" tone="violet" onClick={() => onNavigate("ASK CARE CONNECTED")} />
         <QuickAction icon={<ScanLine />} label="Scan a document" detail="Read and review a file" tone="blue" onClick={() => onNavigate("Scan & Upload")} />
         <QuickAction icon={<HeartPulse />} label="Add a health reading" detail="Type or speak a value" tone="rose" onClick={onOpenMonitor} />
         <QuickAction icon={<Pill />} label="My medicines" detail="Review my saved list" tone="mint" onClick={() => onNavigate("My Medicines")} />
@@ -779,14 +782,14 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
 
     <section className="cp-today-records">
       <div className="cp-today-records-heading"><div><span className="cp-eyebrow">YOUR PERSONAL RECORD</span><h2>Recent readings</h2></div>{personalReadings.length > 0 && <button className="cp-today-manage" onClick={() => onNavigate("Health Timeline")}>View timeline <ArrowRight size={14} /></button>}</div>
-      {latestReadings.length ? <div className="cp-today-reading-list">{latestReadings.map((reading) => <button className="cp-today-reading" key={reading.id} onClick={() => onNavigate("Health Tracker")}><span className="cp-today-reading-symbol">{reading.metric === "Blood Pressure" ? <HeartPulse size={18} /> : <Activity size={18} />}</span><span><strong>{reading.metric}</strong><small>{reading.date === today ? "Today" : reading.date} · {reading.time}</small></span><b>{reading.value}{reading.secondValue !== undefined ? " / " + reading.secondValue : ""}<small> {reading.unit}</small></b><ArrowRight size={16} /></button>)}</div> : <div className="cp-today-record-empty"><span className="cp-today-empty-icon"><Activity size={19} /></span><div><strong>No personal readings yet</strong><p>Only values you enter will appear here. CAREPATH will not interpret or label them normal or abnormal.</p></div><button className="cp-button cp-today-outline" onClick={onOpenMonitor}>Add a reading <Plus size={15} /></button></div>}
+      {latestReadings.length ? <div className="cp-today-reading-list">{latestReadings.map((reading) => <button className="cp-today-reading" key={reading.id} onClick={() => onNavigate("Health Tracker")}><span className="cp-today-reading-symbol">{reading.metric === "Blood Pressure" ? <HeartPulse size={18} /> : <Activity size={18} />}</span><span><strong>{reading.metric}</strong><small>{reading.date === today ? "Today" : reading.date} · {reading.time}</small></span><b>{reading.value}{reading.secondValue !== undefined ? " / " + reading.secondValue : ""}<small> {reading.unit}</small></b><ArrowRight size={16} /></button>)}</div> : <div className="cp-today-record-empty"><span className="cp-today-empty-icon"><Activity size={19} /></span><div><strong>No personal readings yet</strong><p>Only values you enter will appear here. CARE CONNECTED will not interpret or label them normal or abnormal.</p></div><button className="cp-button cp-today-outline" onClick={onOpenMonitor}>Add a reading <Plus size={15} /></button></div>}
     </section>
   </>;
 }
 function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => void }) {
   const cards = [
-    { title: "CAREPATH EASY", text: "A calmer way to use your health workspace", detail: "Large controls, read-aloud support, and clear next steps.", action: "Turn on Easy mode", route: "__easy", icon: <Accessibility size={24} />, tone: "mint" },
-    { title: "ASK CAREPATH", text: "Find information with a safer starting point", detail: "Read curated answers and official sources. Your typed question stays on this device.", action: "Open ASK CAREPATH", route: "ASK CAREPATH", icon: <Search size={24} />, tone: "violet" },
+    { title: "CARE CONNECTED EASY", text: "A calmer way to use your health workspace", detail: "Large controls, read-aloud support, and clear next steps.", action: "Turn on Easy mode", route: "__easy", icon: <Accessibility size={24} />, tone: "mint" },
+    { title: "ASK CARE CONNECTED", text: "Find information with a safer starting point", detail: "Read curated answers and official sources. Your typed question stays on this device.", action: "Open ASK CARE CONNECTED", route: "ASK CARE CONNECTED", icon: <Search size={24} />, tone: "violet" },
     { title: "LEARN WITH AUDIO & VIDEO", text: "Play a clip and find the moment you need", detail: "Add a device-local video or audio clip, search its captions, and hear matching lines.", action: "Open learning studio", route: "Learn", icon: <BookOpen size={24} />, tone: "blue" },
     { title: "SAFETY REVIEW", text: "See what needs a second look", detail: "Review missing notes, repeated names, and questions for a professional.", action: "Review my list", route: "Safety Check", icon: <ShieldCheck size={24} />, tone: "amber" },
     { title: "HEALTH JOURNEY", text: "Keep the story together", detail: "Bring readings, documents, and personal notes into one timeline.", action: "Open timeline", route: "Health Timeline", icon: <Clock3 size={24} />, tone: "blue" },
@@ -803,7 +806,7 @@ function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => voi
     try { localStorage.setItem("carepath_discover_index", JSON.stringify(next)); } catch { /* Optional preference. */ }
     return next;
   });
-  return <section className="cp-discover" aria-roledescription="carousel" aria-label="Discover CAREPATH features" onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.screenX ?? null; }} onTouchEnd={(event) => { const startX = touchStartX.current; touchStartX.current = null; const endX = event.changedTouches[0]?.screenX; if (startX === null || endX === undefined) return; const distance = startX - endX; if (Math.abs(distance) > 48) move(distance > 0 ? 1 : -1); }}><div className="cp-discover-copy"><span className="cp-eyebrow">DISCOVER CAREPATH ✨</span><h2 aria-live="polite">{card.text}</h2><p>{card.detail}</p><div className="cp-discover-actions"><button className="cp-button primary" onClick={() => card.route === "__easy" ? document.querySelector<HTMLButtonElement>(".cp-accessibility-bar button")?.click() : onNavigate(card.route)}>{card.action}<ArrowRight size={15} /></button><span>{index + 1} / {cards.length}</span></div></div><div className={`cp-discover-art ${card.tone}`}><span>{card.icon}</span><strong>{card.title}</strong><small>PERSONAL ORGANIZATION · DEMO SAFE</small></div><div className="cp-discover-controls"><button onClick={() => move(-1)} aria-label="Previous CAREPATH feature"><ChevronLeft size={17} /></button><button onClick={() => move(1)} aria-label="Next CAREPATH feature"><ChevronRight size={17} /></button></div><div className="cp-discover-dots" role="tablist" aria-label="Choose a CAREPATH feature">{cards.map((item, itemIndex) => <button key={item.title} className={itemIndex === index ? "active" : ""} role="tab" aria-selected={itemIndex === index} aria-label={`Show ${item.title}`} onClick={() => { setIndex(itemIndex); try { localStorage.setItem("carepath_discover_index", JSON.stringify(itemIndex)); } catch { /* Optional preference. */ } }} />)}</div></section>;
+  return <section className="cp-discover" aria-roledescription="carousel" aria-label="Discover CARE CONNECTED features" onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.screenX ?? null; }} onTouchEnd={(event) => { const startX = touchStartX.current; touchStartX.current = null; const endX = event.changedTouches[0]?.screenX; if (startX === null || endX === undefined) return; const distance = startX - endX; if (Math.abs(distance) > 48) move(distance > 0 ? 1 : -1); }}><div className="cp-discover-copy"><span className="cp-eyebrow">DISCOVER CARE CONNECTED ✨</span><h2 aria-live="polite">{card.text}</h2><p>{card.detail}</p><div className="cp-discover-actions"><button className="cp-button primary" onClick={() => card.route === "__easy" ? document.querySelector<HTMLButtonElement>(".cp-accessibility-bar button")?.click() : onNavigate(card.route)}>{card.action}<ArrowRight size={15} /></button><span>{index + 1} / {cards.length}</span></div></div><div className={`cp-discover-art ${card.tone}`}><span>{card.icon}</span><strong>{card.title}</strong><small>PERSONAL ORGANIZATION · DEMO SAFE</small></div><div className="cp-discover-controls"><button onClick={() => move(-1)} aria-label="Previous CARE CONNECTED feature"><ChevronLeft size={17} /></button><button onClick={() => move(1)} aria-label="Next CARE CONNECTED feature"><ChevronRight size={17} /></button></div><div className="cp-discover-dots" role="tablist" aria-label="Choose a CARE CONNECTED feature">{cards.map((item, itemIndex) => <button key={item.title} className={itemIndex === index ? "active" : ""} role="tab" aria-selected={itemIndex === index} aria-label={`Show ${item.title}`} onClick={() => { setIndex(itemIndex); try { localStorage.setItem("carepath_discover_index", JSON.stringify(itemIndex)); } catch { /* Optional preference. */ } }} />)}</div></section>;
 }
 
 function QuickAction({ icon, label, detail, tone, onClick }: { icon: ReactNode; label: string; detail: string; tone: string; onClick: () => void }) { return <button className="cp-quick-action" onClick={onClick}><span className={`cp-quick-icon ${tone}`}>{icon}</span><strong>{label}</strong><small>{detail}</small><ArrowRight size={14} /></button>; }

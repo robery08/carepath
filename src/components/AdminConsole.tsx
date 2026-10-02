@@ -125,11 +125,11 @@ export default function AdminConsole() {
     setReviewed(false);
     setForm({ ...item, keywords: [...item.keywords], pointsEn: [...item.pointsEn], pointsKn: [...item.pointsKn] });
     setShowForm(true);
-    setMessage(item.status === "published" ? "Editing moves this item to draft until you review and publish it again." : "Editing a draft does not make it visible in Ask CAREPATH.");
+    setMessage(item.status === "published" ? "Editing moves this item to draft until you review and publish it again." : "Editing a draft does not make it visible in Ask CARE CONNECTED.");
   };
 
   const archiveItem = (item: CareContent) => {
-    if (!window.confirm(`Archive “${item.title}”? It will no longer appear in Ask CAREPATH.`)) return;
+    if (!window.confirm(`Archive “${item.title}”? It will no longer appear in Ask CARE CONNECTED.`)) return;
     const archived = { ...item, status: "archived" as const, updatedAt: nowIso() };
     logChange("archived", archived, items.map((entry) => entry.id === item.id ? archived : entry));
   };
@@ -157,7 +157,7 @@ export default function AdminConsole() {
   };
 
   const exportHistory = () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), scope: "Local CAREPATH content drafts and audit preview", content: items, changes: history }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), scope: "Local CARE CONNECTED content drafts and audit preview", content: items, changes: history }, null, 2)], { type: "application/json" });
     const href = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = href;
@@ -168,7 +168,7 @@ export default function AdminConsole() {
   };
 
   return <div className="cp-admin-page">
-    <header className="cp-admin-hero"><span className="cp-admin-mark"><ShieldCheck size={24} /></span><div><span className="cp-eyebrow">CONTENT ADMIN · PREVIEW</span><h1>CAREPATH Content Studio</h1><p>Prepare clear, source-linked learning cards and review the changes saved in this browser.</p></div><button className="cp-button light" onClick={() => { setForm(blank); setEditingId(""); setShowForm(true); }}><FilePlus2 size={16} /> New content</button></header>
+    <header className="cp-admin-hero"><span className="cp-admin-mark"><ShieldCheck size={24} /></span><div><span className="cp-eyebrow">CONTENT ADMIN · PREVIEW</span><h1>CARE CONNECTED Content Studio</h1><p>Prepare clear, source-linked learning cards and review the changes saved in this browser.</p></div><button className="cp-button light" onClick={() => { setForm(blank); setEditingId(""); setShowForm(true); }}><FilePlus2 size={16} /> New content</button></header>
 
     <div className="cp-admin-security-note" role="note"><ShieldAlert size={20} /><div><strong>This is a local prototype, not a secure admin account.</strong><p>There is no login or server here. Drafts, publications, and history are saved only in this browser; other users and the GitHub website will not receive them. Do not add patient details. A protected team admin and shared publishing need a backend, verified sign-in, and server-side audit storage.</p></div></div>
 
@@ -177,7 +177,7 @@ export default function AdminConsole() {
     {message && <p className="cp-admin-status" role="status"><Check size={16} />{message}</p>}
 
     {showForm && <section className="cp-admin-editor" aria-labelledby="cp-admin-editor-title"><div className="cp-admin-section-heading"><div><span className="cp-eyebrow">CONTENT WORKFLOW</span><h2 id="cp-admin-editor-title">{editingId ? "Edit a learning card" : "Create a learning card"}</h2></div><button className="cp-button quiet" onClick={resetForm}>Close editor</button></div>
-      {editingId && items.find((item) => item.id === editingId)?.status === "published" && <p className="cp-admin-edit-note"><Clock3 size={15} /> Saving this edit as a draft temporarily removes the older version from Ask CAREPATH until you review and publish.</p>}
+      {editingId && items.find((item) => item.id === editingId)?.status === "published" && <p className="cp-admin-edit-note"><Clock3 size={15} /> Saving this edit as a draft temporarily removes the older version from Ask CARE CONNECTED until you review and publish.</p>}
       <div className="cp-admin-form-grid">
         <label>Content type<select value={form.kind} onChange={(event) => setField("kind", event.target.value as CareContentKind)}><option value="medicine">Medicine information</option><option value="condition">Condition guide</option><option value="self-care">Self-care / home comfort</option></select></label>
         <label>Topic or generic medicine name<input value={form.title} onChange={(event) => setField("title", event.target.value)} placeholder="Example: Metformin" maxLength={90} /></label>
@@ -191,7 +191,7 @@ export default function AdminConsole() {
         <label>Source name<input value={form.sourceName} onChange={(event) => setField("sourceName", event.target.value)} placeholder="Example: NIH MedlinePlus" /></label>
         <label>Secure source link<input type="url" value={form.sourceUrl} onChange={(event) => setField("sourceUrl", event.target.value)} placeholder="https://…" /></label>
       </div>
-      <div className="cp-admin-review-box"><strong>Before publishing</strong><label><input type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} /> I checked the linked source and wording; this is general education, has no dose or personal treatment instructions, and contains no user health record.</label><p>CAREPATH will display this card as educational information. An admin checkbox does not independently verify a claim.</p></div>
+      <div className="cp-admin-review-box"><strong>Before publishing</strong><label><input type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} /> I checked the linked source and wording; this is general education, has no dose or personal treatment instructions, and contains no user health record.</label><p>CARE CONNECTED will display this card as educational information. An admin checkbox does not independently verify a claim.</p></div>
       <div className="cp-admin-form-actions"><button className="cp-button quiet" onClick={() => saveDraft(false)}><FilePlus2 size={15} /> Save draft</button><button className="cp-button primary" onClick={() => saveDraft(true)} disabled={!reviewed}><BookOpenCheck size={15} /> Publish on this device</button></div>
     </section>}
 
