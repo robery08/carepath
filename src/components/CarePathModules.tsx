@@ -125,6 +125,10 @@ type MedicationEvent = {
 type Props = {
   active: string;
   medicineCount: number;
+  initialQuestion: string;
+  onQuestionConsumed: () => void;
+  initialFile: File | null;
+  onInitialFileHandled: () => void;
   onOpenMedicines: () => void;
   onOpenMonitor: () => void;
   onScheduleReview: (medicine: string, at: string) => void;
@@ -240,7 +244,7 @@ function Notice({ children, tone = "info" }: { children: ReactNode; tone?: "info
   return <div className={`cp-notice ${tone}`}><Icon size={17} /><p>{children}</p></div>;
 }
 
-export default function CarePathModules({ active, medicineCount, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate, onInstallApp }: Props) {
+export default function CarePathModules({ active, medicineCount, initialQuestion, onQuestionConsumed, initialFile, onInitialFileHandled, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate, onInstallApp }: Props) {
   const [refresh, setRefresh] = useState(0);
   const medicines = useMemo(() => readStored<Medicine[]>("carepath_medicines", DEFAULT_MEDICINES), [medicineCount, refresh]);
   const readings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", DEFAULT_READINGS), [refresh]);
@@ -266,9 +270,9 @@ export default function CarePathModules({ active, medicineCount, onOpenMedicines
       {active === "Care Guide" && <CareGuide />}
       {active === "Symptom Guide" && <SymptomGuide onNavigate={onNavigate} />}
       {active === "Official Sources" && <OfficialSources {...shared} />}
-      {active === "ASK CAREPATH" && <AskCarepath {...shared} />}
+      {active === "ASK CAREPATH" && <AskCarepath {...shared} initialQuestion={initialQuestion} onQuestionConsumed={onQuestionConsumed} />}
       {active === "My Medicines" && <MedicinePassport {...shared} />}
-      {active === "Scan & Upload" && <Scanner {...shared} />}
+      {active === "Scan & Upload" && <Scanner {...shared} initialFile={initialFile} onInitialFileHandled={onInitialFileHandled} />}
       {active === "Medicine Passport" && <MedicinePassport {...shared} />}
       {active === "Safety Check" && <SafetyReview {...shared} />}
       {active === "Medication Changes" && <MedicationChanges {...shared} />}
@@ -485,16 +489,21 @@ function findAskGuide(question: string) {
   return null;
 }
 
-function AskCarepath({ medicines, readings, documents, profile, onNavigate }: Shared) {
-  const [input, setInput] = useState("");
+function AskCarepath({ medicines, readings, documents, profile, onNavigate, initialQuestion, onQuestionConsumed }: Shared & { initialQuestion: string; onQuestionConsumed: () => void }) {
+  const [input, setInput] = useState(initialQuestion);
   const [mode, setMode] = useState<"medicine" | "health">("health");
   const [market, setMarket] = useState("global");
-  const [language, setLanguage] = useState<AskLanguage>("en");
+  const [language, setLanguage] = useState<AskLanguage>(() => getVoiceLanguage());
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [matchedGuide, setMatchedGuide] = useState<AskGuide | null>(null);
   const [matchedMedicine, setMatchedMedicine] = useState<MedicineReference | null>(null);
   const [matchedCustom, setMatchedCustom] = useState<CareContent | null>(null);
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!initialQuestion) return;
+    setInput(initialQuestion);
+    onQuestionConsumed();
+  }, [initialQuestion, onQuestionConsumed]);
   const selectedMarket = MEDICINE_MARKETS.find((item) => item.id === market) ?? MEDICINE_MARKETS[0];
   const prompts = mode === "medicine"
     ? language === "en" ? ["What is metformin used for?", "What is amlodipine used for?", "Paracetamol"] : ["ಮೆಟ್‌ಫಾರ್ಮಿನ್ ಏಕೆ ಬಳಸುತ್ತಾರೆ?", "ಅಮ್ಲೋಡಿಪೈನ್ ಏಕೆ ಬಳಸುತ್ತಾರೆ?", "Paracetamol"]
@@ -525,7 +534,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate }: Sh
     : "";
   return <>
     <PageHeader eyebrow={language === "en" ? "ASK IN THE APP · ENGLISH OR ಕನ್ನಡ" : "ಆಪ್‌ನಲ್ಲೇ ಕೇಳಿ · ENGLISH OR ಕನ್ನಡ"} title="ASK CAREPATH" description={language === "en" ? "Use the new in-app assistant when a secure server is connected, or get an immediate answer from the curated offline guides below." : "ಸುರಕ್ಷಿತ ಸರ್ವರ್ ಸಂಪರ್ಕವಿದ್ದಾಗ ಆಪ್‌ನಲ್ಲೇ ಸಹಾಯಕ ಬಳಸಿ ಅಥವಾ ಕೆಳಗಿನ ಮಾರ್ಗದರ್ಶಿಗಳಿಂದ ಉತ್ತರ ಪಡೆಯಿರಿ."} icon={<Search size={24} />} action={<span className="cp-local-pill"><span /> {language === "en" ? "No diagnosis · no dose advice" : "ರೋಗ ನಿರ್ಣಯವಿಲ್ಲ · ಡೋಸ್ ಸಲಹೆಯಿಲ್ಲ"}</span>} />
-    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} />
+    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} initialQuestion={initialQuestion} />
     <div className="cp-ai-layout">
       <Panel title={mode === "medicine" ? (language === "en" ? "Ask about medicines" : "ಔಷಧಿಗಳ ಬಗ್ಗೆ ಕೇಳಿ") : (language === "en" ? "Ask about health topics" : "ಆರೋಗ್ಯ ವಿಷಯಗಳ ಬಗ್ಗೆ ಕೇಳಿ")} eyebrow={language === "en" ? "REVIEWED GUIDES · OPTIONAL MEDICINE LOOKUP" : "ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ · ಔಷಧಿ ಹುಡುಕಾಟಕ್ಕೆ ಒಪ್ಪಿಗೆ ಬೇಕು"}>
         <div className="cp-ai-toolbar"><div className="cp-ai-mode-switch" role="group" aria-label="Choose guide category"><button className={mode === "medicine" ? "selected" : ""} onClick={() => setSearchMode("medicine")}><Pill size={16} /> {language === "en" ? "Medicines" : "ಔಷಧಿ"}</button><button className={mode === "health" ? "selected" : ""} onClick={() => setSearchMode("health")}><Search size={16} /> {language === "en" ? "Health topics" : "ಆರೋಗ್ಯ"}</button></div><div className="cp-language-switch" role="group" aria-label="Answer language"><button className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => setLanguage("en")}>English</button><button className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => setLanguage("kn")}>ಕನ್ನಡ</button></div></div>
@@ -598,7 +607,7 @@ function OfficialSources({ medicines, readings, documents, profile, onNavigate }
 
 function Snapshot({ icon, label, value }: { icon: ReactNode; label: string; value: string }) { return <div className="cp-snapshot-row"><span className="cp-snapshot-icon">{icon}</span><span>{label}</span><strong>{value}</strong></div>; }
 
-function Scanner({ documents, bump, onOpenMedicines, onNavigate }: Shared) {
+function Scanner({ documents, bump, onOpenMedicines, onNavigate, initialFile, onInitialFileHandled }: Shared & { initialFile: File | null; onInitialFileHandled: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [kind, setKind] = useState("Prescription");
@@ -612,6 +621,23 @@ function Scanner({ documents, bump, onOpenMedicines, onNavigate }: Shared) {
   const [reviewNote, setReviewNote] = useState("");
   const [savedReview, setSavedReview] = useState<{ id: string; name: string; mimeType: string; extractedText: string; reviewNote: string } | null>(null);
   const [savedUrl, setSavedUrl] = useState("");
+
+  useEffect(() => {
+    if (!initialFile) return;
+    const isPdf = initialFile.type === "application/pdf" || initialFile.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf && !initialFile.type.startsWith("image/")) setNotice("Choose a photo or PDF file.");
+    else if (initialFile.size > 15 * 1024 * 1024) setNotice("This file is over 15 MB. Choose a smaller photo or PDF to keep CAREPATH responsive.");
+    else {
+      setFile(initialFile);
+      setPreviewUrl(URL.createObjectURL(initialFile));
+      setExtractedText("");
+      setReviewNote("");
+      setSavedReview(null);
+      setNotice("");
+      setStatus("File selected. Choose “Read text” to extract words on this device.");
+    }
+    onInitialFileHandled();
+  }, [initialFile, onInitialFileHandled]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (savedUrl) URL.revokeObjectURL(savedUrl); }, [savedUrl]);

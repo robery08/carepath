@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
   Activity,
   Accessibility,
@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Clock3,
   FileCheck2,
+  FileUp,
   HeartPulse,
   Home,
   Info,
@@ -32,8 +33,8 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { speakText, stopReading } from "./voice";
-import { getVoiceLanguage } from "./voice";
+import { getVoiceLanguage, saveVoiceLanguage, speakText, stopReading } from "./voice";
+import type { VoiceLanguage } from "./voice";
 
 const CarePathModules = lazy(() => import("./components/CarePathModules"));
 const HealthMonitor = lazy(() => import("./components/HealthMonitor"));
@@ -194,6 +195,8 @@ function App() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [lastSaved, setLastSaved] = useState(() => readStored<string>("carepath_last_local_save", ""));
+  const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+  const [pendingAskQuestion, setPendingAskQuestion] = useState("");
   const medicines = useMemo(() => readStored<Medicine[]>("carepath_medicines", SAMPLE_MEDICINES), [medicineCount, refresh]);
   const healthReadings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", SAMPLE_READINGS), [refresh]);
   const medicationLog = useMemo(() => readStored<MedicationEvent[]>("carepath_medication_log", []), [refresh]);
@@ -202,6 +205,8 @@ function App() {
 
 
   const refreshApp = useCallback(() => setRefresh((current) => current + 1), []);
+  const clearPendingUploadFile = useCallback(() => setPendingUploadFile(null), []);
+  const clearPendingAskQuestion = useCallback(() => setPendingAskQuestion(""), []);
   const applyRoute = useCallback((route: RouteState) => {
     setActive(route.section);
     setShowMedicines(route.overlay === "medicines");
@@ -426,8 +431,9 @@ function App() {
     }
     if (/\b(show|list|my)\b/.test(command) && /medicine|medication|pills/.test(command)) { openSection("Medicine Passport"); return; }
     if (/remind|reminder/.test(command)) { setShowReminders(true); return; }
+    setPendingAskQuestion(raw.trim());
     openSection("ASK CAREPATH");
-    setNotice("Try: show my medicines, scan a document, log a reading, prepare a visit, or read this to me.");
+    setNotice("Your spoken question is ready in ASK CAREPATH. Review it before sending anything to an AI service.");
   };
   const markDose = (medicine: Medicine) => {
     const current = readStored<MedicationEvent[]>("carepath_medication_log", []);
@@ -531,9 +537,9 @@ function App() {
             {installPrompt && <button onClick={() => void installApp()}><Plus size={17} /><span>Install app</span></button>}
             <button onClick={() => setShowGuide(true)}><BookOpen size={17} /><span>Show me how</span></button>
           </div>
-        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} /> : <>
+        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} onAskQuestion={(question) => { setPendingAskQuestion(question); openSection("ASK CAREPATH"); }} onStartVoice={startVoice} onUploadFile={(file) => { setPendingUploadFile(file); openSection("Scan & Upload"); }} /> : <>
             <div className="cp-route-topline"><button onClick={() => openSection("Home")}><Home size={14} /> Home</button><ChevronRight size={13} /><span>{active}</span></div>
-            <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onInstallApp={() => void installApp()} /></Suspense>
+            <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} initialQuestion={pendingAskQuestion} onQuestionConsumed={clearPendingAskQuestion} initialFile={pendingUploadFile} onInitialFileHandled={clearPendingUploadFile} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onInstallApp={() => void installApp()} /></Suspense>
           </>}
           <footer className="cp-app-footer"><div><strong>CAREPATH</strong><span>Your health, made simpler.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
         </section>
@@ -595,7 +601,7 @@ function ReminderCenter({ medicines, reminders, onSave, onClose }: { medicines: 
   return <div className="cp-modal-backdrop" role="presentation"><section className="cp-reminder-modal" role="dialog" aria-modal="true" aria-labelledby="cp-reminder-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close reminders"><X size={19} /></button><span className="cp-guide-modal-icon"><BellRing size={22} /></span><span className="cp-eyebrow">PERSONAL TIME NOTES</span><h2 id="cp-reminder-title">Medicine reminders</h2><p>Set a daily reminder time copied from your current instructions. It only runs while this page is open; it is not a background alarm or clinical instruction.</p><div className="cp-reminder-form"><label>Medicine<select value={medicineId} onChange={(event) => setMedicineId(event.target.value)}>{medicines.length ? medicines.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.strength}</option>) : <option value="">Add a medicine first</option>}</select></label><label>Reminder time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label><button className="cp-button primary" onClick={add}><Plus size={16} /> Add reminder</button></div>{message && <p className="cp-voice-status" role="status">{message}</p>}<div className="cp-reminder-list">{reminders.map((item) => <div key={item.id}><span><strong>{item.name}</strong><small>{item.time} · daily personal note</small></span><label className="cp-switch"><input type="checkbox" checked={item.enabled} onChange={(event) => update(item.id, { enabled: event.target.checked, lastFiredDate: undefined })} /><span>{item.enabled ? "On" : "Off"}</span></label><button aria-label={`Remove reminder for ${item.name}`} onClick={() => onSave(reminders.filter((reminder) => reminder.id !== item.id))}><X size={16} /></button></div>)}</div><div className="cp-reminder-actions"><button className="cp-button quiet" onClick={allowNotifications}><Bell size={16} /> Enable browser notifications</button><button className="cp-button quiet" aria-pressed={soundEnabled} onClick={() => { const next = !soundEnabled; setSoundEnabled(next); try { localStorage.setItem("carepath_reminder_sound", JSON.stringify(next)); } catch { /* Optional preference. */ } setMessage(next ? "Reminder sound enabled where the device permits it." : "Reminder sound disabled."); }}>Sound: {soundEnabled ? "On" : "Off"}</button></div><div className="cp-voice-privacy"><Info size={15} /> Notifications need your explicit browser permission. Timing varies by device; no reminder is guaranteed if the browser is closed.</div><div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onClose}>Close</button></div></section></div>;
 }
 
-function HomeDashboard({ name, medicines, readings, medicationLog, reminders, onNavigate, onOpenMonitor, onOpenReminders, onMarkDose }: {
+function HomeDashboard({ name, medicines, readings, medicationLog, reminders, onNavigate, onOpenMonitor, onOpenReminders, onMarkDose, onAskQuestion, onStartVoice, onUploadFile }: {
   name: string;
   medicines: Medicine[];
   readings: HealthReading[];
@@ -605,6 +611,9 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
   onOpenMonitor: () => void;
   onOpenReminders: () => void;
   onMarkDose: (medicine: Medicine) => void;
+  onAskQuestion: (question: string) => void;
+  onStartVoice: () => void;
+  onUploadFile: (file: File) => void;
 }) {
   const today = getToday();
   const personalMedicines = medicines.filter((medicine) => medicine.source !== "sample");
@@ -615,6 +624,34 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
   const latestReadings = Array.from(new Map(personalReadings.map((reading) => [reading.metric, reading])).values()).slice(0, 3);
   const todayNotes = medicationLog.filter((entry) => entry.date === today).slice(0, 3);
   const activeReminders = reminders.filter((reminder) => reminder.enabled).slice().sort((a, b) => a.time.localeCompare(b.time));
+  const [actionQuestion, setActionQuestion] = useState("");
+  const [useSavedRecords, setUseSavedRecords] = useState(false);
+  const [recordAnswer, setRecordAnswer] = useState<{ title: string; lines: string[]; sources: string[] } | null>(null);
+  const [actionLanguage, setActionLanguage] = useState<VoiceLanguage>(() => getVoiceLanguage());
+  const savedDocuments = readStored<Array<{ id: string; name: string; kind: string; status: string; fileStored?: boolean }>>("carepath_documents", []);
+  const actionCopy = actionLanguage === "kn" ? {
+    heading: "ಇಂದು ನಿಮಗೆ ಏನು ಸಹಾಯ ಬೇಕು?", intro: "ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ, ಮಾತನಾಡಿ ಅಥವಾ ಫೋಟೋ/PDF ಸೇರಿಸಿ. CAREPATH ಒಳಗೇ ಮುಂದುವರಿಯಿರಿ.",
+    placeholder: "ಉದಾಹರಣೆ: ಈ ಔಷಧಿ ಯಾವುದಕ್ಕೆ? ನನ್ನ ವರದಿಯನ್ನು ವಿವರಿಸಿ…", ask: "CAREPATH ಕೇಳಿ", showRecords: "ಉಳಿಸಿದ ಮಾಹಿತಿ ತೋರಿಸಿ", speak: "ಮಾತನಾಡಿ", upload: "ಫೋಟೋ ಅಥವಾ PDF ಸೇರಿಸಿ",
+    consent: "ಈ ಪ್ರಶ್ನೆಗೆ ನನ್ನ ಉಳಿಸಿದ ದಾಖಲೆಗಳನ್ನು ಬಳಸಿ", consentHint: "CAREPATH ಸಂಬಂಧಿತ ದಾಖಲೆಗಳನ್ನು ಈ ಸಾಧನದಲ್ಲೇ ತೋರಿಸುತ್ತದೆ. AI ಸೇವೆಗೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.",
+    prompts: ["ಈ ಔಷಧಿ ಯಾವುದಕ್ಕೆ?", "ನನ್ನ ಪರೀಕ್ಷಾ ವರದಿ ವಿವರಿಸಿ", "ಡೋಸ್ ಮರೆತರೆ ಸೂಚನೆ ಎಲ್ಲಿ ನೋಡಲಿ?"], recordTitle: "ನಿಮ್ಮ CAREPATH ದಾಖಲೆಗಳಿಂದ",
+    readBp: "ರಕ್ತದೊತ್ತಡ ದಾಖಲಿಸಿ", visit: "ವೈದ್ಯರ ಭೇಟಿಗೆ ತಯಾರಿ", alsoAsk: "ಸಾಮಾನ್ಯ ಮಾಹಿತಿಯನ್ನೂ ಕೇಳಿ",
+    noMedicines: "ಈ ಸಾಧನದಲ್ಲಿ ನಿಮ್ಮದೇ ಆದ ಔಷಧಿ ದಾಖಲೆ ಇಲ್ಲ.", sampleMedicines: "ಆ್ಯಪ್‌ನಲ್ಲಿ ಉದಾಹರಣೆ ಔಷಧಿಗಳಿವೆ; ಅವು ನಿಮ್ಮ ದೃಢೀಕೃತ ಪಟ್ಟಿಯಲ್ಲ.",
+    savedMedicines: "ಉಳಿಸಿದ ಔಷಧಿಗಳು:",
+    recentReadings: "ನೀವು ನಮೂದಿಸಿದ ಇತ್ತೀಚಿನ ಅಳತೆಗಳು:", noReadings: "ವೈಯಕ್ತಿಕ ಅಳತೆಗಳಿಲ್ಲ. ಬೇರೆಡೆ ಕಾಣುವ ಉದಾಹರಣೆಗಳು ನಿಮ್ಮ ಅಳತೆಗಳಲ್ಲ.",
+    documents: "ಉಳಿಸಿದ ದಾಖಲೆಗಳು:", noDocuments: "ಈ ಸಾಧನದಲ್ಲಿ ಮೂಲ ದಾಖಲೆಗಳನ್ನು ಉಳಿಸಿಲ್ಲ.", noMatch: "ಉಳಿಸಿದ ದಾಖಲೆಗಳು ಈ ಪ್ರಶ್ನೆಗೆ ಉತ್ತರಿಸುವುದಿಲ್ಲ. ಸಂಬಂಧವಿಲ್ಲದ ದಾಖಲೆಗಳಿಂದ ನಾನು ಊಹಿಸುವುದಿಲ್ಲ. ಸಂಬಂಧಿತ ದಾಖಲೆ ತೆರೆಯಿರಿ ಅಥವಾ ಸಾಮಾನ್ಯ ಮಾಹಿತಿಗಾಗಿ CAREPATH ಕೇಳಿ.",
+    medicinesSource: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ಔಷಧಿ ದಾಖಲೆಗಳು", readingsSource: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ನೀವು ನಮೂದಿಸಿದ ಅಳತೆಗಳು", docsSource: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ದಾಖಲೆ ಹೆಸರು ಮತ್ತು ಪರಿಶೀಲನಾ ಸ್ಥಿತಿ",
+  } : {
+    heading: "What do you need help with today?", intro: "Type a question, speak it, or add a document. CAREPATH keeps you in the app.",
+    placeholder: "For example: What is this medicine used for? · Explain my report · I have a cough", ask: "Ask CAREPATH", showRecords: "Show my saved information", speak: "Speak", upload: "Add photo or PDF",
+    consent: "Use my saved records for this question on this device", consentHint: "CAREPATH only shows matching entries here. It does not send records to an AI service.",
+    prompts: ["What is this medicine used for?", "Explain my test report", "I forgot a dose — where can I check?"], recordTitle: "From your saved CAREPATH records",
+    readBp: "Record blood pressure", visit: "Prepare for a doctor visit", alsoAsk: "Also ask for general information",
+    noMedicines: "No personal medicine entry was found in this browser.", sampleMedicines: "Illustrative sample medicines are shown in the app; they are not your confirmed medicine list.",
+    savedMedicines: "Saved medicines:",
+    recentReadings: "Recent readings you entered:", noReadings: "No personal readings were found. Example values shown elsewhere are not your measurements.",
+    documents: "Saved documents:", noDocuments: "No original documents are saved in this browser.", noMatch: "Your saved records do not answer this question. I will not guess from unrelated records. Open the relevant record, or ask CAREPATH for general information.",
+    medicinesSource: "Medicine entries saved in this browser", readingsSource: "Health readings entered in this browser", docsSource: "Document names and review status saved in this browser",
+  };
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
   const firstName = name === "Demo User" ? "there" : name.trim().split(/\s+/)[0] || "there";
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -625,6 +662,52 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
       : personalReadings.length === 0
         ? { title: "Keep a reading when it is useful", detail: "Enter a value from your own device with its date and time. CAREPATH will show it as entered.", action: "Add a reading", route: "__monitor", icon: <HeartPulse size={20} /> }
         : { title: "Bring your notes to a care visit", detail: "Gather your own saved medicines, readings, and questions into a short visit brief.", action: "Prepare a visit brief", route: "Visit Prep", icon: <Stethoscope size={20} /> };
+  const submitActionQuestion = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const question = actionQuestion.trim();
+    if (!question) return;
+    if (!useSavedRecords) {
+      setRecordAnswer(null);
+      onAskQuestion(question);
+      return;
+    }
+
+    const lower = question.toLowerCase();
+    const lines: string[] = [];
+    const sources: string[] = [];
+    const asksMedicines = /medicine|medication|tablet|pill|ಔಷಧಿ|ಮಾತ್ರೆ/.test(lower);
+    const asksReadings = /blood pressure|\bbp\b|glucose|sugar|reading|measurement|ರಕ್ತದೊತ್ತಡ|ಸಕ್ಕರೆ|ಮೌಲ್ಯ/.test(lower);
+    const asksDocuments = /document|report|prescription|scan|file|ದಾಖಲೆ|ವರದಿ|ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್/.test(lower);
+    const asksSummary = /my health|my record|my details|saved record|what do you know|ನನ್ನ ಆರೋಗ್ಯ|ನನ್ನ ದಾಖಲೆ/.test(lower);
+
+    if (asksMedicines || asksSummary) {
+      const personal = medicines.filter((item) => item.source !== "sample" && !["2", "3", "4"].includes(item.id));
+      const examples = medicines.filter((item) => item.source === "sample" || ["2", "3", "4"].includes(item.id));
+      if (personal.length) {
+        lines.push(`${actionCopy.savedMedicines} ${personal.map((item) => `${item.name} ${item.strength}${item.schedule ? ` · ${item.schedule}` : ""}`).join("; ")}.`);
+        sources.push(actionCopy.medicinesSource);
+      } else lines.push(actionCopy.noMedicines);
+      if (!personal.length && examples.length) lines.push(`${actionCopy.sampleMedicines} (${examples.map((item) => `${item.name} ${item.strength}`).join(", ")}).`);
+    }
+    if (asksReadings || asksSummary) {
+      const personal = personalReadings.slice(0, 5);
+      if (personal.length) {
+        lines.push(`${actionCopy.recentReadings} ${personal.map((item) => `${item.metric} ${item.value}${item.secondValue === undefined ? "" : `/${item.secondValue}`} ${item.unit} · ${item.date} ${item.time}`).join("; ")}.`);
+        sources.push(actionCopy.readingsSource);
+      } else lines.push(actionCopy.noReadings);
+    }
+    if (asksDocuments || asksSummary) {
+      const personal = savedDocuments.filter((item) => item.fileStored);
+      lines.push(personal.length
+        ? `${actionCopy.documents} ${personal.map((item) => `${item.name} (${item.kind}; ${item.status})`).join("; ")}. ${actionLanguage === "kn" ? "ಈ ಪಟ್ಟಿ ದಾಖಲೆ ವಿಷಯವನ್ನು ಅರ್ಥೈಸುವುದಿಲ್ಲ." : "This list does not interpret the document contents."}`
+        : actionCopy.noDocuments);
+      if (personal.length) sources.push(actionCopy.docsSource);
+    }
+    if (!asksMedicines && !asksReadings && !asksDocuments && !asksSummary) {
+      lines.push(actionCopy.noMatch);
+    }
+    setRecordAnswer({ title: actionCopy.recordTitle, lines, sources });
+  };
   return <>
     <section className="cp-today-hero">
       <div className="cp-today-hero-copy">
@@ -640,6 +723,25 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
         <small>General health information and personal organization. Not a diagnosis or emergency service.</small>
       </div>
       <div className="cp-today-hero-mark" aria-hidden="true"><span><HeartPulse size={42} /></span><i /><i /><i /></div>
+    </section>
+
+    <section className="cp-action-center" aria-labelledby="cp-action-center-title">
+      <div className="cp-action-center-heading"><span className="cp-action-center-icon"><HeartPulse size={20} /></span><div><span className="cp-eyebrow">ONE PLACE TO START · {actionLanguage === "kn" ? "ಸರಳವಾಗಿ ಪ್ರಾರಂಭಿಸಿ" : "START SIMPLY"}</span><h2 id="cp-action-center-title">{actionCopy.heading}</h2><p>{actionCopy.intro}</p></div><div className="cp-action-center-language" role="group" aria-label="Action center language"><button type="button" className={actionLanguage === "en" ? "selected" : ""} aria-pressed={actionLanguage === "en"} onClick={() => { setActionLanguage("en"); saveVoiceLanguage("en"); }}>English</button><button type="button" className={actionLanguage === "kn" ? "selected" : ""} aria-pressed={actionLanguage === "kn"} onClick={() => { setActionLanguage("kn"); saveVoiceLanguage("kn"); }}>ಕನ್ನಡ</button></div></div>
+      <form className="cp-action-center-form" onSubmit={submitActionQuestion}>
+        <textarea value={actionQuestion} onChange={(event) => setActionQuestion(event.target.value)} placeholder={actionCopy.placeholder} rows={2} maxLength={1200} aria-label={actionCopy.heading} />
+        <div className="cp-action-center-buttons">
+          <button className="cp-button cp-today-primary" type="submit"><Search size={16} /> {useSavedRecords ? actionCopy.showRecords : actionCopy.ask}</button>
+          <button className="cp-button quiet" type="button" onClick={onStartVoice}><Mic size={16} /> {actionCopy.speak}</button>
+          <label className="cp-button quiet cp-action-upload"><FileUp size={16} /> {actionCopy.upload}<input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onUploadFile(file); }} /></label>
+        </div>
+        <label className="cp-record-consent"><input type="checkbox" checked={useSavedRecords} onChange={(event) => { setUseSavedRecords(event.target.checked); setRecordAnswer(null); }} /><span><strong>{actionCopy.consent}</strong><small>{actionCopy.consentHint}</small></span></label>
+      </form>
+      <div className="cp-action-prompts" aria-label="Suggested questions and tasks">
+        {actionCopy.prompts.map((prompt) => <button key={prompt} type="button" onClick={() => { setActionQuestion(prompt); setRecordAnswer(null); }}>{prompt}<ArrowRight size={14} /></button>)}
+        <button type="button" onClick={onOpenMonitor}>{actionCopy.readBp} <ArrowRight size={14} /></button>
+        <button type="button" onClick={() => onNavigate("Visit Prep")}>{actionCopy.visit} <ArrowRight size={14} /></button>
+      </div>
+      {recordAnswer && <article className="cp-record-answer" aria-live="polite"><div><span className="cp-eyebrow">{actionLanguage === "kn" ? "ಸ್ಥಳೀಯ ದಾಖಲೆ ಹುಡುಕಾಟ · ಕಳುಹಿಸಲಾಗಿಲ್ಲ" : "LOCAL RECORD LOOKUP · NOT SENT"}</span><h3>{recordAnswer.title}</h3></div><ul>{recordAnswer.lines.map((line, index) => <li key={`${line}-${index}`}>{line}</li>)}</ul>{recordAnswer.sources.length > 0 && <p>{actionLanguage === "kn" ? "ಆಧಾರ:" : "Based on:"} {recordAnswer.sources.join("; ")}.</p>}<button type="button" className="cp-button quiet" onClick={() => onAskQuestion(actionQuestion.trim())}>{actionCopy.alsoAsk} <ArrowRight size={14} /></button></article>}
     </section>
 
     <section className="cp-today-grid" aria-label="Today's health workspace">

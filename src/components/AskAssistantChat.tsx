@@ -38,14 +38,14 @@ function restoreChat(): Message[] {
   } catch { return []; }
 }
 
-export default function AskAssistantChat({ language, onLanguageChange, documents }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[] }) {
+export default function AskAssistantChat({ language, onLanguageChange, documents, initialQuestion = "" }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[]; initialQuestion?: string }) {
   const [saveHistory, setSaveHistory] = useState(() => {
     try { return localStorage.getItem("carepath_ai_chat_save") === "true"; } catch { return false; }
   });
   const [messages, setMessages] = useState<Message[]>(() => {
     try { return localStorage.getItem("carepath_ai_chat_save") === "true" ? restoreChat() : []; } catch { return []; }
   });
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(() => ASSISTANT_ENDPOINT ? initialQuestion : "");
   const [consent, setConsent] = useState(false);
   const [includeDocument, setIncludeDocument] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState("");
@@ -67,6 +67,10 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
   }, [messages]);
 
   useEffect(() => () => { recognitionRef.current?.stop(); }, []);
+
+  useEffect(() => {
+    if (ASSISTANT_ENDPOINT && initialQuestion) setInput(initialQuestion);
+  }, [initialQuestion]);
 
   const copy = language === "en" ? {
     title: "Ask the CAREPATH assistant", subtitle: "A connected, in-app information chat. Answers can be wrong; check the cited sources.",
