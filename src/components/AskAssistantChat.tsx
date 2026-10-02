@@ -8,6 +8,11 @@ import { getDocumentFile } from "../documentFiles";
 type AskLanguage = "en" | "kn";
 type ChatDocument = { id: string; name: string; fileStored?: boolean };
 type Source = { title: string; url: string };
+type OfflineResolution = { answer?: { text: string; sources?: Source[] }; correction?: { original: string; corrected: string } };
+const QUICK_PROMPTS: Record<AskLanguage, string[]> = {
+  en: ["I have a cough", "I have leg pain", "What is metformin used for?", "I missed a dose"],
+  kn: ["ನನಗೆ ಕೆಮ್ಮು ಇದೆ", "ನನಗೆ ಕಾಲು ನೋವು ಇದೆ", "ಮೆಟ್‌ಫಾರ್ಮಿನ್ ಏಕೆ ಬಳಸುತ್ತಾರೆ?", "ನಾನು ಡೋಸ್ ಮರೆತಿದ್ದೇನೆ"],
+};
 type Message = { id: string; role: "user" | "assistant"; text: string; sources?: Source[]; error?: boolean; pending?: boolean };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
 type RetryRequest = { conversationId: string; question: string; excerpt: string; prior: Message[]; responseId: string };
@@ -110,7 +115,7 @@ function initialWorkspace(saved: boolean): { conversations: Conversation[]; acti
   return { conversations, activeId: conversations[0].id };
 }
 
-export default function AskAssistantChat({ language, onLanguageChange, documents, initialQuestion = "", onTryOfflineGuide }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[]; initialQuestion?: string; onTryOfflineGuide?: (question: string) => void }) {
+export default function AskAssistantChat({ language, onLanguageChange, documents, initialQuestion = "", onTryOfflineGuide, onResolveOfflineQuestion }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[]; initialQuestion?: string; onTryOfflineGuide?: (question: string) => void; onResolveOfflineQuestion?: (question: string) => OfflineResolution | null }) {
   const [saveHistory, setSaveHistory] = useState(() => {
     try { return localStorage.getItem("carepath_ai_chat_save") === "true"; } catch { return false; }
   });
@@ -124,6 +129,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
   const [listening, setListening] = useState(false);
   const [status, setStatus] = useState("");
   const [retry, setRetry] = useState<RetryRequest | null>(null);
+  const [pendingCorrection, setPendingCorrection] = useState<{ question: string; original: string; corrected: string; excerpt: string } | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const conversations = workspace.conversations;
@@ -185,13 +191,13 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
   const createNewChat = () => {
     const conversation = createConversation();
     setWorkspace((current) => ({ conversations: [conversation, ...current.conversations].slice(0, 40), activeId: conversation.id }));
-    setInput(""); setStatus(""); setRetry(null); setHistorySearch("");
+    setInput(""); setStatus(""); setRetry(null); setHistorySearch(""); setPendingCorrection(null);
   };
 
   const clearConversation = () => {
     if (!activeConversation) return;
     updateMessages(activeConversation.id, () => []);
-    setInput(""); setStatus(""); setRetry(null);
+    setInput(""); setStatus(""); setRetry(null); setPendingCorrection(null);
   };
 
   const deleteConversation = (conversation: Conversation) => {
@@ -236,16 +242,24 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     } finally { setBusy(false); }
   };
 
-  const sendQuestion = async (question: string, excerpt = "") => {
+  const sendQuestion = async (question: string, excerpt = "", allowCorrection = true) => {
     if (busy || !activeConversation) return;
     if (!ASSISTANT_ENDPOINT) {
+      const offlineResolution = onResolveOfflineQuestion?.(question);
+      if (allowCorrection && offlineResolution?.correction) {
+        setPendingCorrection({ question, excerpt, ...offlineResolution.correction });
+        setInput(question);
+        setStatus("");
+        return;
+      }
       const userMessage: Message = { id: newId(), role: "user", text: question };
       const localReply = localConversationReply(question, language);
-      const statusMessage: Message = { id: newId(), role: "assistant", text: localReply ?? copy.offlineResponse, error: !localReply };
+      const answer = localReply ? { text: localReply } : offlineResolution?.answer;
+      const statusMessage: Message = { id: newId(), role: "assistant", text: answer?.text ?? copy.offlineResponse, sources: answer?.sources, error: !answer };
       const conversationId = activeConversation.id;
       updateMessages(conversationId, (current) => [...current, userMessage, statusMessage]);
       patchConversation(conversationId, (current) => ({ ...current, title: messages.some((message) => message.role === "user") ? current.title : short(question, 42) }));
-      setInput(""); setRetry(null); setStatus("");
+      setInput(""); setRetry(null); setStatus(""); setPendingCorrection(null);
       return;
     }
     if (!consent) { setStatus(copy.consentNeeded); return; }
@@ -272,6 +286,15 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
       } catch { setStatus(copy.docReadError); return; }
     }
     await sendQuestion(question, excerpt);
+  };
+
+  const acceptCorrection = (useSuggestedWording: boolean) => {
+    if (!pendingCorrection) return;
+    const { question, corrected, excerpt } = pendingCorrection;
+    const nextQuestion = useSuggestedWording ? corrected : question;
+    setPendingCorrection(null);
+    setInput("");
+    void sendQuestion(nextQuestion, excerpt, false);
   };
 
   const retryQuestion = (item: RetryRequest) => {
@@ -317,7 +340,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
       <div className="cp-chat-history-heading"><span>{copy.history}</span><small>{saveHistory ? copy.saved : copy.temporary}</small></div>
       <div className="cp-chat-history-list">
         {filteredConversations.map((conversation) => <div key={conversation.id} className={`cp-chat-history-item ${conversation.id === activeConversation?.id ? "active" : ""}`}>
-          <button type="button" className="cp-chat-history-open" onClick={() => { setWorkspace((current) => ({ ...current, activeId: conversation.id })); setStatus(""); setRetry(null); }}><span>{conversation.title}</span><small>{conversation.messages.find((message) => message.role === "user")?.text || (language === "en" ? "New conversation" : "ಹೊಸ ಚಾಟ್")}</small></button>
+          <button type="button" className="cp-chat-history-open" onClick={() => { setWorkspace((current) => ({ ...current, activeId: conversation.id })); setStatus(""); setRetry(null); setPendingCorrection(null); }}><span>{conversation.title}</span><small>{conversation.messages.find((message) => message.role === "user")?.text || (language === "en" ? "New conversation" : "ಹೊಸ ಚಾಟ್")}</small></button>
           <button type="button" className="cp-chat-history-action" aria-label={`${copy.rename}: ${conversation.title}`} title={copy.rename} onClick={() => renameConversation(conversation)}><Pencil size={13} /></button>
           <button type="button" className="cp-chat-history-action delete" aria-label={`${copy.delete}: ${conversation.title}`} title={copy.delete} onClick={() => deleteConversation(conversation)}><Trash2 size={13} /></button>
         </div>)}
@@ -334,19 +357,25 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
 
       {!ASSISTANT_ENDPOINT && <div className="cp-assistant-not-configured" role="status"><AlertTriangle size={18} /><p>{copy.notConfigured}</p></div>}
       <div className="cp-assistant-chat" ref={threadRef} aria-live="polite" aria-label={language === "en" ? "Chat messages" : "ಚಾಟ್ ಸಂದೇಶಗಳು"}>
-        {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p></div>}
+        {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p><strong>{language === "en" ? "Try a question" : "ಪ್ರಶ್ನೆ ಪ್ರಯತ್ನಿಸಿ"}</strong><div className="cp-assistant-quick-prompts">{QUICK_PROMPTS[language].map((prompt) => <button key={prompt} type="button" onClick={() => setInput(prompt)}>{prompt}<Send size={13} /></button>)}</div></div>}
         {messages.map((message, index) => <article key={message.id} className={`cp-assistant-message ${message.role}`}>
           <div className="cp-assistant-bubble">
-            <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : message.error ? (language === "en" ? "CARE CONNECTED · connection status" : "CARE CONNECTED · ಸಂಪರ್ಕ ಸ್ಥಿತಿ") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>
+            <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : message.error ? (language === "en" ? "CARE CONNECTED · connection status" : "CARE CONNECTED · ಸಂಪರ್ಕ ಸ್ಥಿತಿ") : !ASSISTANT_ENDPOINT && message.sources?.length ? (language === "en" ? "CARE CONNECTED · reviewed guide" : "CARE CONNECTED · ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ") : !ASSISTANT_ENDPOINT ? (language === "en" ? "CARE CONNECTED · offline reply" : "CARE CONNECTED · ಆಫ್‌ಲೈನ್ ಉತ್ತರ") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>
             {message.pending ? <span className="cp-assistant-thinking"><LoaderCircle size={15} />{copy.sending}</span> : <p>{message.text}</p>}
             {message.error && retry?.responseId === message.id && <button type="button" className="cp-button quiet" onClick={() => retryQuestion(retry)} disabled={busy}><RotateCcw size={14} />{copy.retry}</button>}
             {message.role === "assistant" && message.error && !ASSISTANT_ENDPOINT && onTryOfflineGuide && <div className="cp-assistant-offline-actions"><button type="button" className="cp-button primary" onClick={() => { const question = messages.slice(0, index).reverse().find((item) => item.role === "user")?.text; if (question) onTryOfflineGuide(question); }}><ArrowDown size={15} />{copy.offlineGuide}</button><small>{copy.offlineGuideHint}</small></div>}
             {message.role === "assistant" && !message.pending && !message.error && <div className="cp-assistant-answer-tools"><ReadAloudButton text={message.text} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} language={language === "kn" ? "kn" : "en"} /><button type="button" className="cp-answer-tool" onClick={() => void copyAnswer(message.text)}><Copy size={14} />{copy.copyAnswer}</button>{index === messages.length - 1 && <button type="button" className="cp-answer-tool" onClick={regenerateLast} disabled={busy}><RotateCcw size={14} />{copy.regenerate}</button>}</div>}
             {message.role === "assistant" && !message.pending && !message.error && message.sources?.length ? <div className="cp-assistant-sources"><strong>{copy.sourceLabel}</strong>{message.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.title}<ExternalLink size={13} /></a>)}</div> : null}
-            {message.role === "assistant" && !message.pending && !message.error && !message.sources?.length ? <small className="cp-assistant-no-sources">{copy.noSources}</small> : null}
+            {message.role === "assistant" && !message.pending && !message.error && ASSISTANT_ENDPOINT && !message.sources?.length ? <small className="cp-assistant-no-sources">{copy.noSources}</small> : null}
           </div>
         </article>)}
       </div>
+
+      {pendingCorrection && <div className="cp-assistant-correction" role="group" aria-label={language === "en" ? "Check spelling suggestion" : "ಕಾಗುಣಿತ ಸೂಚನೆ ಪರಿಶೀಲಿಸಿ"}>
+        <strong>{language === "en" ? `Did you mean: “${pendingCorrection.corrected}”?` : `ನೀವು “${pendingCorrection.corrected}” ಎಂದಿದ್ದೀರಾ?`}</strong>
+        <p>{language === "en" ? `I may have read “${pendingCorrection.original}” as a typo. Please choose before I use this health or medicine guide.` : `“${pendingCorrection.original}” ತಪ್ಪಾಗಿ ಬರೆದಿರಬಹುದು. ಆರೋಗ್ಯ ಅಥವಾ ಔಷಧಿ ಮಾರ್ಗದರ್ಶಿ ತೋರಿಸುವ ಮೊದಲು ಆಯ್ಕೆಮಾಡಿ.`}</p>
+        <div><button type="button" className="cp-button primary" onClick={() => acceptCorrection(true)}>{language === "en" ? "Use suggested wording" : "ಸೂಚಿಸಿದ ಪದ ಬಳಸಿ"}</button><button type="button" className="cp-button quiet" onClick={() => acceptCorrection(false)}>{language === "en" ? "Keep my wording" : "ನನ್ನ ಪದಗಳನ್ನೇ ಇಡಿ"}</button></div>
+      </div>}
 
       <div className="cp-assistant-safety"><ShieldCheck size={16} /><span>{copy.noDiagnosis}<br /><small>{copy.urgent}</small></span></div>
       {documents.some((document) => document.fileStored) && <div className="cp-assistant-document">
@@ -355,7 +384,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
       </div>}
       {!documents.some((document) => document.fileStored) && <p className="cp-assistant-document-hint">{copy.noDocs}</p>}
       <form className="cp-assistant-composer" onSubmit={(event) => void submit(event)}>
-        <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={copy.placeholder} rows={2} maxLength={1200} aria-label={copy.placeholder} disabled={busy} />
+        <textarea value={input} onChange={(event) => { setInput(event.target.value); setPendingCorrection(null); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={copy.placeholder} rows={2} maxLength={1200} aria-label={copy.placeholder} disabled={busy} />
         <button type="button" className={`cp-assistant-mic ${listening ? "listening" : ""}`} onClick={toggleVoice} aria-label={listening ? copy.stopMic : copy.listen} disabled={busy}>{listening ? <X size={17} /> : <Mic size={17} />}</button>
         <button type="submit" aria-label={copy.send} disabled={(Boolean(ASSISTANT_ENDPOINT) && !consent) || !input.trim() || busy}>{busy ? <LoaderCircle className="cp-spin" size={17} /> : <Send size={17} />}</button>
       </form>

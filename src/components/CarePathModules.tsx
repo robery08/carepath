@@ -319,6 +319,7 @@ const HEALTH_SOURCES = ["who.int", "cancer.gov", "medlineplus.gov", "nhs.uk"];
 type AskLanguage = "en" | "kn";
 type AskCopy = { title: string; summary: string; points: string[]; source: string; url: string; next: string; route: string };
 type AskGuide = { terms: string[]; en: AskCopy; kn: AskCopy };
+type AskGuideMatch = { guide: AskGuide; spelling?: { original: string; corrected: string } };
 
 const ASK_GUIDES: AskGuide[] = [
   {
@@ -327,12 +328,17 @@ const ASK_GUIDES: AskGuide[] = [
     kn: { title: "ಈಗಲೇ ತುರ್ತು ಸಹಾಯ ಪಡೆಯಿರಿ", summary: "ಯಾರಾದರೂ ತಕ್ಷಣದ ಅಪಾಯದಲ್ಲಿದ್ದರೆ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಗೆ ಕರೆ ಮಾಡಿ. CARE CONNECTED ನಿಮ್ಮ ಸ್ಥಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಲು ಅಥವಾ ಕರೆ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ.", points: ["ನಿಮ್ಮ ಪ್ರದೇಶದ ತುರ್ತು ಸಂಖ್ಯೆಗೆ ಕರೆ ಮಾಡಿ. ಭಾರತದಲ್ಲಿ 112 ಕರೆ ಮಾಡಿ.", "ಲಕ್ಷಣಗಳು ತೀವ್ರವಾಗಿದ್ದರೆ ಅಥವಾ ಬೇಗ ಹದಗೆಟ್ಟರೆ ಆಪ್ ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಬೇಡಿ."], source: "ಭಾರತದ ತುರ್ತು ಪ್ರತಿಕ್ರಿಯೆ ಸಹಾಯ ವ್ಯವಸ್ಥೆ · 112", url: "https://112.gov.in/", next: "ತುರ್ತು ಕಾರ್ಡ್ ತೆರೆಯಿರಿ", route: "Emergency Help" },
   },
   {
-    terms: ["fever", "feaver", "high temperature", "temperature", "ಜ್ವರ"],
+    terms: ["fever", "high temperature", "temperature", "ಜ್ವರ"],
     en: { title: "Fever: what to check", summary: "Fever can have different causes. CARE CONNECTED cannot tell the cause or choose a fever medicine or dose.", points: ["Record the temperature, when it began, and other symptoms; drink fluids if you are able.", "Ask a clinician promptly about fever in a young infant, during cancer treatment, or when the person is very unwell or has a weakened immune system.", "Get urgent help for breathing difficulty, confusion, seizure, chest pain, or rapid worsening."], source: "U.S. National Library of Medicine · MedlinePlus: Fever", url: "https://medlineplus.gov/fever.html", next: "Open health tracker", route: "Health Tracker" },
     kn: { title: "ಜ್ವರ: ಏನು ಗಮನಿಸಬೇಕು", summary: "ಜ್ವರಕ್ಕೆ ಬೇರೆ ಬೇರೆ ಕಾರಣಗಳಿರಬಹುದು. ಕಾರಣ ಏನು ಅಥವಾ ಯಾವ ಜ್ವರದ ಔಷಧಿ/ಡೋಸ್ ತೆಗೆದುಕೊಳ್ಳಬೇಕು ಎಂದು CARE CONNECTED ಹೇಳುವುದಿಲ್ಲ.", points: ["ತಾಪಮಾನ, ಜ್ವರ ಯಾವಾಗ ಆರಂಭವಾಯಿತು ಮತ್ತು ಇತರೆ ಲಕ್ಷಣಗಳನ್ನು ದಾಖಲಿಸಿ; ಸಾಧ್ಯವಾದರೆ ದ್ರವಗಳನ್ನು ಕುಡಿಯಿರಿ.", "ಚಿಕ್ಕ ಶಿಶುವಿಗೆ, ಕ್ಯಾನ್ಸರ್ ಚಿಕಿತ್ಸೆ ಸಮಯದಲ್ಲಿ, ರೋಗಿ ತುಂಬಾ ಅಸ್ವಸ್ಥನಾಗಿದ್ದರೆ ಅಥವಾ ರೋಗನಿರೋಧಕ ಶಕ್ತಿ ಕಡಿಮೆಯಿದ್ದರೆ ವೈದ್ಯರನ್ನು ತಕ್ಷಣ ಕೇಳಿ.", "ಉಸಿರಾಟದ ತೊಂದರೆ, ಗೊಂದಲ, ಸೆಳೆತ, ಎದೆನೋವು ಅಥವಾ ಬೇಗ ಹದಗೆಟ್ಟರೆ ತುರ್ತು ಸಹಾಯ ಪಡೆಯಿರಿ."], source: "U.S. National Library of Medicine · MedlinePlus: ಜ್ವರ", url: "https://medlineplus.gov/fever.html", next: "ಆರೋಗ್ಯ ಟ್ರ್ಯಾಕರ್ ತೆರೆಯಿರಿ", route: "Health Tracker" },
   },
   {
-    terms: ["missed dose", "missed my dose", "missed my medicine", "missed a dose", "miss a dose", "forgot my medicine", "forgot my dose", "forgot to take", "forgot dose", "skip a dose", "extra dose", "double dose", "ಔಷಧಿ ಮರೆತು", "ಮಾತ್ರೆ ಮರೆತು", "ಮಾತ್ರೆ ಮಿಸ್ ಆಯಿತು", "ಮಿಸ್ ಆದ ಡೋಸ್"],
+    terms: ["leg pain", "leg ache", "leg hurts", "my leg hurts", "my leg is hurting", "pain in my leg", "pain in legs", "painful leg", "sore leg", "aching leg", "legs aching", "calf pain", "calf hurts", "calf ache", "thigh pain", "thigh hurts", "leg cramp", "leg cramps", "my legs hurt", "legs hurt", "leg muscle pain", "ಕಾಲು ನೋವು", "ಕಾಲಿನ ನೋವು", "ಕಾಲು ನೋಯುತ್ತಿದೆ", "ಕಾಲು ಸೆಳೆತ"],
+    en: { title: "Leg pain: understand the next safe step", summary: "Leg pain can have several causes, including a cramp, strain, or injury. One symptom is not enough to identify the cause or choose a medicine.", points: ["Note where it hurts, when it began, whether there was an injury or exercise, and any other symptoms. Contact a clinician promptly if a leg is newly swollen, red or warm, or if pain is severe or worsening.", "If leg pain or swelling comes with chest pain or sudden trouble breathing, get emergency help now.", "For a clear mild cramp or overuse, MedlinePlus describes rest and raising the leg as self-care. Ask a pharmacist or clinician what pain relief is safe for you; do not start, stop, or change a medicine based on this app."], source: "U.S. National Library of Medicine · MedlinePlus: Leg pain", url: "https://medlineplus.gov/ency/article/003182.htm", next: "Prepare a question for my visit", route: "Visit Prep" },
+    kn: { title: "ಕಾಲಿನ ನೋವು: ಸುರಕ್ಷಿತ ಮುಂದಿನ ಹೆಜ್ಜೆ", summary: "ಕಾಲಿನ ನೋವಿಗೆ ಸೆಳೆತ, ಸ್ನಾಯು ಎಳೆಯುವುದು ಅಥವಾ ಗಾಯ ಸೇರಿದಂತೆ ಹಲವು ಕಾರಣಗಳಿರಬಹುದು. ಒಂದು ಲಕ್ಷಣದಿಂದ ಕಾರಣ ಅಥವಾ ಸೂಕ್ತ ಔಷಧಿ ತಿಳಿಯುವುದಿಲ್ಲ.", points: ["ನೋವು ಎಲ್ಲಿ ಇದೆ, ಯಾವಾಗ ಆರಂಭವಾಯಿತು, ಗಾಯ ಅಥವಾ ವ್ಯಾಯಾಮದ ನಂತರವೇ, ಇನ್ನಾವುದೇ ಲಕ್ಷಣವಿದೆಯೇ ಎಂಬುದನ್ನು ದಾಖಲಿಸಿ. ಒಂದು ಕಾಲು ಹೊಸದಾಗಿ ಊದಿಕೊಂಡು, ಕೆಂಪಾಗಿ ಅಥವಾ ಬಿಸಿಯಾಗಿದ್ದರೆ, ಅಥವಾ ನೋವು ತೀವ್ರವಾಗಿದ್ದರೆ/ಹೆಚ್ಚುತ್ತಿದ್ದರೆ ವೈದ್ಯರನ್ನು ತ್ವರಿತವಾಗಿ ಸಂಪರ್ಕಿಸಿ.", "ಕಾಲಿನ ನೋವು ಅಥವಾ ಊತದ ಜೊತೆಗೆ ಎದೆನೋವು ಅಥವಾ ಹಠಾತ್ ಉಸಿರಾಟದ ತೊಂದರೆ ಇದ್ದರೆ ಈಗಲೇ ತುರ್ತು ಸಹಾಯ ಪಡೆಯಿರಿ.", "ಸ್ಪಷ್ಟವಾದ ಸೌಮ್ಯ ಸೆಳೆತ ಅಥವಾ ಹೆಚ್ಚು ಬಳಕೆಯ ನಂತರದ ನೋವಿಗೆ ವಿಶ್ರಾಂತಿ ಮತ್ತು ಕಾಲನ್ನು ಎತ್ತರಕ್ಕೆ ಇಡುವುದನ್ನು MedlinePlus ಸಾಮಾನ್ಯ ಆರೈಕೆಯಾಗಿ ತಿಳಿಸುತ್ತದೆ. ನಿಮಗೆ ಯಾವ ನೋವು ನಿವಾರಕ ಸುರಕ್ಷಿತ ಎಂದು ಫಾರ್ಮಸಿಸ್ಟ್ ಅಥವಾ ವೈದ್ಯರನ್ನು ಕೇಳಿ; ಈ ಆಪ್ ಆಧರಿಸಿ ಔಷಧಿ ಆರಂಭಿಸಬೇಡಿ, ನಿಲ್ಲಿಸಬೇಡಿ ಅಥವಾ ಬದಲಿಸಬೇಡಿ."], source: "U.S. National Library of Medicine · MedlinePlus: ಕಾಲಿನ ನೋವು", url: "https://medlineplus.gov/ency/article/003182.htm", next: "ವೈದ್ಯರ ಭೇಟಿಗೆ ಪ್ರಶ್ನೆ ಸಿದ್ಧಪಡಿಸಿ", route: "Visit Prep" },
+  },
+  {
+    terms: ["missed dose", "missed my dose", "missed my medicine", "missed a dose", "miss a dose", "forgot my medicine", "forgot my dose", "forgot to take", "forgot dose", "skip a dose", "extra dose", "double dose", "ಔಷಧಿ ಮರೆತು", "ಮಾತ್ರೆ ಮರೆತು", "ಮಾತ್ರೆ ಮರೆತಿದ್ದೇನೆ", "ಡೋಸ್ ಮರೆತಿದ್ದೇನೆ", "ನಾನು ಡೋಸ್ ಮರೆತಿದ್ದೇನೆ", "ಮಾತ್ರೆ ಮಿಸ್ ಆಯಿತು", "ಮಿಸ್ ಆದ ಡೋಸ್"],
     en: { title: "If you missed or are unsure about a dose", summary: "The right instructions depend on the exact medicine and timing, so this guide will not tell you to take, skip, or repeat a dose.", points: ["Read the leaflet or current prescription for that exact medicine.", "If it is unclear, ask a pharmacist or prescriber. Do not guess or double a dose unless your prescriber specifically tells you to."], source: "NHS Specialist Pharmacy Service · missed or delayed doses", url: "https://sps.nhs.uk/articles/advising-on-missed-or-delayed-doses-of-medicines/", next: "Record what happened", route: "Safety Alerts" },
     kn: { title: "ಡೋಸ್ ಮರೆತಿದ್ದರೆ ಅಥವಾ ಖಚಿತವಿಲ್ಲದಿದ್ದರೆ", summary: "ಸರಿಯಾದ ಸೂಚನೆ ಔಷಧಿ ಮತ್ತು ಸಮಯದ ಮೇಲೆ ಅವಲಂಬಿತ. ಈ ಮಾರ್ಗದರ್ಶಿ ಡೋಸ್ ತೆಗೆದುಕೊಳ್ಳಿ, ಬಿಡಿ ಅಥವಾ ಮರುತೆಗೆದುಕೊಳ್ಳಿ ಎಂದು ಹೇಳುವುದಿಲ್ಲ.", points: ["ಆ ಔಷಧಿಯ ಪ್ಯಾಕೆಟ್‌ನಲ್ಲಿರುವ ಕರಪತ್ರ ಅಥವಾ ಇತ್ತೀಚಿನ ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ನೋಡಿ.", "ಸ್ಪಷ್ಟವಾಗದಿದ್ದರೆ ಫಾರ್ಮಸಿಸ್ಟ್ ಅಥವಾ ವೈದ್ಯರನ್ನು ಕೇಳಿ. ವೈದ್ಯರು ಹೇಳದಿದ್ದರೆ ಊಹಿಸಿ ಅಥವಾ ಎರಡು ಡೋಸ್ ತೆಗೆದುಕೊಳ್ಳಬೇಡಿ."], source: "NHS Specialist Pharmacy Service · ಮರೆತ ಅಥವಾ ತಡವಾದ ಡೋಸ್", url: "https://sps.nhs.uk/articles/advising-on-missed-or-delayed-doses-of-medicines/", next: "ಏನಾಯಿತು ಎಂದು ದಾಖಲಿಸಿ", route: "Safety Alerts" },
   },
@@ -367,17 +373,17 @@ const ASK_GUIDES: AskGuide[] = [
     kn: { title: "ಸೌಮ್ಯ ಶೀತದ ಲಕ್ಷಣಗಳಿಗೆ ಆರಾಮದಾಯಕ ಆರೈಕೆ", summary: "ಸೌಮ್ಯ ಶೀತ ಕಡಿಮೆಯಾಗುವಾಗ ವಿಶ್ರಾಂತಿ ಮತ್ತು ದ್ರವಗಳು ಆರಾಮಕ್ಕೆ ಸಹಾಯ ಮಾಡಬಹುದು. ಮನೆಮದ್ದು ಬೇಗ ಗುಣಪಡಿಸುತ್ತದೆ ಎಂಬ ಭರವಸೆ ಇಲ್ಲ; ವಯಸ್ಸು, ಆರೋಗ್ಯ ಸ್ಥಿತಿ ಅಥವಾ ಚಿಕಿತ್ಸೆ ಸುರಕ್ಷತೆಯನ್ನು ಬದಲಾಯಿಸಬಹುದು.", points: ["ವಿಶ್ರಾಂತಿ ಮಾಡಿ, ದ್ರವಗಳನ್ನು ಕುಡಿಯಿರಿ; ಸ್ವಚ್ಛವಾದ ತಂಪು-ಮಂಜಿನ ಹ್ಯೂಮಿಡಿಫೈಯರ್ ಅಥವಾ ಬೆಚ್ಚಗಿನ ಉಪ್ಪುನೀರಿನಿಂದ ಬಾಯಿ ಮುಕ್ಕಳಿಸುವುದು ಆರಾಮ ಕೊಡಬಹುದು.", "ಗಿಡಮೂಲಿಕೆ ಅಥವಾ ಪೂರಕಗಳು ಎಲ್ಲರಿಗೂ ಸುರಕ್ಷಿತವೆಂದು ಊಹಿಸಬೇಡಿ; ಔಷಧಿ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿದ್ದರೆ ಅಥವಾ ಆರೋಗ್ಯ ಸ್ಥಿತಿಯಿದ್ದರೆ ಫಾರ್ಮಸಿಸ್ಟ್ ಅನ್ನು ಕೇಳಿ.", "ಉಸಿರಾಟದ ತೊಂದರೆ, ಎದೆನೋವು ಅಥವಾ ತೀವ್ರವಾಗಿ ಹದಗೆಡುವ ಲಕ್ಷಣಗಳಿಗೆ ತುರ್ತು ಸಹಾಯ ಪಡೆಯಿರಿ. ಕ್ಯಾನ್ಸರ್ ಚಿಕಿತ್ಸೆ ಪಡೆಯುತ್ತಿದ್ದರೆ ನಿಮ್ಮ ಆಂಕಾಲಜಿ ತಂಡದ ಜ್ವರ ಯೋಜನೆ ಪಾಲಿಸಿ."], source: "NIH MedlinePlus · ಸಾಮಾನ್ಯ ಶೀತ", url: "https://medlineplus.gov/commoncold.html", next: "ದೈನಂದಿನ ಆರೋಗ್ಯ ಮಾರ್ಗದರ್ಶಿ ತೆರೆಯಿರಿ", route: "Learn" },
   },
   {
-    terms: ["cough", "coughing", "cough medicine", "caugh", "ಕೆಮ್ಮು", "ಕಫ"],
+    terms: ["cough", "coughing", "cough medicine", "ಕೆಮ್ಮು", "ಕಫ"],
     en: { title: "Cough: safe first steps", summary: "A cough has many possible causes, so it does not identify one illness by itself. CARE CONNECTED cannot choose a cough tablet. Water may help soothe a cough; ask a pharmacist before using a cough product, especially for a child or when other medicines are involved.", points: ["Notice when it started and whether fever or other symptoms are present; add this to your visit brief if useful.", "Get urgent help for breathing difficulty, chest pain, coughing blood, or severe/rapidly worsening symptoms."], source: "U.S. National Library of Medicine · MedlinePlus: Cough", url: "https://medlineplus.gov/cough.html", next: "Prepare a question for my visit", route: "Visit Prep" },
     kn: { title: "ಕೆಮ್ಮು: ಸುರಕ್ಷಿತ ಮೊದಲ ಹೆಜ್ಜೆಗಳು", summary: "ಕೆಮ್ಮಿಗೆ ಹಲವು ಕಾರಣಗಳಿರಬಹುದು; ಕೆಮ್ಮು ಮಾತ್ರದಿಂದ ಒಂದು ರೋಗ ಗೊತ್ತಾಗುವುದಿಲ್ಲ. ಯಾವ ಕೆಮ್ಮಿನ ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಬೇಕು ಎಂದು CARE CONNECTED ಹೇಳುವುದಿಲ್ಲ. ನೀರು ಆರಾಮಕ್ಕೆ ಸಹಾಯ ಮಾಡಬಹುದು; ವಿಶೇಷವಾಗಿ ಮಕ್ಕಳಿಗೆ ಅಥವಾ ಬೇರೆ ಔಷಧಿ ತೆಗೆದುಕೊಳ್ಳುವಾಗ ಫಾರ್ಮಸಿಸ್ಟ್ ಅನ್ನು ಕೇಳಿ.", points: ["ಕೆಮ್ಮು ಯಾವಾಗ ಆರಂಭವಾಯಿತು, ಜ್ವರ ಅಥವಾ ಬೇರೆ ಲಕ್ಷಣಗಳಿವೆಯೇ ಗಮನಿಸಿ.", "ಉಸಿರಾಟದ ತೊಂದರೆ, ಎದೆನೋವು, ರಕ್ತ ಕೆಮ್ಮುವುದು ಅಥವಾ ತೀವ್ರವಾಗಿ ಹದಗೆಟ್ಟರೆ ತುರ್ತು ಸಹಾಯ ಪಡೆಯಿರಿ."], source: "U.S. National Library of Medicine · MedlinePlus: ಕೆಮ್ಮು", url: "https://medlineplus.gov/cough.html", next: "ವೈದ್ಯರ ಭೇಟಿಗೆ ಪ್ರಶ್ನೆ ಸಿದ್ಧಪಡಿಸಿ", route: "Visit Prep" },
   },
   {
-    terms: ["headache", "head ache", "migraine", "hedache", "ತಲೆನೋವು", "ಮೈಗ್ರೇನ್"],
+    terms: ["headache", "head ache", "migraine", "ತಲೆನೋವು", "ಮೈಗ್ರೇನ್"],
     en: { title: "Headache: know when to get help", summary: "Headaches have different causes. CARE CONNECTED cannot diagnose the cause or choose a pain medicine.", points: ["Note when it started and other symptoms; discuss a new or recurring pattern with a clinician.", "Get help right away for a sudden severe headache, after a head injury, or with fever and stiff neck, confusion, fainting, or eye pain."], source: "U.S. National Library of Medicine · MedlinePlus: Headache", url: "https://medlineplus.gov/headache.html", next: "Prepare a question for my visit", route: "Visit Prep" },
     kn: { title: "ತಲೆನೋವು: ಯಾವಾಗ ಸಹಾಯ ಬೇಕು", summary: "ತಲೆನೋವಿಗೆ ಬೇರೆ ಕಾರಣಗಳಿರಬಹುದು. ಕಾರಣ ಪತ್ತೆಹಚ್ಚಲು ಅಥವಾ ನೋವಿನ ಔಷಧಿ ಆಯ್ಕೆಮಾಡಲು CARE CONNECTED ಸಾಧ್ಯವಿಲ್ಲ.", points: ["ಯಾವಾಗ ಆರಂಭವಾಯಿತು ಮತ್ತು ಬೇರೆ ಲಕ್ಷಣಗಳಿವೆಯೇ ದಾಖಲಿಸಿ; ಹೊಸದಾಗಿ ಅಥವಾ ಮತ್ತೆಮತ್ತೆ ಆಗುತ್ತಿದ್ದರೆ ವೈದ್ಯರೊಂದಿಗೆ ಚರ್ಚಿಸಿ.", "ಹಠಾತ್ ತೀವ್ರ ತಲೆನೋವು, ತಲೆಗೆ ಪೆಟ್ಟು ನಂತರದ ನೋವು, ಜ್ವರದೊಂದಿಗೆ ಕುತ್ತಿಗೆ ಬಿಗಿಯಾಗುವುದು, ಗೊಂದಲ ಅಥವಾ ಪ್ರಜ್ಞೆ ತಪ್ಪಿದರೆ ತಕ್ಷಣ ಸಹಾಯ ಪಡೆಯಿರಿ."], source: "U.S. National Library of Medicine · MedlinePlus: ತಲೆನೋವು", url: "https://medlineplus.gov/headache.html", next: "ವೈದ್ಯರ ಭೇಟಿಗೆ ಪ್ರಶ್ನೆ ಸಿದ್ಧಪಡಿಸಿ", route: "Visit Prep" },
   },
   {
-    terms: ["sore throat", "throat pain", "sore throt", "ಗಂಟಲು ನೋವು", "ಗಂಟಲು ಕೆರೆತ"],
+    terms: ["sore throat", "throat pain", "throat hurts", "my throat hurts", "ಗಂಟಲು ನೋವು", "ಗಂಟಲು ಕೆರೆತ"],
     en: { title: "Sore throat: watch the symptoms", summary: "A sore throat can have several causes. CARE CONNECTED cannot identify which one applies or recommend an antibiotic or tablet.", points: ["Record how long it has lasted and any fever or other symptoms.", "Get urgent help for difficulty breathing or swallowing, or severe/rapid worsening. Ask a clinician or pharmacist if symptoms persist."], source: "U.S. National Library of Medicine · MedlinePlus: Sore throat", url: "https://medlineplus.gov/sorethroat.html", next: "Prepare a question for my visit", route: "Visit Prep" },
     kn: { title: "ಗಂಟಲು ನೋವು: ಲಕ್ಷಣಗಳನ್ನು ಗಮನಿಸಿ", summary: "ಗಂಟಲು ನೋವಿಗೆ ಹಲವು ಕಾರಣಗಳಿರಬಹುದು. ಯಾವುದು ಕಾರಣ ಅಥವಾ ಆಂಟಿಬಯಾಟಿಕ್/ಮಾತ್ರೆ ಬೇಕೇ ಎಂದು CARE CONNECTED ಹೇಳುವುದಿಲ್ಲ.", points: ["ಎಷ್ಟು ದಿನಗಳಿಂದ ಇದೆ ಮತ್ತು ಜ್ವರ ಅಥವಾ ಬೇರೆ ಲಕ್ಷಣಗಳಿವೆಯೇ ದಾಖಲಿಸಿ.", "ಉಸಿರಾಡಲು ಅಥವಾ ನುಂಗಲು ಕಷ್ಟವಾದರೆ ಅಥವಾ ತೀವ್ರವಾಗಿ ಹದಗೆಟ್ಟರೆ ತುರ್ತು ಸಹಾಯ ಪಡೆಯಿರಿ. ಲಕ್ಷಣ ಮುಂದುವರಿದರೆ ವೈದ್ಯರನ್ನು ಕೇಳಿ."], source: "U.S. National Library of Medicine · MedlinePlus: ಗಂಟಲು ನೋವು", url: "https://medlineplus.gov/sorethroat.html", next: "ವೈದ್ಯರ ಭೇಟಿಗೆ ಪ್ರಶ್ನೆ ಸಿದ್ಧಪಡಿಸಿ", route: "Visit Prep" },
   },
@@ -394,6 +400,7 @@ const ASK_GUIDES: AskGuide[] = [
 ];
 
 type MedicineReference = { terms: string[]; en: AskCopy; kn: AskCopy };
+type MedicineReferenceMatch = { medicine: MedicineReference; spelling?: { original: string; corrected: string } };
 
 const MEDICINE_REFERENCES: MedicineReference[] = [
   {
@@ -423,17 +430,21 @@ const MEDICINE_REFERENCES: MedicineReference[] = [
   },
 ];
 
-function findMedicineReference(question: string) {
+function findMedicineReference(question: string): MedicineReferenceMatch | null {
   const normalize = (value: string) => " " + value.toLocaleLowerCase().normalize("NFC").replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim() + " ";
   const normalized = normalize(question);
   const exact = MEDICINE_REFERENCES.find((item) => item.terms.some((term) => normalized.includes(normalize(term))));
-  if (exact) return exact;
+  if (exact) return { medicine: exact };
   const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 6 && !containsNonAscii(word));
   for (const item of MEDICINE_REFERENCES) for (const term of item.terms) {
     const clean = term.toLocaleLowerCase();
     if (containsNonAscii(clean) || clean.length < 6) continue;
     const limit = clean.length > 8 ? 2 : 1;
-    if (words.some((word) => Math.abs(word.length - clean.length) <= limit && spellingDistance(word, clean) <= limit)) return item;
+    const word = words.find((candidate) => candidate !== clean && Math.abs(candidate.length - clean.length) <= limit && spellingDistance(candidate, clean) <= limit);
+    if (!word) continue;
+    const start = question.toLocaleLowerCase().indexOf(word);
+    const correctedQuestion = start >= 0 ? question.slice(0, start) + clean + question.slice(start + word.length) : question;
+    return { medicine: item, spelling: { original: word, corrected: correctedQuestion } };
   }
   return null;
 }
@@ -478,7 +489,7 @@ function isGreetingQuestion(question: string) {
 }
 
 function isPersonalTreatmentQuestion(question: string) {
-  return /\b(dose|dosage|how much|how many|can i take|should i take|safe for me|interaction|mix with|take together|stop taking|start taking|change my|switch|pregnan|side effect|treatment for me)\b|ಡೋಸ್|ಪ್ರಮಾಣ|ನಿಲ್ಲಿಸ|ಬದಲಿಸ/i.test(question);
+  return /\b(dose|dosage|how much|how many|can i take|should i take|safe for me|interaction|mix with|take together|stop taking|start taking|change my|switch|pregnan|treatment for me)\b|ಡೋಸ್|ಪ್ರಮಾಣ|ನಿಲ್ಲಿಸ|ಬದಲಿಸ/i.test(question);
 }
 
 function containsNonAscii(value: string) { return Array.from(value).some((character) => (character.codePointAt(0) ?? 0) > 127); }
@@ -496,20 +507,39 @@ function spellingDistance(left: string, right: string) {
   return row[right.length];
 }
 
-function findAskGuide(question: string) {
+function findAskGuide(question: string): AskGuideMatch | null {
   const normalize = (value: string) => " " + value.toLocaleLowerCase().normalize("NFC").replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim() + " ";
   const normalized = normalize(question);
   const exact = ASK_GUIDES.find((item) => item.terms.some((term) => normalized.includes(normalize(term))));
-  if (exact) return exact;
+  if (exact) return { guide: exact };
   const ignored = new Set(["have", "with", "from", "what", "when", "where", "does", "this", "that", "please", "help", "feel", "been", "some", "about", "take", "tablet", "medicine"]);
-  const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 4 && !containsNonAscii(word) && !ignored.has(word));
+  const allWords = normalized.trim().split(/\s+/);
+  const words = allWords.filter((word) => word.length >= 4 && !containsNonAscii(word) && !ignored.has(word));
   for (const item of ASK_GUIDES) for (const term of item.terms) {
-    const clean = normalize(term).trim();
-    if (clean.includes(" ") || clean.length < 4 || containsNonAscii(clean)) continue;
-    const limit = clean.length > 7 ? 2 : 1;
-    if (words.some((word) => Math.abs(word.length - clean.length) <= limit && spellingDistance(word, clean) <= limit)) return item;
+    const termWords = normalize(term).trim().split(/\s+/);
+    for (const clean of termWords.filter((word) => word.length >= 4 && !containsNonAscii(word))) {
+      const limit = clean.length > 7 ? 2 : 1;
+      const word = words.find((candidate) => candidate !== clean && Math.abs(candidate.length - clean.length) <= limit && spellingDistance(candidate, clean) <= limit);
+      if (!word) continue;
+      if (termWords.length > 1 && !termWords.some((companion) => companion !== clean && allWords.includes(companion))) continue;
+      const start = question.toLocaleLowerCase().indexOf(word);
+      const correctedQuestion = start >= 0 ? question.slice(0, start) + clean + question.slice(start + word.length) : question;
+      return { guide: item, spelling: { original: word, corrected: correctedQuestion } };
+    }
   }
   return null;
+}
+
+function medicineSideEffectSummary(medicine: MedicineReference, language: AskLanguage) {
+  const key = medicine.terms[0].toLocaleLowerCase();
+  const summaries: Record<string, Record<AskLanguage, string>> = {
+    metformin: { en: "Reported effects can include diarrhea, nausea, stomach discomfort, and gas. Rarely, metformin can cause a serious condition called lactic acidosis. This is not a complete list.", kn: "ವರದಿಯಾದ ಅಡ್ಡಪರಿಣಾಮಗಳಲ್ಲಿ ಅತಿಸಾರ, ವಾಕರಿಕೆ, ಹೊಟ್ಟೆ ಅಸ್ವಸ್ಥತೆ ಮತ್ತು ಗ್ಯಾಸ್ ಇರಬಹುದು. ಅಪರೂಪವಾಗಿ ಲ್ಯಾಕ್ಟಿಕ್ ಆಸಿಡೋಸಿಸ್ ಎಂಬ ಗಂಭೀರ ಸ್ಥಿತಿ ಉಂಟಾಗಬಹುದು. ಇದು ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಲ್ಲ." },
+    amlodipine: { en: "Reported effects can include ankle or lower-leg swelling, dizziness, nausea, and tiredness. More frequent chest pain, fainting, or an irregular heartbeat need prompt medical attention. This is not a complete list.", kn: "ವರದಿಯಾದ ಅಡ್ಡಪರಿಣಾಮಗಳಲ್ಲಿ ಕಣಕಾಲು/ಕಾಲಿನ ಕೆಳಭಾಗದ ಊತ, ತಲೆಸುತ್ತು, ವಾಕರಿಕೆ ಮತ್ತು ದಣಿವು ಇರಬಹುದು. ಎದೆನೋವು ಹೆಚ್ಚಾಗುವುದು, ಮೂರ್ಛೆ ಅಥವಾ ಹೃದಯಬಡಿತ ಅಸಮವಾಗುವುದಕ್ಕೆ ತ್ವರಿತ ವೈದ್ಯಕೀಯ ಸಹಾಯ ಬೇಕು. ಇದು ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಲ್ಲ." },
+    atorvastatin: { en: "Reported effects can include diarrhea, heartburn, gas, joint pain, or memory changes. Uncommon serious problems can include muscle symptoms or signs of liver problems. This is not a complete list.", kn: "ವರದಿಯಾದ ಅಡ್ಡಪರಿಣಾಮಗಳಲ್ಲಿ ಅತಿಸಾರ, ಎದೆಉರಿ, ಗ್ಯಾಸ್, ಕೀಲುನೋವು ಅಥವಾ ನೆನಪಿನ ಬದಲಾವಣೆ ಇರಬಹುದು. ಅಪರೂಪದ ಗಂಭೀರ ಸಮಸ್ಯೆಗಳಲ್ಲಿ ಸ್ನಾಯು ಲಕ್ಷಣಗಳು ಅಥವಾ ಯಕೃತ್ತಿನ ತೊಂದರೆಯ ಸೂಚನೆಗಳು ಇರಬಹುದು. ಇದು ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಲ್ಲ." },
+    acetaminophen: { en: "Serious allergic or skin reactions are possible. Taking too much, including from multiple products with the same ingredient, can seriously damage the liver. Check the exact product label; this is not a complete list.", kn: "ಗಂಭೀರ ಅಲರ್ಜಿ ಅಥವಾ ಚರ್ಮದ ಪ್ರತಿಕ್ರಿಯೆ ಸಾಧ್ಯ. ಒಂದೇ ಪದಾರ್ಥವಿರುವ ಹಲವು ಉತ್ಪನ್ನಗಳಿಂದ ಸೇರಿ ಅತಿಯಾಗಿ ತೆಗೆದುಕೊಂಡರೆ ಯಕೃತ್ತಿಗೆ ಗಂಭೀರ ಹಾನಿಯಾಗಬಹುದು. ನಿಖರ ಉತ್ಪನ್ನದ ಲೇಬಲ್ ನೋಡಿ; ಇದು ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಲ್ಲ." },
+    ibuprofen: { en: "Reported effects can include constipation, gas, dizziness, nervousness, or ringing in the ears. Serious stomach bleeding and heart or stroke risks are described in official information for some people. This is not a complete list.", kn: "ವರದಿಯಾದ ಅಡ್ಡಪರಿಣಾಮಗಳಲ್ಲಿ ಮಲಬದ್ಧತೆ, ಗ್ಯಾಸ್, ತಲೆಸುತ್ತು, ಆತಂಕ ಅಥವಾ ಕಿವಿಯಲ್ಲಿ ಗಂಟುಮಣಿ ಶಬ್ದ ಇರಬಹುದು. ಕೆಲವರಿಗೆ ಗಂಭೀರ ಹೊಟ್ಟೆ ರಕ್ತಸ್ರಾವ ಮತ್ತು ಹೃದಯ/ಪಾರ್ಶ್ವವಾಯು ಅಪಾಯಗಳನ್ನೂ ಅಧಿಕೃತ ಮಾಹಿತಿಯಲ್ಲಿ ವಿವರಿಸಲಾಗಿದೆ. ಇದು ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಲ್ಲ." },
+  };
+  return summaries[key]?.[language] ?? "Side effects differ by product and person. Review the official leaflet and ask a pharmacist or clinician.";
 }
 
 function AskCarepath({ medicines, readings, documents, profile, onNavigate, initialQuestion, onQuestionConsumed }: Shared & { initialQuestion: string; onQuestionConsumed: () => void }) {
@@ -519,6 +549,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
   const [language, setLanguage] = useState<AskLanguage>(() => getVoiceLanguage());
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [matchedGuide, setMatchedGuide] = useState<AskGuide | null>(null);
+  const [spellingSuggestion, setSpellingSuggestion] = useState<{ original: string; corrected: string } | null>(null);
   const [matchedMedicine, setMatchedMedicine] = useState<MedicineReference | null>(null);
   const [matchedCustom, setMatchedCustom] = useState<CareContent | null>(null);
   const [notice, setNotice] = useState("");
@@ -534,9 +565,11 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
     : language === "en" ? ["I have a cough", "I have a fever", "My head hurts"] : ["ನನಗೆ ಕೆಮ್ಮು ಇದೆ", "ನನಗೆ ಜ್ವರ ಇದೆ", "ನನ್ನ ತಲೆ ನೋಯುತ್ತಿದೆ"];
   const prepareLocalAnswer = (question: string, selectedMode = mode) => {
     const personalDecision = isPersonalTreatmentQuestion(question);
+    const guideMatch = findAskGuide(question);
     setSubmittedQuestion(question);
-    setMatchedGuide(findAskGuide(question));
-    setMatchedMedicine(personalDecision ? null : findMedicineReference(question));
+    setMatchedGuide(guideMatch?.guide ?? null);
+    setSpellingSuggestion(guideMatch?.spelling ?? null);
+    setMatchedMedicine(personalDecision ? null : findMedicineReference(question)?.medicine ?? null);
     setMatchedCustom(personalDecision ? null : findPublishedCareContent(question, selectedMode === "medicine" ? "medicine" : undefined));
     setNotice("");
   };
@@ -552,6 +585,28 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
     setInput(question);
     prepareLocalAnswer(question, nextMode);
   };
+  const resolveOfflineQuestion = (question: string) => {
+    const guideMatch = findAskGuide(question);
+    if (guideMatch?.spelling) return { correction: guideMatch.spelling };
+    const medicineMatch = findMedicineReference(question);
+    if (medicineMatch?.spelling) return { correction: medicineMatch.spelling };
+    if (guideMatch) {
+      const copy = guideMatch.guide[language];
+      return { answer: { text: `${copy.title}\n\n${copy.summary}\n\n${copy.points.map((point) => `• ${point}`).join("\n")}`, sources: copy.url ? [{ title: copy.source, url: copy.url }] : [] } };
+    }
+    if (medicineMatch && !isPersonalTreatmentQuestion(question)) {
+      const copy = medicineMatch.medicine[language];
+      return { answer: { text: `${copy.title}\n\n${copy.summary}\n\n${copy.points.map((point) => `• ${point}`).join("\n")}\n\n${language === "en" ? "Side effects — general overview, not a complete list:" : "ಅಡ್ಡಪರಿಣಾಮಗಳು — ಸಾಮಾನ್ಯ ಮಾಹಿತಿ, ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಲ್ಲ:"} ${medicineSideEffectSummary(medicineMatch.medicine, language)}`, sources: [{ title: copy.source, url: copy.url }] } };
+    }
+    if (!isPersonalTreatmentQuestion(question)) {
+      const custom = findPublishedCareContent(question, /\b(medicine|medication|tablet|pill|drug)\b|ಔಷಧಿ|ಮಾತ್ರೆ/i.test(question) ? "medicine" : undefined);
+      if (custom) {
+        const copy = customCareAnswer(custom, language);
+        return { answer: { text: `${copy.title}\n\n${copy.summary}\n\n${copy.points.map((point) => `• ${point}`).join("\n")}`, sources: copy.url ? [{ title: copy.source, url: copy.url }] : [] } };
+      }
+    }
+    return null;
+  };
   useEffect(() => {
     if (submittedQuestion) answerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [submittedQuestion]);
@@ -560,6 +615,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
     setNotice("");
     setSubmittedQuestion("");
     setMatchedGuide(null);
+    setSpellingSuggestion(null);
     setMatchedMedicine(null);
     setMatchedCustom(null);
   };
@@ -574,7 +630,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
     : "";
   return <>
     <PageHeader eyebrow={language === "en" ? "A CONVERSATION SPACE · ENGLISH OR ಕನ್ನಡ" : "ಸಂಭಾಷಣೆ · ENGLISH OR ಕನ್ನಡ"} title={language === "en" ? "Ask anything" : "ಏನನ್ನಾದರೂ ಕೇಳಿ"} description={language === "en" ? "Explore ideas and ask follow-up questions here. Live AI needs a configured server; curated health guides remain available offline." : "ವಿಷಯಗಳನ್ನು ಅನ್ವೇಷಿಸಿ, ಮುಂದಿನ ಪ್ರಶ್ನೆಗಳನ್ನು ಇಲ್ಲಿಯೇ ಕೇಳಿ. ಲೈವ್ AI ಗೆ ಸರ್ವರ್ ಅಗತ್ಯ; ಆರೋಗ್ಯ ಮಾರ್ಗದರ್ಶಿಗಳು ಆಫ್‌ಲೈನ್‌ನಲ್ಲೂ ಲಭ್ಯ."} icon={<Search size={24} />} action={<span className="cp-local-pill"><span /> {language === "en" ? "Health information · not diagnosis" : "ಆರೋಗ್ಯ ಮಾಹಿತಿ · ರೋಗನಿರ್ಣಯವಲ್ಲ"}</span>} />
-    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} initialQuestion={initialQuestion} onTryOfflineGuide={openOfflineAnswer} />
+    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} initialQuestion={initialQuestion} onTryOfflineGuide={openOfflineAnswer} onResolveOfflineQuestion={resolveOfflineQuestion} />
     <div className="cp-ai-layout">
       <Panel title={mode === "medicine" ? (language === "en" ? "Ask about medicines" : "ಔಷಧಿಗಳ ಬಗ್ಗೆ ಕೇಳಿ") : (language === "en" ? "Ask about health topics" : "ಆರೋಗ್ಯ ವಿಷಯಗಳ ಬಗ್ಗೆ ಕೇಳಿ")} eyebrow={language === "en" ? "REVIEWED GUIDES · OPTIONAL MEDICINE LOOKUP" : "ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ · ಔಷಧಿ ಹುಡುಕಾಟಕ್ಕೆ ಒಪ್ಪಿಗೆ ಬೇಕು"}>
         <div className="cp-ai-toolbar"><div className="cp-ai-mode-switch" role="group" aria-label="Choose guide category"><button className={mode === "medicine" ? "selected" : ""} onClick={() => setSearchMode("medicine")}><Pill size={16} /> {language === "en" ? "Medicines" : "ಔಷಧಿ"}</button><button className={mode === "health" ? "selected" : ""} onClick={() => setSearchMode("health")}><Search size={16} /> {language === "en" ? "Health topics" : "ಆರೋಗ್ಯ"}</button></div><div className="cp-language-switch" role="group" aria-label="Answer language"><button className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => setLanguage("en")}>English</button><button className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => setLanguage("kn")}>ಕನ್ನಡ</button></div></div>
@@ -582,7 +638,8 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
         <div className="cp-chat-thread"><div className="cp-chat-welcome"><div className="cp-ai-orb">{mode === "medicine" ? <Pill size={25} /> : <Search size={25} />}</div><h3>{language === "en" ? "What would you like to know?" : "ನೀವು ಏನು ತಿಳಿಯಲು ಬಯಸುತ್ತೀರಿ?"}</h3><p>{language === "en" ? "Choose a topic or type a question. Answers are curated general information, not a live AI response." : "ವಿಷಯ ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ. ಉತ್ತರಗಳು ಸಂಪಾದಿತ ಸಾಮಾನ್ಯ ಮಾಹಿತಿ; ಲೈವ್ AI ಉತ್ತರಗಳಲ್ಲ."}</p><div className="cp-prompt-grid">{prompts.map((prompt) => <button key={prompt} onClick={() => setInput(prompt)}>{prompt}<ArrowRight size={15} /></button>)}</div></div></div>
         <form className="cp-chat-composer" onSubmit={answerQuestion}><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={language === "en" ? "Ask in English or Kannada…" : "English ಅಥವಾ ಕನ್ನಡದಲ್ಲಿ ಕೇಳಿ…"} rows={2} maxLength={300} /><button type="submit" aria-label={language === "en" ? "Get an answer" : "ಉತ್ತರ ನೋಡಿ"}><Send size={18} /></button></form>
         {notice && <p className="cp-ai-status" role="status">{notice}</p>}
-        {submittedQuestion && !needsOfficialMedicineLookup && <section ref={answerRef} className="cp-ask-answer" aria-live="polite"><div className="cp-answer-question"><span className="cp-answer-avatar">{language === "en" ? "YOU" : "ನೀವು"}</span><p>{submittedQuestion}</p></div><article className="cp-answer-card"><div className="cp-answer-heading"><span className="cp-ai-orb"><BookOpen size={21} /></span><div><span className="cp-eyebrow">{language === "en" ? (greeting ? "A FRIENDLY HELLO · OFFLINE" : supportive ? "A SUPPORTIVE MOMENT · OFFLINE" : matchedCustom ? "LOCAL ADMIN LEARNING CARD" : matchedMedicine ? "GENERAL MEDICINE PURPOSE · SOURCE LINKED" : matchedGuide ? "CURATED CARE CONNECTED GUIDE" : "GUIDE LIMIT") : (greeting ? "ಸ್ನೇಹಪೂರ್ಣ ಸ್ವಾಗತ · ಆಫ್‌ಲೈನ್" : supportive ? "ಬೆಂಬಲದ ಮಾತು · ಆಫ್‌ಲೈನ್" : matchedCustom ? "ಸ್ಥಳೀಯ ಆಡಳಿತ ಕಲಿಕಾ ಕಾರ್ಡ್" : matchedMedicine ? "ಸಾಮಾನ್ಯ ಔಷಧಿ ಬಳಕೆ · ಮೂಲ ಸಹಿತ" : matchedGuide ? "CARE CONNECTED ಮಾರ್ಗದರ್ಶಿ" : "ಮಾರ್ಗದರ್ಶಿ ಮಿತಿ")}</span><h3>{answer.title}</h3></div></div><p className="cp-answer-summary">{answer.summary}</p><ReadAloudButton text={answer.title + ". " + answer.summary + " " + answer.points.join(" ")} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} /><ul>{answer.points.map((point) => <li key={point}>{point}</li>)}</ul>{localPurposeNotice && <Notice tone="warm">{localPurposeNotice}</Notice>}{matchedMedicine && <p className="cp-source-freshness">{language === "en" ? "Source: U.S. NIH MedlinePlus. Product labels and approvals differ by country; compare your own package and local regulator." : "ಮೂಲ: U.S. NIH MedlinePlus. ಉತ್ಪನ್ನ ಲೇಬಲ್ ಮತ್ತು ಅನುಮೋದನೆ ದೇಶದ ಪ್ರಕಾರ ಬದಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಪ್ಯಾಕೆಟ್ ಮತ್ತು ಸ್ಥಳೀಯ ನಿಯಂತ್ರಕವನ್ನು ನೋಡಿ."}</p>}{matchedCustom && <p className="cp-source-freshness">{customIsKannada ? "ಸ್ಥಳೀಯ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ಸಂಪಾದಕೀಯ ಮಾಹಿತಿ. ಪ್ರಕಟಣೆ ಮೂಲದ ಸ್ವತಂತ್ರ ಪರಿಶೀಲನೆಗೆ ಬದಲಿಯಲ್ಲ." : "Editorial information saved in this browser. Publication here does not independently verify the source."}</p>}{answer.url && <div className="cp-answer-source"><span><strong>{language === "en" ? "Source to review" : "ಪರಿಶೀಲಿಸಬೇಕಾದ ಮೂಲ"}</strong><small>{answer.source}</small></span><a href={answer.url} target="_blank" rel="noreferrer">{language === "en" ? "Open source" : "ಮೂಲ ತೆರೆಯಿರಿ"}<ArrowRight size={14} /></a></div>}<button className="cp-button quiet" onClick={() => onNavigate(answer.route)}>{answer.next}<ArrowRight size={15} /></button></article></section>}
+        {spellingSuggestion && <div className="cp-spelling-choice" role="status"><strong>{language === "en" ? `Did you mean “${spellingSuggestion.corrected}”?` : `ನೀವು “${spellingSuggestion.corrected}” ಎಂದು ಕೇಳಲು ಬಯಸಿದ್ದೀರಾ?`}</strong><p>{language === "en" ? `I may have read “${spellingSuggestion.original}” as a spelling mistake. Choose to use the suggested wording or edit your question.` : `“${spellingSuggestion.original}” ಪದವನ್ನು ತಪ್ಪಾಗಿ ಬರೆದಿರಬಹುದು ಎಂದು ತೋರುತ್ತದೆ. ಸೂಚಿಸಿದ ಪದ ಬಳಸಿ ಅಥವಾ ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ತಿದ್ದಿ.`}</p><div><button className="cp-button primary" type="button" onClick={() => { setInput(spellingSuggestion.corrected); prepareLocalAnswer(spellingSuggestion.corrected); }}>{language === "en" ? "Use suggested wording" : "ಸೂಚಿಸಿದ ಪದ ಬಳಸಿ"}</button><button className="cp-button quiet" type="button" onClick={() => { setInput(submittedQuestion); setSubmittedQuestion(""); setMatchedGuide(null); setSpellingSuggestion(null); setMatchedMedicine(null); setMatchedCustom(null); }}>{language === "en" ? "Edit my question" : "ನನ್ನ ಪ್ರಶ್ನೆ ತಿದ್ದಿ"}</button></div></div>}
+        {submittedQuestion && !spellingSuggestion && !needsOfficialMedicineLookup && <section ref={answerRef} className="cp-ask-answer" aria-live="polite"><div className="cp-answer-question"><span className="cp-answer-avatar">{language === "en" ? "YOU" : "ನೀವು"}</span><p>{submittedQuestion}</p></div><article className="cp-answer-card"><div className="cp-answer-heading"><span className="cp-ai-orb"><BookOpen size={21} /></span><div><span className="cp-eyebrow">{language === "en" ? (greeting ? "A FRIENDLY HELLO · OFFLINE" : supportive ? "A SUPPORTIVE MOMENT · OFFLINE" : matchedCustom ? "LOCAL ADMIN LEARNING CARD" : matchedMedicine ? "GENERAL MEDICINE PURPOSE · SOURCE LINKED" : matchedGuide ? "CURATED CARE CONNECTED GUIDE" : "GUIDE LIMIT") : (greeting ? "ಸ್ನೇಹಪೂರ್ಣ ಸ್ವಾಗತ · ಆಫ್‌ಲೈನ್" : supportive ? "ಬೆಂಬಲದ ಮಾತು · ಆಫ್‌ಲೈನ್" : matchedCustom ? "ಸ್ಥಳೀಯ ಆಡಳಿತ ಕಲಿಕಾ ಕಾರ್ಡ್" : matchedMedicine ? "ಸಾಮಾನ್ಯ ಔಷಧಿ ಬಳಕೆ · ಮೂಲ ಸಹಿತ" : matchedGuide ? "CARE CONNECTED ಮಾರ್ಗದರ್ಶಿ" : "ಮಾರ್ಗದರ್ಶಿ ಮಿತಿ")}</span><h3>{answer.title}</h3></div></div><p className="cp-answer-summary">{answer.summary}</p><ReadAloudButton text={answer.title + ". " + answer.summary + " " + answer.points.join(" ")} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} /><ul>{answer.points.map((point) => <li key={point}>{point}</li>)}</ul>{localPurposeNotice && <Notice tone="warm">{localPurposeNotice}</Notice>}{matchedMedicine && <p className="cp-source-freshness">{language === "en" ? "Source: U.S. NIH MedlinePlus. Product labels and approvals differ by country; compare your own package and local regulator." : "ಮೂಲ: U.S. NIH MedlinePlus. ಉತ್ಪನ್ನ ಲೇಬಲ್ ಮತ್ತು ಅನುಮೋದನೆ ದೇಶದ ಪ್ರಕಾರ ಬದಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಪ್ಯಾಕೆಟ್ ಮತ್ತು ಸ್ಥಳೀಯ ನಿಯಂತ್ರಕವನ್ನು ನೋಡಿ."}</p>}{matchedCustom && <p className="cp-source-freshness">{customIsKannada ? "ಸ್ಥಳೀಯ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ಸಂಪಾದಕೀಯ ಮಾಹಿತಿ. ಪ್ರಕಟಣೆ ಮೂಲದ ಸ್ವತಂತ್ರ ಪರಿಶೀಲನೆಗೆ ಬದಲಿಯಲ್ಲ." : "Editorial information saved in this browser. Publication here does not independently verify the source."}</p>}{answer.url && <div className="cp-answer-source"><span><strong>{language === "en" ? "Source to review" : "ಪರಿಶೀಲಿಸಬೇಕಾದ ಮೂಲ"}</strong><small>{answer.source}</small></span><a href={answer.url} target="_blank" rel="noreferrer">{language === "en" ? "Open source" : "ಮೂಲ ತೆರೆಯಿರಿ"}<ArrowRight size={14} /></a></div>}<button className="cp-button quiet" onClick={() => onNavigate(answer.route)}>{answer.next}<ArrowRight size={15} /></button></article></section>}
         {needsOfficialMedicineLookup && <div className="cp-official-lookup-intro" role="status"><strong>Let’s look up that medicine.</strong><p>Search the U.S. NIH MedlinePlus medicine information here. We send only the name you type, after you agree; results may not cover every country or product.</p></div>}
         {needsOfficialMedicineLookup && <MedlinePlusLookup question={submittedQuestion} language={language} />}
         <p className="cp-composer-hint"><Info size={13} /> {language === "en" ? "Your symptom question stays in this browser. The optional medicine lookup sends only its name after consent. CARE CONNECTED is not Gemini or a medical professional; it does not identify tablets, diagnose, check interactions, or recommend a dose." : "ಲಕ್ಷಣ ಪ್ರಶ್ನೆ ಈ ಬ್ರೌಸರ್‌ನಲ್ಲೇ ಇರುತ್ತದೆ. ಆಯ್ಕೆಯ ಔಷಧಿ ಹುಡುಕಾಟವು ನಿಮ್ಮ ಒಪ್ಪಿಗೆಯ ನಂತರ ಹೆಸರನ್ನು ಮಾತ್ರ MedlinePlus ಗೆ ಕಳುಹಿಸುತ್ತದೆ. CARE CONNECTED Gemini ಅಥವಾ ವೈದ್ಯಕೀಯ ವೃತ್ತಿಪರರಲ್ಲ; ಮಾತ್ರೆ ಗುರುತಿಸುವುದಿಲ್ಲ, ರೋಗ ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ, ಪರಸ್ಪರ ಕ್ರಿಯೆ ಅಥವಾ ಡೋಸ್ ಸೂಚಿಸುವುದಿಲ್ಲ."}</p>
