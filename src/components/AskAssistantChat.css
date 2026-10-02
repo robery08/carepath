@@ -121,3 +121,10 @@
   .cp-chat-workspace .cp-assistant-composer textarea { font-size:12px; }
   .cp-assistant-answer-tools { gap:4px; }
 }
+
+.cp-assistant-offline-actions { display:grid;justify-items:start;gap:6px;margin-top:12px; }
+.cp-assistant-offline-actions .cp-button { min-height:38px; }
+.cp-assistant-offline-actions small { color:#72878a;font-size:11px; }
+@media (max-width:680px) {
+  .cp-assistant-offline-actions .cp-button { width:100%;justify-content:center; }
+}

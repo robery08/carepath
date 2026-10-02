@@ -427,10 +427,11 @@ const MEDICINE_REFERENCES: MedicineReference[] = [
 ];
 
 function findMedicineReference(question: string) {
-  const normalized = " " + question.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim() + " ";
-  const exact = MEDICINE_REFERENCES.find((item) => item.terms.some((term) => normalized.includes(" " + term.toLocaleLowerCase() + " ")));
+  const normalize = (value: string) => " " + value.toLocaleLowerCase().normalize("NFC").replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim() + " ";
+  const normalized = normalize(question);
+  const exact = MEDICINE_REFERENCES.find((item) => item.terms.some((term) => normalized.includes(normalize(term))));
   if (exact) return exact;
-  const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 6);
+  const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 6 && !containsNonAscii(word));
   for (const item of MEDICINE_REFERENCES) for (const term of item.terms) {
     const clean = term.toLocaleLowerCase();
     if (containsNonAscii(clean) || clean.length < 6) continue;
@@ -474,12 +475,12 @@ function spellingDistance(left: string, right: string) {
 }
 
 function findAskGuide(question: string) {
-  const normalize = (value: string) => " " + value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim() + " ";
+  const normalize = (value: string) => " " + value.toLocaleLowerCase().normalize("NFC").replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim() + " ";
   const normalized = normalize(question);
   const exact = ASK_GUIDES.find((item) => item.terms.some((term) => normalized.includes(normalize(term))));
   if (exact) return exact;
   const ignored = new Set(["have", "with", "from", "what", "when", "where", "does", "this", "that", "please", "help", "feel", "been", "some", "about", "take", "tablet", "medicine"]);
-  const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 4 && !ignored.has(word));
+  const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 4 && !containsNonAscii(word) && !ignored.has(word));
   for (const item of ASK_GUIDES) for (const term of item.terms) {
     const clean = normalize(term).trim();
     if (clean.includes(" ") || clean.length < 4 || containsNonAscii(clean)) continue;
@@ -499,6 +500,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
   const [matchedMedicine, setMatchedMedicine] = useState<MedicineReference | null>(null);
   const [matchedCustom, setMatchedCustom] = useState<CareContent | null>(null);
   const [notice, setNotice] = useState("");
+  const answerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!initialQuestion) return;
     setInput(initialQuestion);
@@ -507,17 +509,30 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
   const selectedMarket = MEDICINE_MARKETS.find((item) => item.id === market) ?? MEDICINE_MARKETS[0];
   const prompts = mode === "medicine"
     ? language === "en" ? ["What is metformin used for?", "What is amlodipine used for?", "Paracetamol"] : ["ಮೆಟ್‌ಫಾರ್ಮಿನ್ ಏಕೆ ಬಳಸುತ್ತಾರೆ?", "ಅಮ್ಲೋಡಿಪೈನ್ ಏಕೆ ಬಳಸುತ್ತಾರೆ?", "Paracetamol"]
-    : language === "en" ? ["I have a cough", "I have a fever", "My head hurts"] : ["ನನಗೆ ಕೆಮ್ಮು ಇದೆ", "ನನಗೆ ಜ್ವರ ಇದೆ", "ನನ್ನ ತಲೆ ನೋಯುತ್ತಿದೆ"];  const answerQuestion = (event: FormEvent) => {
-    event.preventDefault();
-    const question = input.trim();
-    if (!question) { setNotice(language === "en" ? "Type a question or choose one of the examples." : "ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ ಅಥವಾ ಉದಾಹರಣೆ ಆಯ್ಕೆಮಾಡಿ."); return; }
+    : language === "en" ? ["I have a cough", "I have a fever", "My head hurts"] : ["ನನಗೆ ಕೆಮ್ಮು ಇದೆ", "ನನಗೆ ಜ್ವರ ಇದೆ", "ನನ್ನ ತಲೆ ನೋಯುತ್ತಿದೆ"];
+  const prepareLocalAnswer = (question: string, selectedMode = mode) => {
     const personalDecision = /\b(dose|dosage|how much|how many|can i take|should i take|safe for me|interaction|mix with|take together|stop taking|start taking|change my|switch|pregnan|side effect|treatment for me)\b|ಡೋಸ್|ಪ್ರಮಾಣ|ನಿಲ್ಲಿಸ|ಬದಲಿಸ/i.test(question);
     setSubmittedQuestion(question);
     setMatchedGuide(findAskGuide(question));
     setMatchedMedicine(personalDecision ? null : findMedicineReference(question));
-    setMatchedCustom(personalDecision ? null : findPublishedCareContent(question, mode === "medicine" ? "medicine" : undefined));
+    setMatchedCustom(personalDecision ? null : findPublishedCareContent(question, selectedMode === "medicine" ? "medicine" : undefined));
     setNotice("");
   };
+  const answerQuestion = (event: FormEvent) => {
+    event.preventDefault();
+    const question = input.trim();
+    if (!question) { setNotice(language === "en" ? "Type a question or choose one of the examples." : "ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ ಅಥವಾ ಉದಾಹರಣೆ ಆಯ್ಕೆಮಾಡಿ."); return; }
+    prepareLocalAnswer(question);
+  };
+  const openOfflineAnswer = (question: string) => {
+    const nextMode = /\b(medicine|medication|tablet|pill|drug|dose|metformin|amlodipine|paracetamol|acetaminophen|ibuprofen)\b|ಔಷಧಿ|ಮಾತ್ರೆ/i.test(question) ? "medicine" : "health";
+    setMode(nextMode);
+    setInput(question);
+    prepareLocalAnswer(question, nextMode);
+  };
+  useEffect(() => {
+    if (submittedQuestion) answerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [submittedQuestion]);
   const setSearchMode = (next: "medicine" | "health") => {
     setMode(next);
     setNotice("");
@@ -534,7 +549,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
     : "";
   return <>
     <PageHeader eyebrow={language === "en" ? "A CONVERSATION SPACE · ENGLISH OR ಕನ್ನಡ" : "ಸಂಭಾಷಣೆ · ENGLISH OR ಕನ್ನಡ"} title={language === "en" ? "Ask anything" : "ಏನನ್ನಾದರೂ ಕೇಳಿ"} description={language === "en" ? "Explore ideas and ask follow-up questions here. Live AI needs a configured server; curated health guides remain available offline." : "ವಿಷಯಗಳನ್ನು ಅನ್ವೇಷಿಸಿ, ಮುಂದಿನ ಪ್ರಶ್ನೆಗಳನ್ನು ಇಲ್ಲಿಯೇ ಕೇಳಿ. ಲೈವ್ AI ಗೆ ಸರ್ವರ್ ಅಗತ್ಯ; ಆರೋಗ್ಯ ಮಾರ್ಗದರ್ಶಿಗಳು ಆಫ್‌ಲೈನ್‌ನಲ್ಲೂ ಲಭ್ಯ."} icon={<Search size={24} />} action={<span className="cp-local-pill"><span /> {language === "en" ? "Health information · not diagnosis" : "ಆರೋಗ್ಯ ಮಾಹಿತಿ · ರೋಗನಿರ್ಣಯವಲ್ಲ"}</span>} />
-    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} initialQuestion={initialQuestion} />
+    <AskAssistantChat language={language} onLanguageChange={setLanguage} documents={documents} initialQuestion={initialQuestion} onTryOfflineGuide={openOfflineAnswer} />
     <div className="cp-ai-layout">
       <Panel title={mode === "medicine" ? (language === "en" ? "Ask about medicines" : "ಔಷಧಿಗಳ ಬಗ್ಗೆ ಕೇಳಿ") : (language === "en" ? "Ask about health topics" : "ಆರೋಗ್ಯ ವಿಷಯಗಳ ಬಗ್ಗೆ ಕೇಳಿ")} eyebrow={language === "en" ? "REVIEWED GUIDES · OPTIONAL MEDICINE LOOKUP" : "ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ · ಔಷಧಿ ಹುಡುಕಾಟಕ್ಕೆ ಒಪ್ಪಿಗೆ ಬೇಕು"}>
         <div className="cp-ai-toolbar"><div className="cp-ai-mode-switch" role="group" aria-label="Choose guide category"><button className={mode === "medicine" ? "selected" : ""} onClick={() => setSearchMode("medicine")}><Pill size={16} /> {language === "en" ? "Medicines" : "ಔಷಧಿ"}</button><button className={mode === "health" ? "selected" : ""} onClick={() => setSearchMode("health")}><Search size={16} /> {language === "en" ? "Health topics" : "ಆರೋಗ್ಯ"}</button></div><div className="cp-language-switch" role="group" aria-label="Answer language"><button className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => setLanguage("en")}>English</button><button className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => setLanguage("kn")}>ಕನ್ನಡ</button></div></div>
@@ -542,7 +557,7 @@ function AskCarepath({ medicines, readings, documents, profile, onNavigate, init
         <div className="cp-chat-thread"><div className="cp-chat-welcome"><div className="cp-ai-orb">{mode === "medicine" ? <Pill size={25} /> : <Search size={25} />}</div><h3>{language === "en" ? "What would you like to know?" : "ನೀವು ಏನು ತಿಳಿಯಲು ಬಯಸುತ್ತೀರಿ?"}</h3><p>{language === "en" ? "Choose a topic or type a question. Answers are curated general information, not a live AI response." : "ವಿಷಯ ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ. ಉತ್ತರಗಳು ಸಂಪಾದಿತ ಸಾಮಾನ್ಯ ಮಾಹಿತಿ; ಲೈವ್ AI ಉತ್ತರಗಳಲ್ಲ."}</p><div className="cp-prompt-grid">{prompts.map((prompt) => <button key={prompt} onClick={() => setInput(prompt)}>{prompt}<ArrowRight size={15} /></button>)}</div></div></div>
         <form className="cp-chat-composer" onSubmit={answerQuestion}><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={language === "en" ? "Ask in English or Kannada…" : "English ಅಥವಾ ಕನ್ನಡದಲ್ಲಿ ಕೇಳಿ…"} rows={2} maxLength={300} /><button type="submit" aria-label={language === "en" ? "Get an answer" : "ಉತ್ತರ ನೋಡಿ"}><Send size={18} /></button></form>
         {notice && <p className="cp-ai-status" role="status">{notice}</p>}
-        {submittedQuestion && <section className="cp-ask-answer" aria-live="polite"><div className="cp-answer-question"><span className="cp-answer-avatar">{language === "en" ? "YOU" : "ನೀವು"}</span><p>{submittedQuestion}</p></div><article className="cp-answer-card"><div className="cp-answer-heading"><span className="cp-ai-orb"><BookOpen size={21} /></span><div><span className="cp-eyebrow">{language === "en" ? (matchedCustom ? "LOCAL ADMIN LEARNING CARD" : matchedMedicine ? "GENERAL MEDICINE PURPOSE · SOURCE LINKED" : matchedGuide ? "CURATED CARE CONNECTED GUIDE" : "GUIDE LIMIT") : (matchedCustom ? "ಸ್ಥಳೀಯ ಆಡಳಿತ ಕಲಿಕಾ ಕಾರ್ಡ್" : matchedMedicine ? "ಸಾಮಾನ್ಯ ಔಷಧಿ ಬಳಕೆ · ಮೂಲ ಸಹಿತ" : matchedGuide ? "CARE CONNECTED ಮಾರ್ಗದರ್ಶಿ" : "ಮಾರ್ಗದರ್ಶಿ ಮಿತಿ")}</span><h3>{answer.title}</h3></div></div><p className="cp-answer-summary">{answer.summary}</p><ReadAloudButton text={answer.title + ". " + answer.summary + " " + answer.points.join(" ")} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} /><ul>{answer.points.map((point) => <li key={point}>{point}</li>)}</ul>{localPurposeNotice && <Notice tone="warm">{localPurposeNotice}</Notice>}{matchedMedicine && <p className="cp-source-freshness">{language === "en" ? "Source: U.S. NIH MedlinePlus. Product labels and approvals differ by country; compare your own package and local regulator." : "ಮೂಲ: U.S. NIH MedlinePlus. ಉತ್ಪನ್ನ ಲೇಬಲ್ ಮತ್ತು ಅನುಮೋದನೆ ದೇಶದ ಪ್ರಕಾರ ಬದಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಪ್ಯಾಕೆಟ್ ಮತ್ತು ಸ್ಥಳೀಯ ನಿಯಂತ್ರಕವನ್ನು ನೋಡಿ."}</p>}{matchedCustom && <p className="cp-source-freshness">{customIsKannada ? "ಸ್ಥಳೀಯ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ಸಂಪಾದಕೀಯ ಮಾಹಿತಿ. ಪ್ರಕಟಣೆ ಮೂಲದ ಸ್ವತಂತ್ರ ಪರಿಶೀಲನೆಗೆ ಬದಲಿಯಲ್ಲ." : "Editorial information saved in this browser. Publication here does not independently verify the source."}</p>}<div className="cp-answer-source"><span><strong>{language === "en" ? "Source to review" : "ಪರಿಶೀಲಿಸಬೇಕಾದ ಮೂಲ"}</strong><small>{answer.source}</small></span><a href={answer.url} target="_blank" rel="noreferrer">{language === "en" ? "Open source" : "ಮೂಲ ತೆರೆಯಿರಿ"}<ArrowRight size={14} /></a></div><button className="cp-button quiet" onClick={() => onNavigate(answer.route)}>{answer.next}<ArrowRight size={15} /></button></article></section>}
+        {submittedQuestion && <section ref={answerRef} className="cp-ask-answer" aria-live="polite"><div className="cp-answer-question"><span className="cp-answer-avatar">{language === "en" ? "YOU" : "ನೀವು"}</span><p>{submittedQuestion}</p></div><article className="cp-answer-card"><div className="cp-answer-heading"><span className="cp-ai-orb"><BookOpen size={21} /></span><div><span className="cp-eyebrow">{language === "en" ? (matchedCustom ? "LOCAL ADMIN LEARNING CARD" : matchedMedicine ? "GENERAL MEDICINE PURPOSE · SOURCE LINKED" : matchedGuide ? "CURATED CARE CONNECTED GUIDE" : "GUIDE LIMIT") : (matchedCustom ? "ಸ್ಥಳೀಯ ಆಡಳಿತ ಕಲಿಕಾ ಕಾರ್ಡ್" : matchedMedicine ? "ಸಾಮಾನ್ಯ ಔಷಧಿ ಬಳಕೆ · ಮೂಲ ಸಹಿತ" : matchedGuide ? "CARE CONNECTED ಮಾರ್ಗದರ್ಶಿ" : "ಮಾರ್ಗದರ್ಶಿ ಮಿತಿ")}</span><h3>{answer.title}</h3></div></div><p className="cp-answer-summary">{answer.summary}</p><ReadAloudButton text={answer.title + ". " + answer.summary + " " + answer.points.join(" ")} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} /><ul>{answer.points.map((point) => <li key={point}>{point}</li>)}</ul>{localPurposeNotice && <Notice tone="warm">{localPurposeNotice}</Notice>}{matchedMedicine && <p className="cp-source-freshness">{language === "en" ? "Source: U.S. NIH MedlinePlus. Product labels and approvals differ by country; compare your own package and local regulator." : "ಮೂಲ: U.S. NIH MedlinePlus. ಉತ್ಪನ್ನ ಲೇಬಲ್ ಮತ್ತು ಅನುಮೋದನೆ ದೇಶದ ಪ್ರಕಾರ ಬದಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಪ್ಯಾಕೆಟ್ ಮತ್ತು ಸ್ಥಳೀಯ ನಿಯಂತ್ರಕವನ್ನು ನೋಡಿ."}</p>}{matchedCustom && <p className="cp-source-freshness">{customIsKannada ? "ಸ್ಥಳೀಯ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಉಳಿಸಿದ ಸಂಪಾದಕೀಯ ಮಾಹಿತಿ. ಪ್ರಕಟಣೆ ಮೂಲದ ಸ್ವತಂತ್ರ ಪರಿಶೀಲನೆಗೆ ಬದಲಿಯಲ್ಲ." : "Editorial information saved in this browser. Publication here does not independently verify the source."}</p>}<div className="cp-answer-source"><span><strong>{language === "en" ? "Source to review" : "ಪರಿಶೀಲಿಸಬೇಕಾದ ಮೂಲ"}</strong><small>{answer.source}</small></span><a href={answer.url} target="_blank" rel="noreferrer">{language === "en" ? "Open source" : "ಮೂಲ ತೆರೆಯಿರಿ"}<ArrowRight size={14} /></a></div><button className="cp-button quiet" onClick={() => onNavigate(answer.route)}>{answer.next}<ArrowRight size={15} /></button></article></section>}
         {submittedQuestion && mode === "medicine" && !matchedMedicine && !matchedCustom && !matchedGuide && !/\b(dose|dosage|how much|how many|can i take|should i take|safe for me|interaction|mix with|take together|stop taking|start taking|change my|switch|pregnan|side effect|treatment for me)\b|ಡೋಸ್|ಪ್ರಮಾಣ|ನಿಲ್ಲಿಸ|ಬದಲಿಸ/i.test(submittedQuestion) && <MedlinePlusLookup question={submittedQuestion} language={language} />}
         <p className="cp-composer-hint"><Info size={13} /> {language === "en" ? "Your symptom question stays in this browser. The optional medicine lookup sends only its name after consent. CARE CONNECTED is not Gemini or a medical professional; it does not identify tablets, diagnose, check interactions, or recommend a dose." : "ಲಕ್ಷಣ ಪ್ರಶ್ನೆ ಈ ಬ್ರೌಸರ್‌ನಲ್ಲೇ ಇರುತ್ತದೆ. ಆಯ್ಕೆಯ ಔಷಧಿ ಹುಡುಕಾಟವು ನಿಮ್ಮ ಒಪ್ಪಿಗೆಯ ನಂತರ ಹೆಸರನ್ನು ಮಾತ್ರ MedlinePlus ಗೆ ಕಳುಹಿಸುತ್ತದೆ. CARE CONNECTED Gemini ಅಥವಾ ವೈದ್ಯಕೀಯ ವೃತ್ತಿಪರರಲ್ಲ; ಮಾತ್ರೆ ಗುರುತಿಸುವುದಿಲ್ಲ, ರೋಗ ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ, ಪರಸ್ಪರ ಕ್ರಿಯೆ ಅಥವಾ ಡೋಸ್ ಸೂಚಿಸುವುದಿಲ್ಲ."}</p>
       </Panel>

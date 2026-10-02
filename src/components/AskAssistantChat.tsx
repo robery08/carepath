@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { AlertTriangle, Bot, Check, Copy, ExternalLink, FileText, LoaderCircle, Mic, Pencil, Plus, RotateCcw, Search, Send, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, Bot, Check, Copy, ExternalLink, FileText, LoaderCircle, Mic, Pencil, Plus, RotateCcw, Search, Send, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
 import ReadAloudButton from "./ReadAloudButton";
 import "./AskAssistantChat.css";
 import { getDocumentFile } from "../documentFiles";
@@ -84,7 +84,7 @@ function initialWorkspace(saved: boolean): { conversations: Conversation[]; acti
   return { conversations, activeId: conversations[0].id };
 }
 
-export default function AskAssistantChat({ language, onLanguageChange, documents, initialQuestion = "" }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[]; initialQuestion?: string }) {
+export default function AskAssistantChat({ language, onLanguageChange, documents, initialQuestion = "", onTryOfflineGuide }: { language: AskLanguage; onLanguageChange: (value: AskLanguage) => void; documents: ChatDocument[]; initialQuestion?: string; onTryOfflineGuide?: (question: string) => void }) {
   const [saveHistory, setSaveHistory] = useState(() => {
     try { return localStorage.getItem("carepath_ai_chat_save") === "true"; } catch { return false; }
   });
@@ -122,7 +122,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
 
   const copy = language === "en" ? {
     title: "Ask CARE CONNECTED", subtitle: "A calm place to ask, explore, and follow up. Check sources for current facts.",
-    ready: "Server endpoint configured", offline: "AI is not connected on this deployment", notConfigured: "You can write a question here, but this public GitHub Pages version has no server AI connection, so it cannot generate a live answer. The offline guides below still work. To enable live Gemini answers, deploy the server function and configure its private key; never put an API key in this page.",
+    ready: "Secure AI server configured", offline: "Live AI is not connected", notConfigured: "Live AI is not connected to this GitHub Pages site. Your question stays on this device. You can still try the reviewed offline health and medicine guides below; a server and private provider key are required for live AI answers.", offlineResponse: "Live AI is not connected to this site, so your question was not sent and no AI answer was generated. You can try the reviewed guide below; it will clearly say when a topic is not covered.", offlineGuide: "Try a reviewed guide below", offlineGuideHint: "Your question stays on this device.",
     consentTitle: "Review before sending", consent: "Your question and recent messages will go to the configured server and its AI provider. Saved health records are not attached. If you select a document, its extracted text will also be sent for this request.",
     docToggle: "Ask about a saved document", selectDoc: "Choose a saved document", noDocs: "No saved documents with reviewed text are available.",
     save: "Save conversation history on this device", saveHint: "Off by default. Without this, chats stay in this browser tab only.",
@@ -134,7 +134,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     newChat: "New chat", history: "Recent chats", searchHistory: "Search chats", emptyHistory: "Your conversations will appear here.", rename: "Rename", delete: "Delete", copyAnswer: "Copy answer", regenerate: "Regenerate answer", saved: "Saved on this device", temporary: "This tab only",
   } : {
     title: "CARE CONNECTED ಗೆ ಕೇಳಿ", subtitle: "ಪ್ರಶ್ನೆ, ಅನ್ವೇಷಣೆ ಮತ್ತು ಮುಂದಿನ ಪ್ರಶ್ನೆಗಳಿಗೆ ಶಾಂತ ಸ್ಥಳ. ಇತ್ತೀಚಿನ ಮಾಹಿತಿಗೆ ಮೂಲ ಪರಿಶೀಲಿಸಿ.",
-    ready: "ಸರ್ವರ್ ಎಂಡ್‌ಪಾಯಿಂಟ್ ಹೊಂದಿಸಲಾಗಿದೆ", offline: "ಈ ಪ್ರಕಟಣೆಯಲ್ಲಿ AI ಸಂಪರ್ಕವಿಲ್ಲ", notConfigured: "ಇಲ್ಲಿ ಪ್ರಶ್ನೆ ಬರೆಯಬಹುದು; ಆದರೆ ಈ ಸಾರ್ವಜನಿಕ GitHub Pages ಆವೃತ್ತಿಗೆ ಸರ್ವರ್ AI ಸಂಪರ್ಕವಿಲ್ಲ, ಆದ್ದರಿಂದ ಲೈವ್ ಉತ್ತರ ರಚಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಕೆಳಗಿನ ಆಫ್‌ಲೈನ್ ಮಾರ್ಗದರ್ಶಿಗಳು ಕೆಲಸ ಮಾಡುತ್ತವೆ. Gemini ಸಕ್ರಿಯಗೊಳಿಸಲು ಸರ್ವರ್ ಫಂಕ್ಷನ್ ಮತ್ತು ಖಾಸಗಿ ಕೀ ಹೊಂದಿಸಿ; API ಕೀಲಿಯನ್ನು ಈ ಪುಟದಲ್ಲಿ ಎಂದಿಗೂ ಇಡಬೇಡಿ.",
+    ready: "ಸುರಕ್ಷಿತ AI ಸರ್ವರ್ ಹೊಂದಿಸಲಾಗಿದೆ", offline: "ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ", notConfigured: "ಈ GitHub Pages ತಾಣಕ್ಕೆ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ. ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ. ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಆಫ್‌ಲೈನ್ ಆರೋಗ್ಯ ಮತ್ತು ಔಷಧಿ ಮಾರ್ಗದರ್ಶಿಗಳನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು; ಲೈವ್ AI ಉತ್ತರಕ್ಕೆ ಸರ್ವರ್ ಮತ್ತು ಖಾಸಗಿ ಸೇವಾ ಕೀ ಅಗತ್ಯ.", offlineResponse: "ಈ ತಾಣಕ್ಕೆ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ; ಆದ್ದರಿಂದ ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಕಳುಹಿಸಲಿಲ್ಲ ಮತ್ತು AI ಉತ್ತರ ರಚಿಸಲಿಲ್ಲ. ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ಪ್ರಯತ್ನಿಸಿ; ವಿಷಯ ಇಲ್ಲದಿದ್ದರೆ ಅದು ಸ್ಪಷ್ಟವಾಗಿ ತಿಳಿಸುತ್ತದೆ.", offlineGuide: "ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ನೋಡಿ", offlineGuideHint: "ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ.",
     consentTitle: "ಕಳುಹಿಸುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿ", consent: "ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಮತ್ತು ಇತ್ತೀಚಿನ ಸಂದೇಶಗಳು ಹೊಂದಿಸಿದ ಸರ್ವರ್ ಮತ್ತು AI ಸೇವೆಗೆ ಹೋಗುತ್ತವೆ. ಉಳಿಸಿದ ಆರೋಗ್ಯ ದಾಖಲೆಗಳನ್ನು ಸೇರಿಸುವುದಿಲ್ಲ. ದಾಖಲೆಯನ್ನು ಆರಿಸಿದರೆ ಅದರ ಹೊರತೆಗೆದ ಪಠ್ಯ ಈ ವಿನಂತಿಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
     docToggle: "ಉಳಿಸಿದ ದಾಖಲೆಯ ಬಗ್ಗೆ ಕೇಳಿ", selectDoc: "ಉಳಿಸಿದ ದಾಖಲೆ ಆಯ್ಕೆಮಾಡಿ", noDocs: "ಪರಿಶೀಲಿಸಿದ ಪಠ್ಯವಿರುವ ಉಳಿಸಿದ ದಾಖಲೆಗಳಿಲ್ಲ.",
     save: "ಈ ಸಾಧನದಲ್ಲಿ ಚಾಟ್ ಇತಿಹಾಸ ಉಳಿಸಿ", saveHint: "ಮೊದಲಿನಿಂದ ಆಫ್. ಇಲ್ಲದಿದ್ದರೆ ಚಾಟ್ ಈ ಟ್ಯಾಬ್‌ನಲ್ಲಷ್ಟೇ ಇರುತ್ತದೆ.",
@@ -211,8 +211,17 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
   };
 
   const sendQuestion = async (question: string, excerpt = "") => {
+    if (busy || !activeConversation) return;
+    if (!ASSISTANT_ENDPOINT) {
+      const userMessage: Message = { id: newId(), role: "user", text: question };
+      const statusMessage: Message = { id: newId(), role: "assistant", text: copy.offlineResponse, error: true };
+      const conversationId = activeConversation.id;
+      updateMessages(conversationId, (current) => [...current, userMessage, statusMessage]);
+      patchConversation(conversationId, (current) => ({ ...current, title: messages.some((message) => message.role === "user") ? current.title : short(question, 42) }));
+      setInput(""); setRetry(null); setStatus("");
+      return;
+    }
     if (!consent) { setStatus(copy.consentNeeded); return; }
-    if (!ASSISTANT_ENDPOINT || busy || !activeConversation) return;
     const prior = messages.filter((message) => !message.error && !message.pending);
     const userMessage: Message = { id: newId(), role: "user", text: question };
     const responseMessage: Message = { id: newId(), role: "assistant", text: "", pending: true };
@@ -228,7 +237,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     const question = input.trim();
     if (!question || busy) return;
     let excerpt = "";
-    if (includeDocument && selectedDocument) {
+    if (ASSISTANT_ENDPOINT && includeDocument && selectedDocument) {
       try {
         const stored = await getDocumentFile(selectedDocument);
         if (!stored?.extractedText?.trim()) { setStatus(copy.docReadError); return; }
@@ -301,9 +310,10 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
         {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p></div>}
         {messages.map((message, index) => <article key={message.id} className={`cp-assistant-message ${message.role}`}>
           <div className="cp-assistant-bubble">
-            <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>
+            <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : message.error ? (language === "en" ? "CARE CONNECTED · connection status" : "CARE CONNECTED · ಸಂಪರ್ಕ ಸ್ಥಿತಿ") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>
             {message.pending ? <span className="cp-assistant-thinking"><LoaderCircle size={15} />{copy.sending}</span> : <p>{message.text}</p>}
             {message.error && retry?.responseId === message.id && <button type="button" className="cp-button quiet" onClick={() => retryQuestion(retry)} disabled={busy}><RotateCcw size={14} />{copy.retry}</button>}
+            {message.role === "assistant" && message.error && !ASSISTANT_ENDPOINT && onTryOfflineGuide && <div className="cp-assistant-offline-actions"><button type="button" className="cp-button primary" onClick={() => { const question = messages.slice(0, index).reverse().find((item) => item.role === "user")?.text; if (question) onTryOfflineGuide(question); }}><ArrowDown size={15} />{copy.offlineGuide}</button><small>{copy.offlineGuideHint}</small></div>}
             {message.role === "assistant" && !message.pending && !message.error && <div className="cp-assistant-answer-tools"><ReadAloudButton text={message.text} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} language={language === "kn" ? "kn" : "en"} /><button type="button" className="cp-answer-tool" onClick={() => void copyAnswer(message.text)}><Copy size={14} />{copy.copyAnswer}</button>{index === messages.length - 1 && <button type="button" className="cp-answer-tool" onClick={regenerateLast} disabled={busy}><RotateCcw size={14} />{copy.regenerate}</button>}</div>}
             {message.role === "assistant" && !message.pending && !message.error && message.sources?.length ? <div className="cp-assistant-sources"><strong>{copy.sourceLabel}</strong>{message.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.title}<ExternalLink size={13} /></a>)}</div> : null}
             {message.role === "assistant" && !message.pending && !message.error && !message.sources?.length ? <small className="cp-assistant-no-sources">{copy.noSources}</small> : null}
@@ -320,10 +330,10 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
       <form className="cp-assistant-composer" onSubmit={(event) => void submit(event)}>
         <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={copy.placeholder} rows={2} maxLength={1200} aria-label={copy.placeholder} disabled={busy} />
         <button type="button" className={`cp-assistant-mic ${listening ? "listening" : ""}`} onClick={toggleVoice} aria-label={listening ? copy.stopMic : copy.listen} disabled={busy}>{listening ? <X size={17} /> : <Mic size={17} />}</button>
-        <button type="submit" aria-label={copy.send} disabled={!ASSISTANT_ENDPOINT || !consent || !input.trim() || busy}>{busy ? <LoaderCircle className="cp-spin" size={17} /> : <Send size={17} />}</button>
+        <button type="submit" aria-label={copy.send} disabled={(Boolean(ASSISTANT_ENDPOINT) && !consent) || !input.trim() || busy}>{busy ? <LoaderCircle className="cp-spin" size={17} /> : <Send size={17} />}</button>
       </form>
       <p className="cp-assistant-voice-note"><Volume2 size={14} />{copy.listenHint}</p>
-      <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>{copy.consentTitle}</strong>{copy.consent}</span></label>
+      {ASSISTANT_ENDPOINT && <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>{copy.consentTitle}</strong>{copy.consent}</span></label>}
       <div className="cp-assistant-footer">
         <label className="cp-assistant-save"><input type="checkbox" checked={saveHistory} onChange={(event) => { const enabled = event.target.checked; setSaveHistory(enabled); try { localStorage.setItem("carepath_ai_chat_save", String(enabled)); if (!enabled) { localStorage.removeItem(SAVED_KEY); localStorage.removeItem(LEGACY_KEY); } } catch { setStatus(copy.storageError); } }} /><span><strong>{copy.save}</strong><small>{copy.saveHint}</small></span></label>
         <div className="cp-assistant-actions"><div className="cp-language-switch" role="group" aria-label="Assistant response language"><button type="button" className={language === "en" ? "selected" : ""} aria-pressed={language === "en"} onClick={() => onLanguageChange("en")}>English</button><button type="button" className={language === "kn" ? "selected" : ""} aria-pressed={language === "kn"} onClick={() => onLanguageChange("kn")}>ಕನ್ನಡ</button></div><button type="button" className="cp-button quiet" onClick={clearConversation} aria-label={copy.clearLabel}><Trash2 size={14} />{copy.clear}</button></div>
