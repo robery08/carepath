@@ -47,6 +47,32 @@ function createConversation(): Conversation {
   return { id: newId(), title: "New conversation", updatedAt: Date.now(), messages: [] };
 }
 
+function localConversationReply(question: string, language: AskLanguage): string | null {
+  const normalized = question.normalize("NFC").toLocaleLowerCase().replace(/[.!?,]+/gu, " ").replace(/\s+/gu, " ").trim();
+  const kannada = /[\u0C80-\u0CFF]/u.test(question);
+  const answerLanguage = kannada ? "kn" : language;
+  const greeting = /^(?:(?:hi|hello|hey|namaste|ನಮಸ್ಕಾರ|ಹಾಯ್|ಹಲೋ)(?:\s+there)?\s*)?(?:how are you(?: doing)?|how is it going|what is up|what's up|are you there|ನೀವು ಹೇಗಿದ್ದೀರಿ|ಹೇಗಿದ್ದೀರಿ|ನೀವು ಚೆನ್ನಾಗಿದ್ದೀರಾ)?$/u.test(normalized)
+    || /^(?:good morning|good afternoon|good evening)$/u.test(normalized);
+  if (greeting) return answerLanguage === "kn"
+    ? "ನಮಸ್ಕಾರ! ಕೇಳಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದ—ನಾನು ಸಹಾಯಕ್ಕೆ ಸಿದ್ಧವಾಗಿದ್ದೇನೆ. ಇಂದು ಏನು ಮಾತನಾಡಲು ಅಥವಾ ತಿಳಿಯಲು ಇಷ್ಟ? ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಬರೆಯಬಹುದು. ಈ ತಾಣಕ್ಕೆ ಇನ್ನೂ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ; ಸದ್ಯ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿಗಳಲ್ಲಿ ಸಹಾಯ ಮಾಡಬಹುದು."
+    : "Hi! Thanks for asking—I’m here and ready to help. What would you like to talk about or learn today? You can write in English or Kannada. Live AI isn’t connected to this site yet, so for now I can help with the reviewed guides below.";
+
+  const immediateRisk = /\b(?:kill myself|hurt myself|harm myself|suicid(?:e|al)|want to die|end my life|hurt someone|harm someone)\b|ಆತ್ಮಹತ್ಯೆ|ನನಗೆ ಬದುಕ(?:ಲು|ಬೇಕೆನಿಸುವುದಿಲ್ಲ)/iu.test(question);
+  if (immediateRisk) return answerLanguage === "kn"
+    ? "ನೀವು ಇದನ್ನು ಎದುರಿಸುತ್ತಿರುವುದಕ್ಕೆ ವಿಷಾದಿಸುತ್ತೇನೆ. ಈಗ ನಿಮಗೆ ಅಥವಾ ಇನ್ನೊಬ್ಬರಿಗೆ ತಕ್ಷಣದ ಅಪಾಯವಿದ್ದರೆ, ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಗೆ ಕರೆ ಮಾಡಿ ಅಥವಾ ಹತ್ತಿರದ ತುರ್ತು ಚಿಕಿತ್ಸಾ ವಿಭಾಗಕ್ಕೆ ಹೋಗಿ. ನಂಬಿಕೆಯ ವ್ಯಕ್ತಿಗೆ ಈಗಲೇ ತಿಳಿಸಿ, ನಿಮ್ಮ ಜೊತೆಯಲ್ಲಿರಲು ಕೇಳಿ. ನಾನು ಆಪ್‌ನಿಂದ ಕರೆ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ—ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಬೇಡಿ."
+    : "I’m sorry you’re facing this. If you or someone else may be in immediate danger, contact local emergency services or go to the nearest emergency department now. Tell someone you trust and ask them to stay with you. I can’t call for you—please don’t wait for an app reply.";
+
+  const supportive = /\b(?:i(?:'m| am| feel| have been)|feeling)\s+(?:(?:really|very|so)\s+)?(?:worried|anxious|scared|sad|lonely|alone|overwhelmed|stressed|upset|afraid|nervous|down|not okay|not ok)\b|\bneed someone to talk\b|ನನಗೆ[^.!?]{0,36}(?:ಚಿಂತೆ|ಭಯ|ದುಃಖ|ಒತ್ತಡ|ಆತಂಕ|ಒಂಟಿತನ)|ನಾನು[^.!?]{0,24}(?:ಒಂಟಿ|ದುಃಖ|ಭಯ|ಚಿಂತಿತ)/iu.test(question);
+  if (supportive) return answerLanguage === "kn"
+    ? "ಇದು ನಿಮಗೆ ಕಷ್ಟವಾಗಿರಬಹುದು. ನಿಮ್ಮ ಮಾತು ಹಂಚಿಕೊಂಡಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದ—ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಮಾತ್ರ ಹೇಳಿ. ನಾನು ಆಪ್, ವ್ಯಕ್ತಿ ಅಥವಾ ವೈದ್ಯರ ಬದಲಿಯಲ್ಲ; ಆದರೆ ನಿಮ್ಮ ಆಲೋಚನೆಗಳನ್ನು ಸರಿಪಡಿಸಲು ಅಥವಾ ನಂಬಿಕೆಯ ವ್ಯಕ್ತಿಗೆ ಏನು ಹೇಳಬೇಕು ಎಂದು ಸಿದ್ಧಪಡಿಸಲು ಸಹಾಯ ಮಾಡಬಹುದು. ತಕ್ಷಣದ ಅಪಾಯವಿದ್ದರೆ ಅಥವಾ ನಿಮಗೆ/ಇನ್ನೊಬ್ಬರಿಗೆ ಹಾನಿ ಮಾಡುವ ಭಯವಿದ್ದರೆ, ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆ ಮತ್ತು ನಂಬಿಕೆಯ ವ್ಯಕ್ತಿಯನ್ನು ಈಗಲೇ ಸಂಪರ್ಕಿಸಿ; ಆಪ್ ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಬೇಡಿ."
+    : "That sounds difficult, and I’m glad you told me. Share only what you want. I’m an app, not a person or clinician, but I can help you sort through your thoughts or prepare what to say to someone you trust. If you’re in immediate danger or may hurt yourself or someone else, contact local emergency services and a trusted person now; don’t wait for an app reply.";
+
+  if (/^(?:thanks|thank you|ಧನ್ಯವಾದ|ಧನ್ಯವಾದಗಳು)$/u.test(normalized)) return answerLanguage === "kn"
+    ? "ಸ್ವಾಗತ. ಇನ್ನೇನಾದರೂ ಕೇಳಲು ಅಥವಾ ಹಂಚಿಕೊಳ್ಳಲು ಇಷ್ಟವಿದ್ದರೆ ಬರೆಯಿರಿ—ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್ ಎರಡೂ ಸರಿ."
+    : "You’re welcome. If there’s anything else you’d like to ask or share, go ahead—English or Kannada is fine.";
+  return null;
+}
+
 function readConversations(storage: Storage, key: string): Conversation[] {
   try {
     const parsed: unknown = JSON.parse(storage.getItem(key) || "null");
@@ -122,7 +148,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
 
   const copy = language === "en" ? {
     title: "Ask CARE CONNECTED", subtitle: "A calm place to ask, explore, and follow up. Check sources for current facts.",
-    ready: "Secure AI server configured", offline: "Live AI is not connected", notConfigured: "Live AI is not connected to this GitHub Pages site. Your question stays on this device. You can still try the reviewed offline health and medicine guides below; a server and private provider key are required for live AI answers.", offlineResponse: "Live AI is not connected to this site, so your question was not sent and no AI answer was generated. You can try the reviewed guide below; it will clearly say when a topic is not covered.", offlineGuide: "Try a reviewed guide below", offlineGuideHint: "Your question stays on this device.",
+    ready: "Secure AI server configured", offline: "Live AI is not connected", notConfigured: "Live AI is not connected to this GitHub Pages site. Your question stays on this device. You can still try the reviewed offline health and medicine guides below; a server and private provider key are required for open-ended AI answers.", offlineResponse: "I want to help, but live AI isn’t connected to this site yet. Your question was not sent, and I don’t want to guess at an answer. You can try a reviewed guide below; a site administrator must connect a secure AI server for open-ended answers.", offlineGuide: "Try a reviewed guide below", offlineGuideHint: "Your question stays on this device.",
     consentTitle: "Review before sending", consent: "Your question and recent messages will go to the configured server and its AI provider. Saved health records are not attached. If you select a document, its extracted text will also be sent for this request.",
     docToggle: "Ask about a saved document", selectDoc: "Choose a saved document", noDocs: "No saved documents with reviewed text are available.",
     save: "Save conversation history on this device", saveHint: "Off by default. Without this, chats stay in this browser tab only.",
@@ -134,7 +160,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     newChat: "New chat", history: "Recent chats", searchHistory: "Search chats", emptyHistory: "Your conversations will appear here.", rename: "Rename", delete: "Delete", copyAnswer: "Copy answer", regenerate: "Regenerate answer", saved: "Saved on this device", temporary: "This tab only",
   } : {
     title: "CARE CONNECTED ಗೆ ಕೇಳಿ", subtitle: "ಪ್ರಶ್ನೆ, ಅನ್ವೇಷಣೆ ಮತ್ತು ಮುಂದಿನ ಪ್ರಶ್ನೆಗಳಿಗೆ ಶಾಂತ ಸ್ಥಳ. ಇತ್ತೀಚಿನ ಮಾಹಿತಿಗೆ ಮೂಲ ಪರಿಶೀಲಿಸಿ.",
-    ready: "ಸುರಕ್ಷಿತ AI ಸರ್ವರ್ ಹೊಂದಿಸಲಾಗಿದೆ", offline: "ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ", notConfigured: "ಈ GitHub Pages ತಾಣಕ್ಕೆ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ. ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ. ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಆಫ್‌ಲೈನ್ ಆರೋಗ್ಯ ಮತ್ತು ಔಷಧಿ ಮಾರ್ಗದರ್ಶಿಗಳನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು; ಲೈವ್ AI ಉತ್ತರಕ್ಕೆ ಸರ್ವರ್ ಮತ್ತು ಖಾಸಗಿ ಸೇವಾ ಕೀ ಅಗತ್ಯ.", offlineResponse: "ಈ ತಾಣಕ್ಕೆ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ; ಆದ್ದರಿಂದ ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಕಳುಹಿಸಲಿಲ್ಲ ಮತ್ತು AI ಉತ್ತರ ರಚಿಸಲಿಲ್ಲ. ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ಪ್ರಯತ್ನಿಸಿ; ವಿಷಯ ಇಲ್ಲದಿದ್ದರೆ ಅದು ಸ್ಪಷ್ಟವಾಗಿ ತಿಳಿಸುತ್ತದೆ.", offlineGuide: "ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ನೋಡಿ", offlineGuideHint: "ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ.",
+    ready: "ಸುರಕ್ಷಿತ AI ಸರ್ವರ್ ಹೊಂದಿಸಲಾಗಿದೆ", offline: "ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ", notConfigured: "ಈ GitHub Pages ತಾಣಕ್ಕೆ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ. ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ. ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಆರೋಗ್ಯ ಮತ್ತು ಔಷಧಿ ಮಾರ್ಗದರ್ಶಿಗಳನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು; ಮುಕ್ತ AI ಉತ್ತರಗಳಿಗೆ ಸರ್ವರ್ ಮತ್ತು ಖಾಸಗಿ ಸೇವಾ ಕೀ ಅಗತ್ಯ.", offlineResponse: "ಸಹಾಯ ಮಾಡಲು ಬಯಸುತ್ತೇನೆ; ಆದರೆ ಈ ತಾಣಕ್ಕೆ ಇನ್ನೂ ಲೈವ್ AI ಸಂಪರ್ಕವಿಲ್ಲ. ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಕಳುಹಿಸಲಿಲ್ಲ ಮತ್ತು ಊಹಿಸಿ ಉತ್ತರಿಸುವುದಿಲ್ಲ. ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ಪ್ರಯತ್ನಿಸಿ; ಮುಕ್ತ ಪ್ರಶ್ನೆಗಳಿಗೆ ತಾಣದ ನಿರ್ವಾಹಕರು ಸುರಕ್ಷಿತ AI ಸರ್ವರ್ ಸಂಪರ್ಕಿಸಬೇಕು.", offlineGuide: "ಕೆಳಗಿನ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ನೋಡಿ", offlineGuideHint: "ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ.",
     consentTitle: "ಕಳುಹಿಸುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿ", consent: "ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಮತ್ತು ಇತ್ತೀಚಿನ ಸಂದೇಶಗಳು ಹೊಂದಿಸಿದ ಸರ್ವರ್ ಮತ್ತು AI ಸೇವೆಗೆ ಹೋಗುತ್ತವೆ. ಉಳಿಸಿದ ಆರೋಗ್ಯ ದಾಖಲೆಗಳನ್ನು ಸೇರಿಸುವುದಿಲ್ಲ. ದಾಖಲೆಯನ್ನು ಆರಿಸಿದರೆ ಅದರ ಹೊರತೆಗೆದ ಪಠ್ಯ ಈ ವಿನಂತಿಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
     docToggle: "ಉಳಿಸಿದ ದಾಖಲೆಯ ಬಗ್ಗೆ ಕೇಳಿ", selectDoc: "ಉಳಿಸಿದ ದಾಖಲೆ ಆಯ್ಕೆಮಾಡಿ", noDocs: "ಪರಿಶೀಲಿಸಿದ ಪಠ್ಯವಿರುವ ಉಳಿಸಿದ ದಾಖಲೆಗಳಿಲ್ಲ.",
     save: "ಈ ಸಾಧನದಲ್ಲಿ ಚಾಟ್ ಇತಿಹಾಸ ಉಳಿಸಿ", saveHint: "ಮೊದಲಿನಿಂದ ಆಫ್. ಇಲ್ಲದಿದ್ದರೆ ಚಾಟ್ ಈ ಟ್ಯಾಬ್‌ನಲ್ಲಷ್ಟೇ ಇರುತ್ತದೆ.",
@@ -214,7 +240,8 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
     if (busy || !activeConversation) return;
     if (!ASSISTANT_ENDPOINT) {
       const userMessage: Message = { id: newId(), role: "user", text: question };
-      const statusMessage: Message = { id: newId(), role: "assistant", text: copy.offlineResponse, error: true };
+      const localReply = localConversationReply(question, language);
+      const statusMessage: Message = { id: newId(), role: "assistant", text: localReply ?? copy.offlineResponse, error: !localReply };
       const conversationId = activeConversation.id;
       updateMessages(conversationId, (current) => [...current, userMessage, statusMessage]);
       patchConversation(conversationId, (current) => ({ ...current, title: messages.some((message) => message.role === "user") ? current.title : short(question, 42) }));
