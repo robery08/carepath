@@ -12,7 +12,6 @@ import {
   Camera,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -25,10 +24,14 @@ import {
   HeartPulse,
   Info,
   ListChecks,
+  LocateFixed,
   MapPin,
+  MapPinned,
   MessageCircle,
+  MessageSquareText,
   Pill,
   Plus,
+  Phone,
   Printer,
   ScanLine,
   Send,
@@ -71,6 +74,10 @@ type Profile = {
   emergencyRelation: string;
   emergencyPhone: string;
   clinician: string;
+  clinicianPhone: string;
+  pharmacy: string;
+  pharmacyPhone: string;
+  locationHint: string;
 };
 
 type DocumentRecord = {
@@ -108,16 +115,19 @@ const DEFAULT_PROFILE: Profile = {
   emergencyRelation: "",
   emergencyPhone: "",
   clinician: "",
+  clinicianPhone: "",
+  pharmacy: "",
+  pharmacyPhone: "",
+  locationHint: "",
 };
 
 const EXTRACTED_SAMPLE = [
-  { name: "Paracetamol", strength: "500 mg", form: "Tablet", schedule: "8:00 PM", instructions: "After food" },
   { name: "Amlodipine", strength: "5 mg", form: "Tablet", schedule: "8:00 AM", instructions: "Morning" },
   { name: "Atorvastatin", strength: "10 mg", form: "Tablet", schedule: "10:00 PM", instructions: "Night" },
+  { name: "Metformin", strength: "500 mg", form: "Tablet", schedule: "1:00 PM", instructions: "After food" },
 ];
 
 const DEFAULT_MEDICINES: Medicine[] = [
-  { id: "1", name: "Paracetamol", strength: "500 mg", form: "Tablet", schedule: "8:00 PM", instructions: "After food" },
   { id: "2", name: "Amlodipine", strength: "5 mg", form: "Tablet", schedule: "8:00 AM", instructions: "Morning" },
   { id: "3", name: "Atorvastatin", strength: "10 mg", form: "Tablet", schedule: "10:00 PM", instructions: "Night" },
   { id: "4", name: "Metformin", strength: "500 mg", form: "Tablet", schedule: "1:00 PM", instructions: "After food" },
@@ -262,13 +272,17 @@ type Shared = {
 };
 
 function AIHub({ medicines, readings, documents, profile, onNavigate }: Shared) {
+  type Message = { role: "user" | "assistant"; text: string; time: string };
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState(() => readStored<Array<{ role: "user" | "assistant"; text: string; time: string }>>("carepath_ai_conversation", []));
+  const [mode, setMode] = useState<"local" | "sources">("local");
+  const [consent, setConsent] = useState(false);
+  const [remoteNotice, setRemoteNotice] = useState("");
+  const [messages, setMessages] = useState<Message[]>(() => readStored<Message[]>("carepath_ai_conversation", []).map((message) => ({ ...message, origin: "local" })));
   const answerFor = (question: string) => {
     const q = question.toLowerCase();
     const exampleList = medicines.length > 0 && medicines.every((item) => ["1", "2", "3", "4"].includes(item.id));
     if (/dose|dosage|interaction|safe to take|should i take|side effect/.test(q)) {
-      return "I can help organize information, but I can’t determine a safe dose, diagnose a condition, or confirm whether medicines interact. Check the prescription label and ask a pharmacist or clinician before changing anything. If you may be having a severe reaction, use Emergency Help now.";
+      return "I can help organize information, but I can’t determine a safe dose, diagnose a condition, or confirm whether medicines interact. Check the current package or prescription and ask a pharmacist or clinician before changing anything. If this may be an emergency, use Emergency Help now.";
     }
     if (/medicine|medication|prescription/.test(q)) {
       return medicines.length
@@ -276,36 +290,50 @@ function AIHub({ medicines, readings, documents, profile, onNavigate }: Shared) 
         : "There are no saved medicines yet. Add them from the package or prescription, then compare every detail with the original instructions.";
     }
     if (/visit|doctor|appointment|question/.test(q)) {
-      return `Your visit brief can include ${medicines.length} saved medicines, ${readings.length} health readings and ${documents.length} documents. Open Visit Prep to choose what to bring and add questions for your clinician.`;
+      return `Your visit brief can include ${medicines.length} saved medicines, ${readings.length} health readings and ${documents.length} documents. Open Visit Prep to choose what to bring and add questions for your care team.`;
     }
     if (/reading|trend|health data|blood pressure|glucose/.test(q)) {
       return readings.length
-        ? `You have ${readings.length} saved health readings. CAREPATH can help you organize dates and values for a conversation with your care team; it does not interpret them as a diagnosis.`
+        ? `You have ${readings.length} saved health readings. CAREPATH can organize dates and values for you to review with your care team; it does not interpret them as a diagnosis.`
         : "No personal readings are saved yet. Open Health Tracker to record values with their date, time and context.";
     }
-    if (/allerg/.test(q)) return profile.allergies.trim() ? `Your profile lists: ${profile.allergies}. Please verify this list with your care team and keep the original record available.` : "No allergies are recorded in your profile yet. Add known allergies in Settings, or confirm with a clinician whether there are any to record.";
-    return "I can summarize information you have saved in CAREPATH and help you prepare questions for a clinician. Try asking about your saved medicines, a health reading, allergies, or visit preparation. I don’t diagnose or recommend treatment.";
+    if (/allerg/.test(q)) return profile.allergies.trim() ? `Your profile lists: ${profile.allergies}. Please verify this list with your care team and keep the original record available.` : "No allergies are recorded in your profile yet. Add known allergies in Care Circle, or confirm with a care professional what belongs on your list.";
+    return "I can organize information you have saved in CAREPATH and help you prepare questions. Try asking about your medicine list, a reading, allergies, or visit preparation. I don’t diagnose or recommend treatment.";
   };
+  const clock = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const send = (event?: FormEvent) => {
     event?.preventDefault();
     const question = input.trim();
     if (!question) return;
-    const next = [...messages, { role: "user" as const, text: question, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }, { role: "assistant" as const, text: answerFor(question), time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }].slice(-24);
-    setMessages(next);
-    saveStored("carepath_ai_conversation", next);
+    if (mode === "local") {
+      const next = [...messages, { role: "user" as const, text: question, time: clock() }, { role: "assistant" as const, text: answerFor(question), time: clock() }].slice(-24);
+      setMessages(next);
+      saveStored("carepath_ai_conversation", next);
+      setInput("");
+      return;
+    }
+    if (!consent) { setRemoteNotice("Choose the sharing box before opening a web search. Nothing is sent before you submit."); return; }
+    if (!navigator.onLine) { setRemoteNotice("You are offline. Switch to On-device help or open the saved official guides."); return; }
+    const query = `${question} (site:who.int OR site:cancer.gov OR site:medlineplus.gov OR site:nhs.uk)`;
+    const opened = window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank", "noopener,noreferrer");
     setInput("");
+    setConsent(false);
+    setRemoteNotice(opened === null ? "Your browser blocked the new tab. Allow pop-ups for CAREPATH or use the official source links beside this search." : "Google Search opened with a filter for WHO, NCI, MedlinePlus, and NHS pages. CAREPATH does not store this search. Check the source and date before using information.");
   };
   return <>
-    <PageHeader eyebrow="YOUR PRIVATE ORGANIZER" title="CarePath AI Hub" description="Get plain-language help organizing your saved health information and preparing for care." icon={<Brain size={24} />} action={<span className="cp-local-pill"><span /> Works on this device</span>} />
+    <PageHeader eyebrow="ONE PLACE FOR YOUR CARE QUESTIONS" title="CarePath AI Hub" description="Use the local organizer offline or explicitly send one question for Gemini to search public health sources." icon={<Brain size={24} />} action={<span className={`cp-local-pill ${mode === "grounded" ? "online" : ""}`}><span /> {mode === "grounded" ? "Gemini search" : "On-device help"}</span>} />
     <div className="cp-ai-layout">
-      <Panel title="Ask about your saved information" eyebrow="CAREPATH ASSIST">
+      <Panel title={mode === "local" ? "Your saved CAREPATH information" : "Search general health guidance"} eyebrow={mode === "local" ? "PRIVATE · STORED ON THIS DEVICE" : "GEMINI + GOOGLE SEARCH · ONLINE"}>
+        <div className="cp-ai-mode-switch" role="group" aria-label="Choose CAREPATH help mode"><button className={mode === "local" ? "selected" : ""} onClick={() => { setMode("local"); setConsent(false); setRemoteNotice(""); }}><ShieldCheck size={16} /> On-device help</button><button className={mode === "grounded" ? "selected" : ""} onClick={() => { setMode("grounded"); setConsent(false); setRemoteNotice(""); }}><Sparkles size={16} /> Gemini source search</button></div>
         <div className="cp-chat-thread" aria-live="polite">
-          {messages.length === 0 ? <div className="cp-chat-welcome"><div className="cp-ai-orb"><Sparkles size={27} /></div><h3>What would make today easier?</h3><p>Ask about your saved medicine list, readings, allergies, or a clinician visit.</p><div className="cp-prompt-grid">{["Summarize my medicine list", "Help me prepare for a visit", "What health readings have I saved?"].map((prompt) => <button key={prompt} onClick={() => { setInput(prompt); }}>{prompt}<ArrowRight size={15} /></button>)}</div></div> : messages.map((message, index) => <div className={`cp-message ${message.role}`} key={`${message.time}-${index}`}><div className="cp-message-avatar">{message.role === "assistant" ? <Sparkles size={15} /> : initials(profile.name)}</div><div><p>{message.text}</p><small>{message.time}</small></div></div>)}
+          {messages.length === 0 ? <div className="cp-chat-welcome"><div className="cp-ai-orb"><Sparkles size={27} /></div><h3>{mode === "local" ? "Make your health information easier to use" : "Look up a medicine or health topic"}</h3><p>{mode === "local" ? "Ask about your saved medicine list, readings, allergies, or care preparation." : "Try: ‘What should I know about metformin?’ or ‘WHO guidance for blood pressure’. Avoid names, phone numbers, and private details."}</p><div className="cp-prompt-grid">{(mode === "local" ? ["Summarize my medicine list", "Help me prepare for a visit", "What health readings have I saved?"] : ["WHO guidance for high blood pressure", "Diabetes self-management education", "What information is on a metformin patient leaflet?"]).map((prompt) => <button key={prompt} onClick={() => setInput(prompt)}>{prompt}<ArrowRight size={15} /></button>)}</div></div> : messages.map((message, index) => <div className={`cp-message ${message.role}`} key={`${message.time}-${index}`}><div className="cp-message-avatar">{message.role === "assistant" ? <Sparkles size={15} /> : initials(profile.name)}</div><div><p>{message.text}</p>{message.sources?.length ? <div className="cp-grounding-sources"><strong>Sources found</strong>{message.sources.map((source) => <a href={source.uri} target="_blank" rel="noreferrer" key={source.uri}>{source.title || source.uri}<ArrowRight size={13} /></a>)}</div> : null}<small>{message.time}</small></div></div>)}
         </div>
-        <form className="cp-chat-composer" onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Ask about your saved CAREPATH information…" rows={2} /><button type="submit" aria-label="Send message"><Send size={18} /></button></form>
-        <p className="cp-composer-hint"><Info size={13} /> For organization and education only. This assistant does not diagnose or recommend treatment.</p>
+        <form className="cp-chat-composer" onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder={mode === "local" ? "Ask about your saved CAREPATH information…" : "Search a general health topic or medicine name…"} rows={2} maxLength={1200} /><button type="submit" disabled={pending} aria-label={mode === "local" ? "Send question" : "Search with Gemini"}><Send size={18} /></button></form>
+        {mode === "grounded" && <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>Send this question through CAREPATH to Gemini and Google Search.</strong> This third-party service receives the text you type. Do not include your name, contact details, or identifying health information. Your saved profile and records are never attached automatically.</span></label>}
+        {remoteNotice && <p className="cp-ai-status" role="status">{remoteNotice}</p>}
+        <p className="cp-composer-hint"><Info size={13} /> CAREPATH does not diagnose, choose a medicine for you, or prescribe a dose. For medicine choice, interactions, or treatment changes, ask a pharmacist or your care team.</p>
       </Panel>
-      <aside className="cp-ai-aside"><Panel title="Your CAREPATH snapshot"><div className="cp-snapshot-list"><Snapshot icon={<Pill />} label="Medicines" value={`${medicines.length} saved`} /><Snapshot icon={<Activity />} label="Health readings" value={`${readings.length} recorded`} /><Snapshot icon={<FileCheck2 />} label="Documents" value={`${documents.length} saved`} /><Snapshot icon={<Heart />} label="Allergy notes" value={profile.allergies.trim() ? "On file" : "Not added"} /></div></Panel><Panel title="Go to a workspace"><div className="cp-link-list"><button onClick={() => onNavigate("Medicine Passport")}>Medicine passport <ArrowRight size={15} /></button><button onClick={() => onNavigate("Visit Prep")}>Prepare for a visit <ArrowRight size={15} /></button><button onClick={() => onNavigate("Safety Check")}>Review your saved details <ArrowRight size={15} /></button></div></Panel></aside>
+      <aside className="cp-ai-aside"><Panel title="Your CAREPATH snapshot"><div className="cp-snapshot-list"><Snapshot icon={<Pill />} label="Medicines" value={`${medicines.length} saved`} /><Snapshot icon={<Activity />} label="Health readings" value={`${readings.length} recorded`} /><Snapshot icon={<FileCheck2 />} label="Documents" value={`${documents.length} saved`} /><Snapshot icon={<Heart />} label="Allergy notes" value={profile.allergies.trim() ? "On file" : "Not added"} /></div></Panel><Panel title="Go to a workspace"><div className="cp-link-list"><button onClick={() => onNavigate("Learn")}>Chronic-care guides <ArrowRight size={15} /></button><button onClick={() => onNavigate("Medicine Passport")}>Medicine passport <ArrowRight size={15} /></button><button onClick={() => onNavigate("Visit Prep")}>Prepare for a visit <ArrowRight size={15} /></button><button onClick={() => onNavigate("Health Map")}>Find a pharmacy <ArrowRight size={15} /></button></div></Panel></aside>
     </div>
   </>;
 }
@@ -453,16 +481,34 @@ function HealthCalendar({ readings, documents, medEvents }: Shared) {
 }
 
 function HealthMap({ medicines, readings, documents, profile, onNavigate }: Shared) {
+  const [area, setArea] = useState(profile.locationHint || "");
+  const [coords, setCoords] = useState("");
+  const [mapNotice, setMapNotice] = useState("");
   const mapItems = [
     { title: "Medicines", count: medicines.length, text: "Your saved medication notes", icon: <Pill />, route: "Medicine Passport", tone: "mint" },
     { title: "Vitals & readings", count: readings.length, text: "Measurements with date and context", icon: <HeartPulse />, route: "Health Tracker", tone: "blue" },
     { title: "Documents", count: documents.length, text: "Reports and document references", icon: <FileCheck2 />, route: "Tests & Reports", tone: "violet" },
     { title: "Care profile", count: profile.allergies || profile.conditions ? 1 : 0, text: "Allergy and health background notes", icon: <Heart />, route: "Care Circle", tone: "rose" },
   ];
+  const mapSearch = (place: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place} near ${coords || area}`)}`;
+  const openMaps = (place: string) => {
+    if (!coords && !area.trim()) { setMapNotice("Enter a city or area, or choose Use my location first."); return; }
+    saveStored("carepath_profile", { ...profile, locationHint: area.trim() });
+    window.open(mapSearch(place), "_blank", "noopener,noreferrer");
+  };
+  const useLocation = () => {
+    setMapNotice("");
+    if (!navigator.geolocation) { setMapNotice("Location is not supported here. Enter a city or area instead."); return; }
+    navigator.geolocation.getCurrentPosition((position) => {
+      setCoords(`${position.coords.latitude},${position.coords.longitude}`);
+      setMapNotice("Location is ready for this search. Tap a Maps button below to send it to Google Maps.");
+    }, () => setMapNotice("Location was not available. You can still search by typing a city or area."), { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+  };
   return <>
     <PageHeader eyebrow="ONE VIEW OF YOUR CARE" title="Health Map" description="Explore the information connected to your personal health record." icon={<MapPin size={24} />} />
     <div className="cp-map-overview"><div className="cp-body-map"><div className="cp-body-glow" /><div className="cp-body-head" /><div className="cp-body-torso"><HeartPulse size={28} /></div><div className="cp-body-arm left" /><div className="cp-body-arm right" /><div className="cp-body-leg left" /><div className="cp-body-leg right" /><span className="cp-map-node node-one"><Activity size={15} /></span><span className="cp-map-node node-two"><Pill size={15} /></span><span className="cp-map-node node-three"><Heart size={15} /></span></div><div className="cp-map-intro"><span className="cp-eyebrow">YOUR PERSONAL HEALTH MAP</span><h2>Everything you choose to keep, connected.</h2><p>CAREPATH brings your saved details into one place, so you can find and share the information that matters to you.</p><button className="cp-button primary" onClick={() => onNavigate("Visit Prep")}>Build a visit brief <ArrowRight size={15} /></button></div></div>
     <div className="cp-map-cards">{mapItems.map((item) => <button className={`cp-map-card ${item.tone}`} key={item.title} onClick={() => onNavigate(item.route)}><span className="cp-map-card-icon">{item.icon}</span><span><strong>{item.title}</strong><small>{item.text}</small></span><b>{item.count}<small>saved</small></b><ChevronRight size={17} /></button>)}</div>
+    <div className="cp-two-column cp-services-grid"><Panel title="Find a medicine place" eyebrow="MAP SEARCH · YOU CHOOSE WHEN TO SHARE LOCATION"><p className="cp-muted-copy">Search a saved area or ask this device for your location. Your location is used only after you tap a Google Maps search button; CAREPATH does not save coordinates. Map results do not confirm stock, opening hours, or medicine quality.</p><form className="cp-location-form" onSubmit={(event) => { event.preventDefault(); setCoords(""); saveStored("carepath_profile", { ...profile, locationHint: area.trim() }); setMapNotice(area.trim() ? `Search area saved on this device: ${area.trim()}` : "Enter a city or area to search."); }}><label htmlFor="cp-pharmacy-area">City or area</label><div><input id="cp-pharmacy-area" value={area} onChange={(event) => { setArea(event.target.value); setCoords(""); }} placeholder="For example, Pune or Andheri West" /><button className="cp-button quiet" type="submit">Save area</button></div></form><button className="cp-button quiet cp-location-button" onClick={useLocation}><LocateFixed size={16} /> Use my current location</button>{mapNotice && <p className="cp-ai-status" role="status">{mapNotice}</p>}<div className="cp-map-search-actions"><button className="cp-button primary" onClick={() => openMaps("pharmacy") }><MapPinned size={16} /> Search pharmacies</button><button className="cp-button quiet" onClick={() => openMaps("medical store") }><MapPin size={16} /> Search medical stores</button><button className="cp-button quiet" onClick={() => openMaps("hospital") }><HeartPulse size={16} /> Search hospitals</button></div><small className="cp-map-privacy">Google Maps opens in a new tab with the location or area in your search. You can cancel and use an area search instead.</small></Panel><Panel title="Reach your people" eyebrow="CALL OR MESSAGE FROM YOUR DEVICE"><div className="cp-care-contact-list">{profile.clinicianPhone ? <div><span className="cp-care-contact-icon"><Stethoscope size={17} /></span><span><strong>{profile.clinician || "Doctor or clinic"}</strong><small>{profile.clinicianPhone}</small></span><a href={`tel:${profile.clinicianPhone.replace(/[^\d+*#]/g, "")}`} aria-label={`Call ${profile.clinician || "doctor or clinic"}`}><Phone size={16} /></a><a href={`sms:${profile.clinicianPhone.replace(/[^\d+*#]/g, "")}`} aria-label="Message doctor or clinic"><MessageSquareText size={16} /></a></div> : null}{profile.pharmacyPhone ? <div><span className="cp-care-contact-icon"><Pill size={17} /></span><span><strong>{profile.pharmacy || "My pharmacy"}</strong><small>{profile.pharmacyPhone}</small></span><a href={`tel:${profile.pharmacyPhone.replace(/[^\d+*#]/g, "")}`} aria-label={`Call ${profile.pharmacy || "pharmacy"}`}><Phone size={16} /></a><a href={`sms:${profile.pharmacyPhone.replace(/[^\d+*#]/g, "")}`} aria-label="Message pharmacy"><MessageSquareText size={16} /></a></div> : null}{profile.emergencyPhone ? <div><span className="cp-care-contact-icon"><Users size={17} /></span><span><strong>{profile.emergencyName || "Trusted contact"}</strong><small>{profile.emergencyRelation || "Personal contact"} · {profile.emergencyPhone}</small></span><a href={`tel:${profile.emergencyPhone.replace(/[^\d+*#]/g, "")}`} aria-label={`Call ${profile.emergencyName || "trusted contact"}`}><Phone size={16} /></a><a href={`sms:${profile.emergencyPhone.replace(/[^\d+*#]/g, "")}`} aria-label="Message trusted contact"><MessageSquareText size={16} /></a></div> : null}{!profile.clinicianPhone && !profile.pharmacyPhone && !profile.emergencyPhone && <div className="cp-care-contact-empty"><p>Add a doctor, pharmacy, or trusted contact in Care Circle. CAREPATH opens calls and messages in your device's apps; it does not send anything automatically.</p><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}>Set up my contacts <ArrowRight size={14} /></button></div>}</div><button className="cp-text-link" onClick={() => onNavigate("Care Circle")}>Edit contact details <ArrowRight size={14} /></button></Panel></div>
   </>;
 }
 
@@ -502,8 +548,10 @@ function CareCircle({ profile, bump }: Shared) {
   const save = (event: FormEvent) => { event.preventDefault(); saveStored("carepath_profile", form); setSaved(true); bump(); window.dispatchEvent(new Event("carepath:refresh")); };
   return <>
     <PageHeader eyebrow="PEOPLE & PREFERENCES" title="Care Circle" description="Keep your background notes and trusted contact information close at hand." icon={<Users size={24} />} />
-    <div className="cp-profile-layout"><Panel title="My health profile" eyebrow="OPTIONAL PERSONAL DETAILS"><form className="cp-profile-form" onSubmit={save}><label>Preferred name<input value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Name to show in CAREPATH" /></label><label>Age<input inputMode="numeric" value={form.age} onChange={(event) => update("age", event.target.value)} placeholder="Optional" /></label><label>Blood type<input value={form.bloodType === "Not provided" ? "" : form.bloodType} onChange={(event) => update("bloodType", event.target.value)} placeholder="Only if known" /></label><label className="span-two">Allergies or sensitivities<textarea rows={3} value={form.allergies} onChange={(event) => update("allergies", event.target.value)} placeholder="Include only information you know; verify with your care team." /></label><label className="span-two">Health conditions or context<textarea rows={3} value={form.conditions} onChange={(event) => update("conditions", event.target.value)} placeholder="Optional notes to help prepare for a visit." /></label><label className="span-two">Doctor or clinic name<input value={form.clinician} onChange={(event) => update("clinician", event.target.value)} placeholder="Optional" /></label><button className="cp-button primary" type="submit">Save my profile</button>{saved && <span className="cp-save-confirm"><CheckCircle2 size={15} /> Saved on this device</span>}</form></Panel>
-      <div className="cp-visit-aside"><Panel title="Trusted contact" eyebrow="FOR YOUR EMERGENCY CARD"><form className="cp-profile-form contact" onSubmit={save}><label>Contact name<input value={form.emergencyName} onChange={(event) => update("emergencyName", event.target.value)} placeholder="Name" /></label><label>Relationship<input value={form.emergencyRelation} onChange={(event) => update("emergencyRelation", event.target.value)} placeholder="For example, partner" /></label><label className="span-two">Phone<input type="tel" value={form.emergencyPhone} onChange={(event) => update("emergencyPhone", event.target.value)} placeholder="Include country code if useful" /></label><button className="cp-button primary" type="submit">Save contact</button></form><Notice>Only add details you are comfortable storing in this browser.</Notice></Panel><Panel title="What gets shared?"><p className="cp-muted-copy">CAREPATH keeps these details on this device. It does not send alerts or share your health information with a contact automatically.</p></Panel></div></div>
+    <div className="cp-profile-layout"><Panel title="My health profile" eyebrow="OPTIONAL PERSONAL DETAILS"><form className="cp-profile-form" onSubmit={save}><label>Preferred name<input value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Name to show in CAREPATH" /></label><label>Age<input inputMode="numeric" value={form.age} onChange={(event) => update("age", event.target.value)} placeholder="Optional" /></label><label>Blood type<input value={form.bloodType === "Not provided" ? "" : form.bloodType} onChange={(event) => update("bloodType", event.target.value)} placeholder="Only if known" /></label><label className="span-two">Allergies or sensitivities<textarea rows={3} value={form.allergies} onChange={(event) => update("allergies", event.target.value)} placeholder="Include only information you know; verify with your care team." /></label><label className="span-two">Health conditions or context<textarea rows={3} value={form.conditions} onChange={(event) => update("conditions", event.target.value)} placeholder="Optional notes to help prepare for a visit." /></label><label>Doctor, oncology team, or clinic<input value={form.clinician} onChange={(event) => update("clinician", event.target.value)} placeholder="Optional" /></label><label>Doctor or clinic phone<input type="tel" value={form.clinicianPhone} onChange={(event) => update("clinicianPhone", event.target.value)} placeholder="Include country code if useful" /></label><label>Preferred pharmacy<input value={form.pharmacy} onChange={(event) => update("pharmacy", event.target.value)} placeholder="Optional pharmacy name" /></label><label>Pharmacy phone<input type="tel" value={form.pharmacyPhone} onChange={(event) => update("pharmacyPhone", event.target.value)} placeholder="For a stock or refill question" /></label><label className="span-two">Area or city for nearby searches<input value={form.locationHint} onChange={(event) => update("locationHint", event.target.value)} placeholder="Optional; helps find a pharmacy without sharing device location" /></label><button className="cp-button primary" type="submit">Save my profile</button>{saved && <span className="cp-save-confirm"><CheckCircle2 size={15} /> Saved on this device</span>}</form>
+      <div className="cp-contact-actions"><strong>Reach your care team</strong><span>These buttons open your phone's calling or messaging app.</span><div>{form.clinicianPhone.trim() ? <><a className="cp-button quiet" href={`tel:${form.clinicianPhone.replace(/[^\d+*#]/g, "")}`}><Phone size={15} /> Call {form.clinician || "doctor"}</a><a className="cp-button quiet" href={`sms:${form.clinicianPhone.replace(/[^\d+*#]/g, "")}`}><MessageSquareText size={15} /> Message</a></> : <button className="cp-button quiet" onClick={() => document.querySelector<HTMLInputElement>("input[type='tel']")?.focus()}>Add a phone number</button>}</div></div>
+      </Panel>
+      <div className="cp-visit-aside"><Panel title="Trusted contact" eyebrow="FOR YOUR EMERGENCY CARD"><form className="cp-profile-form contact" onSubmit={save}><label>Contact name<input value={form.emergencyName} onChange={(event) => update("emergencyName", event.target.value)} placeholder="Name" /></label><label>Relationship<input value={form.emergencyRelation} onChange={(event) => update("emergencyRelation", event.target.value)} placeholder="For example, partner" /></label><label className="span-two">Phone<input type="tel" value={form.emergencyPhone} onChange={(event) => update("emergencyPhone", event.target.value)} placeholder="Include country code if useful" /></label><button className="cp-button primary" type="submit">Save contact</button></form>{form.emergencyPhone.trim() && <div className="cp-contact-actions compact"><div><a className="cp-button quiet" href={`tel:${form.emergencyPhone.replace(/[^\d+*#]/g, "")}`}><Phone size={15} /> Call</a><a className="cp-button quiet" href={`sms:${form.emergencyPhone.replace(/[^\d+*#]/g, "")}`}><MessageSquareText size={15} /> Message</a></div></div>}<Notice>Only add details you are comfortable storing in this browser.</Notice></Panel><Panel title="What gets shared?"><p className="cp-muted-copy">CAREPATH keeps these details on this device. It does not send alerts or share your health information with a contact automatically. Your phone's messaging or calling app receives the number only after you choose a button.</p></Panel></div></div>
   </>;
 }
 
@@ -536,18 +584,23 @@ function Emergency({ medicines, profile, onNavigate }: Shared) {
 }
 
 function Learn({ onNavigate }: Shared) {
+  const [done, setDone] = useState<Record<string, boolean>>(() => readStored<Record<string, boolean>>(`carepath_daily_care_${todayISO()}`, {}));
   const topics = [
-    { title: "Keep a medicine list you can trust", text: "Record names and strengths from the package or current prescription. Add over-the-counter products and supplements, and update the list after a care visit." },
-    { title: "Capture health readings with context", text: "Note the date, time, device or method when relevant, and what was happening. Bring the original device instructions and your questions to a clinician." },
-    { title: "Prepare a useful visit brief", text: "Bring your current medicine containers or list, allergies you know about, recent records, and the questions you want answered." },
-    { title: "Know when to seek urgent help", text: "Do not rely on an app for an emergency. Contact your local emergency number or seek immediate in-person help for severe or rapidly worsening symptoms." },
+    { number: "01", title: "Blood pressure over time", badge: "HYPERTENSION", color: "teal", text: "Build a routine around the plan your care team gave you. Record measurements with date, time, and context; bring the monitor or its instructions when you review the pattern. Take prescribed medicines as directed and ask before changing them. Movement, food choices, and tobacco support can also be part of long-term care.", route: "Health Tracker", action: "Open blood pressure tracker", source: "WHO: Hypertension", url: "https://www.who.int/news-room/fact-sheets/detail/hypertension" },
+    { number: "02", title: "Diabetes day to day", badge: "DIABETES", color: "amber", text: "Keep your own diabetes plan easy to find: medicine instructions, meals, activity, monitoring guidance, and what to do if you feel unwell. Monitoring frequency and targets are personal; use the plan from your diabetes team. This app can organize readings and questions, not set targets or change insulin or other treatment.", route: "Health Tracker", action: "Log a reading", source: "WHO: Diabetes", url: "https://www.who.int/news-room/fact-sheets/detail/diabetes" },
+    { number: "03", title: "Living with cancer and treatment", badge: "CANCER SUPPORT", color: "rose", text: "Keep your oncology team's contact, current treatment list, and written after-hours instructions together. During cancer treatment, infection can become serious; follow your team's personal fever plan and contact them promptly for fever or infection signs. Ask before taking a fever medicine because it may hide a symptom. Do not use this app to decide whether to delay treatment.", route: "Care Circle", action: "Save oncology contact", source: "NCI: Infection during cancer treatment", url: "https://www.cancer.gov/about-cancer/treatment/side-effects/infection" },
+    { number: "04", title: "A steady medicine routine", badge: "REGULAR MEDICINES", color: "blue", text: "Use the current package or prescription as the source for each medicine's name, strength, time, and instructions. Keep a refill note, include non-prescription products and supplements in your list, and carry it when care changes. If a dose is missed or a label is unclear, ask a pharmacist or prescriber rather than doubling or guessing.", route: "Medicine Passport", action: "Review my medicine list", source: "WHO: Self-care for health and well-being", url: "https://www.who.int/news-room/fact-sheets/detail/self-care-health-interventions/" },
+    { number: "05", title: "Short-lived cold or fever symptoms", badge: "TEMPORARY ILLNESS", color: "violet", text: "For an otherwise mild common cold, basic self-care such as rest and fluids may be enough while symptoms improve. You do not need to turn every mild cold into an appointment. Get personalized advice sooner if you have a long-term condition, a weakened immune system, worsening or unusual symptoms, breathing difficulty, chest pain, or concern. If you are receiving cancer treatment, use your oncology team's fever instructions first.", route: "AI Hub", action: "Find trusted guidance", source: "NHS: Common cold", url: "https://www.nhs.uk/conditions/common-cold/" },
   ];
+  const actions = ["Review medicine times using my own current instructions", "Record a BP or glucose reading if it is part of my care plan", "Write down one question, refill need, or symptom to remember"];
+  const toggle = (key: string) => setDone((current) => { const next = { ...current, [key]: !current[key] }; saveStored(`carepath_daily_care_${todayISO()}`, next); return next; });
   return <>
-    <PageHeader eyebrow="SMALL STEPS, CLEARER CONVERSATIONS" title="Learn & Guides" description="Practical ways to keep your personal health information organized and ready to share." icon={<BookOpen size={24} />} />
-    <div className="cp-guide-grid">{topics.map((topic, index) => <details className="cp-guide" key={topic.title} open={index === 0}><summary><span className="cp-guide-number">0{index + 1}</span><strong>{topic.title}</strong><ChevronDown size={17} /></summary><p>{topic.text}</p></details>)}</div>
-    <div className="cp-learning-actions"><button className="cp-button quiet" onClick={() => onNavigate("Medicine Passport")}><Pill size={16} /> Review my medicine passport</button><button className="cp-button quiet" onClick={() => onNavigate("Visit Prep")}><Stethoscope size={16} /> Prepare for a visit</button></div>
-    <Notice>These guides are general organiz size={16} /> Review my medicine passport</button><button className="cp-button quiet" onClick={() => onNavigate("Visit Prep")}><Stethoscope size={16} /> Prepare for a visit</button></div>
-    <Notice>These guides are general organizational tips, not personalized medical advice.</Notice>
+    <PageHeader eyebrow="LONG-TERM CARE, MADE EASIER TO ORGANIZE" title="My Everyday Health Guide" description="Put routines, trusted learning, and your own care team details together. Use the app between planned check-ins; it cannot replace an urgent response or make treatment decisions." icon={<BookOpen size={24} />} action={<button className="cp-button primary" onClick={() => onNavigate("AI Hub")}><Brain size={16} /> Search a health topic</button>} />
+    <Notice tone="good"><strong>Not every minor, short-lived cold needs a clinic visit.</strong> Use practical self-care when appropriate, and know when your personal condition or symptoms call for help. Regular care for long-term conditions still matters; follow the schedule and action plan agreed with your team.</Notice>
+    <div className="cp-care-routine-layout"><Panel title="A small plan for today" eyebrow="OPTIONAL · SAVED ON THIS DEVICE"><p className="cp-muted-copy">Choose the reminders that fit your own plan. These checkboxes do not change prescriptions or decide what measurements you need.</p><div className="cp-care-checklist">{actions.map((action, index) => { const key = `${index}-${action}`; return <label className={done[key] ? "checked" : ""} key={key}><input type="checkbox" checked={Boolean(done[key])} onChange={() => toggle(key)} /><span className="cp-checkbox"><Check size={14} /></span><span>{action}</span></label>; })}</div><small className="cp-private-note"><ShieldCheck size={14} /> Your checklist is stored in this browser. Clear browser data to remove it.</small></Panel><Panel title="Your one-tap workspaces" eyebrow="NO NEED TO SEARCH AROUND"><div className="cp-care-shortcuts"><button onClick={() => onNavigate("My Medicines")}><Pill size={18} /><span><strong>Medicine routine</strong><small>List, passport, and reminders</small></span><ArrowRight size={15} /></button><button onClick={() => onNavigate("Health Tracker")}><HeartPulse size={18} /><span><strong>BP, glucose & readings</strong><small>Record and see your own trends</small></span><ArrowRight size={15} /></button><button onClick={() => onNavigate("Care Circle")}><Phone size={18} /><span><strong>People who support me</strong><small>Doctor, pharmacy, and trusted contact</small></span><ArrowRight size={15} /></button></div></Panel></div>
+    <section className="cp-condition-guides"><div className="cp-section-heading"><div><span className="cp-eyebrow">PLAIN-LANGUAGE STARTING POINTS</span><h2>Guidance for the whole journey</h2></div><span>Open each official source for full details</span></div><div className="cp-condition-grid">{topics.map((topic) => <article className={`cp-condition-card ${topic.color}`} key={topic.title}><div className="cp-condition-top"><span>{topic.badge}</span><b>{topic.number}</b></div><h3>{topic.title}</h3><p>{topic.text}</p><div className="cp-condition-actions"><button className="cp-button quiet" onClick={() => onNavigate(topic.route)}>{topic.action}<ArrowRight size={14} /></button><a href={topic.url} target="_blank" rel="noreferrer">{topic.source}<ArrowRight size={13} /></a></div></article>)}</div></section>
+    <div className="cp-learning-actions"><button className="cp-button quiet" onClick={() => onNavigate("Health Map")}><MapPin size={16} /> Find nearby medicine places</button><button className="cp-button quiet" onClick={() => onNavigate("Visit Prep")}><Stethoscope size={16} /> Build a visit brief when useful</button><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}><MessageSquareText size={16} /> Call or message my care team</button></div>
+    <Notice>These linked sources are general education. Guidance can vary by country and by your treatment. CAREPATH cannot prescribe medicines or determine that it is safe for you to skip or delay needed care.</Notice>
   </>;
 }
 
