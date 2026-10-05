@@ -19,14 +19,6 @@ type Medicine = {
 
 const defaultMedicines: Medicine[] = [
   {
-    id: "1",
-    name: "Paracetamol",
-    strength: "500 mg",
-    form: "Tablet",
-    schedule: "8:00 PM",
-    instructions: "After food",
-  },
-  {
     id: "2",
     name: "Amlodipine",
     strength: "5 mg",

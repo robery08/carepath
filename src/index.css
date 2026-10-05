@@ -3014,7 +3014,7 @@ footer strong {
 .cp-private-note { display:flex;align-items:center;gap:6px;margin-top:12px;color:#7d918f;font-size:8px; }
 .cp-link-list { display:grid;gap:2px }.cp-link-list button{display:flex;align-items:center;justify-content:space-between;padding:11px 1px;border:0;border-bottom:1px solid #edf2f0;color:#527075;background:transparent;text-align:left;font-size:9px}.cp-link-list button:last-child{border-bottom:0}
 
-/* AI Hub */
+/* Help Hub */
 .cp-ai-layout { display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,.8fr);gap:13px;align-items:start }
 .cp-local-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #dfede7;border-radius:99px;color:#608178;background:#f9fdfb;font-size:9px;white-space:nowrap}.cp-local-pill span{width:6px;height:6px;flex-basis:6px}
 .cp-chat-thread { min-height:340px;max-height:510px;overflow:auto;padding:16px 4px; }
@@ -3233,4 +3233,93 @@ footer strong {
 }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important; }
+}
+
+/* Connected chronic-care guidance, secure online search, contacts, and nearby services */
+.cp-local-pill.online { color:#475ca0;border-color:#e0e6fa;background:#f7f8ff; }
+.cp-local-pill.online span { background:#7775d5;box-shadow:0 0 0 3px rgba(119,117,213,.12); }
+.cp-ai-mode-switch { display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px; }
+.cp-ai-mode-switch button { display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 13px;border:1px solid #dfebe7;border-radius:11px;color:#567176;background:white;font-size:12px;font-weight:800;cursor:pointer; }
+.cp-ai-mode-switch button.selected { border-color:#9ed7c5;color:#087c65;background:#eff9f4; }
+.cp-chat-composer button:disabled { opacity:.55;cursor:wait; }
+.cp-ai-consent { display:grid;grid-template-columns:19px minmax(0,1fr);gap:10px;margin:12px 0;padding:13px;border:1px solid #eadfb9;border-radius:12px;color:#596b66;background:#fffaf0;font-size:11px;line-height:1.55;cursor:pointer; }
+.cp-ai-consent input { width:17px;height:17px;margin:2px 0 0;accent-color:#087f68; }
+.cp-ai-consent strong { display:block;margin-bottom:3px;color:#40564f;font-size:12px; }
+.cp-ai-status { margin:9px 0;padding:10px 12px;border:1px solid #dcece6;border-radius:10px;color:#426761;background:#f6fbf8;font-size:11px;line-height:1.55; }
+.cp-grounding-sources { display:grid;gap:6px;margin:9px 0 5px;padding:10px;border:1px solid #e1ece8;border-radius:10px;background:#fbfdfc; }
+.cp-grounding-sources strong { color:#58716d;font-size:10px; }
+.cp-grounding-sources a { display:flex;align-items:center;justify-content:space-between;gap:8px;color:#087e68;font-size:10px;line-height:1.45;text-decoration:none; }
+.cp-grounding-sources a:hover,.cp-condition-actions>a:hover { text-decoration:underline; }
+.cp-care-routine-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);gap:13px;align-items:start;margin:13px 0 24px; }
+.cp-care-checklist { display:grid;gap:8px;margin:13px 0; }
+.cp-care-checklist label { display:grid;grid-template-columns:19px minmax(0,1fr);align-items:center;gap:10px;min-height:49px;padding:10px;border:1px solid #e6eeeb;border-radius:11px;color:#4c6668;background:white;font-size:12px;line-height:1.45;cursor:pointer; }
+.cp-care-checklist label input { position:absolute;opacity:0; }
+.cp-care-checklist .cp-checkbox { display:grid;place-items:center;width:19px;height:19px;border:1px solid #cbdad5;border-radius:6px;color:transparent;background:white; }
+.cp-care-checklist label.checked { border-color:#b4dfcf;background:#f4fbf7; }
+.cp-care-checklist label.checked .cp-checkbox { border-color:#08846b;color:white;background:#08846b; }
+.cp-care-shortcuts { display:grid; }
+.cp-care-shortcuts button { display:grid;grid-template-columns:25px minmax(0,1fr) 17px;align-items:center;gap:9px;min-height:58px;padding:9px 3px;border:0;border-bottom:1px solid #edf2f0;color:#07816a;text-align:left;background:transparent;cursor:pointer; }
+.cp-care-shortcuts button:last-child { border-bottom:0; }
+.cp-care-shortcuts button>span { display:grid;gap:4px; }
+.cp-care-shortcuts strong { color:#3d5b60;font-size:12px; }
+.cp-care-shortcuts small { color:#819395;font-size:10px; }
+.cp-condition-guides { margin:22px 0; }
+.cp-condition-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.cp-condition-card { display:flex;flex-direction:column;min-height:100%;padding:17px;border:1px solid #e1ebe7;border-radius:16px;background:linear-gradient(145deg,#fff,#fbfdfc); }
+.cp-condition-card.teal { border-top:3px solid #18977c; }
+.cp-condition-card.amber { border-top:3px solid #d2a044; }
+.cp-condition-card.rose { border-top:3px solid #c36b7d; }
+.cp-condition-card.blue { border-top:3px solid #5e92ca; }
+.cp-condition-card.violet { border-top:3px solid #8875c9; }
+.cp-condition-top { display:flex;justify-content:space-between;align-items:center;gap:10px; }
+.cp-condition-top span { color:#087960;font-size:9px;font-weight:900;letter-spacing:1px; }
+.cp-condition-top b { color:#a4b0ae;font-size:11px; }
+.cp-condition-card h3 { margin:11px 0 7px;color:#294b50;font-size:17px;letter-spacing:-.2px; }
+.cp-condition-card>p { margin:0 0 14px;color:#5c7374;font-size:12px;line-height:1.7; }
+.cp-condition-actions { display:grid;justify-items:start;gap:11px;margin-top:auto;padding-top:8px; }
+.cp-condition-actions .cp-button { min-height:38px; }
+.cp-condition-actions>a { display:flex;align-items:center;gap:6px;color:#087e68;font-size:11px;font-weight:800;text-decoration:none; }
+.cp-profile-form>label { min-width:0; }
+.cp-contact-actions { display:grid;gap:5px;margin-top:18px;padding-top:14px;border-top:1px solid #e8efec; }
+.cp-contact-actions>strong { color:#3b5a5e;font-size:12px; }
+.cp-contact-actions>span { color:#778b8e;font-size:10px;line-height:1.5; }
+.cp-contact-actions>div { display:flex;flex-wrap:wrap;gap:8px;margin-top:4px; }
+.cp-contact-actions.compact { margin:10px 0 5px;padding:0;border:0; }
+.cp-contact-actions .cp-button { text-decoration:none; }
+.cp-services-grid { margin-top:13px; }
+.cp-location-form { display:grid;gap:6px;margin:14px 0 9px; }
+.cp-location-form>label { color:#526c70;font-size:11px;font-weight:800; }
+.cp-location-form>div { display:flex;gap:8px; }
+.cp-location-form input { flex:1;min-width:0;min-height:42px;padding:0 12px;border:1px solid #dce8e4;border-radius:10px;color:#29494f;background:white;font:inherit;font-size:12px; }
+.cp-location-button { margin:5px 0 3px; }
+.cp-map-search-actions { display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 9px; }
+.cp-map-search-actions .cp-button { min-height:40px; }
+.cp-map-privacy { display:block;color:#819194;font-size:10px;line-height:1.55; }
+.cp-care-contact-list { display:grid;gap:4px; }
+.cp-care-contact-list>div:not(.cp-care-contact-empty) { display:grid;grid-template-columns:35px minmax(0,1fr) 36px 36px;align-items:center;gap:7px;padding:10px 0;border-bottom:1px solid #edf2f0; }
+.cp-care-contact-icon { display:grid;place-items:center;width:32px;height:32px;border-radius:10px;color:#087f68;background:#edf8f3; }
+.cp-care-contact-list>div>span:nth-child(2) { display:grid;gap:4px;min-width:0; }
+.cp-care-contact-list strong { overflow:hidden;color:#3c5a5e;font-size:11px;text-overflow:ellipsis;white-space:nowrap; }
+.cp-care-contact-list small { overflow-wrap:anywhere;color:#829295;font-size:9px; }
+.cp-care-contact-list a { display:grid;place-items:center;min-height:34px;border:1px solid #e0ebe6;border-radius:9px;color:#087c65;background:white; }
+.cp-care-contact-empty p { color:#73888a;font-size:11px;line-height:1.6; }
+.cp-official-links { display:grid;gap:3px; }
+.cp-official-links a { display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:37px;padding:4px 0;border-bottom:1px solid #edf2f0;color:#087e68;font-size:11px;font-weight:750;text-decoration:none; }
+.cp-official-links a:last-child { border-bottom:0; }
+.cp-official-links a:hover { text-decoration:underline; }
+.cp-easy-mode .cp-condition-card>p,.cp-easy-mode .cp-care-checklist label { font-size:14px; }
+.cp-easy-mode .cp-ai-consent,.cp-easy-mode .cp-map-privacy { font-size:12px; }
+@media (max-width: 860px) {
+  .cp-care-routine-layout { grid-template-columns:1fr; }
+}
+@media (max-width: 640px) {
+  .cp-condition-grid { grid-template-columns:1fr; }
+  .cp-condition-card { padding:15px; }
+  .cp-condition-card h3 { font-size:18px; }
+  .cp-condition-card>p { font-size:13px; }
+  .cp-map-search-actions { display:grid;grid-template-columns:1fr; }
+  .cp-map-search-actions .cp-button { justify-content:center;width:100%; }
+  .cp-location-form>div { flex-direction:column; }
+  .cp-location-form>div .cp-button { justify-content:center; }
+  .cp-care-contact-list>div:not(.cp-care-contact-empty) { grid-template-columns:32px minmax(0,1fr) 36px 36px;gap:6px; }
 }
