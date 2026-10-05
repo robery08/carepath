@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="carepath" x1="5" x2="43" y1="4" y2="45" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#31d695" />
+      <stop offset="1" stop-color="#149fa0" />
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="15" fill="#063542" />
+  <path d="M5.5 25h9l5.2-9.4 7.1 17.1 5-10.2 3.3 2.5h7.4" fill="none" stroke="url(#carepath)" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.6" />
+</svg>
