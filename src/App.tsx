@@ -341,7 +341,7 @@ function App() {
       <aside className={`sidebar ${mobileMenu ? "open" : ""}`}>
         <div className="brand">
           <div className="brand-logo"><HeartPulse size={25} /></div>
-          <div className="brand-copy"><h1>CarePath</h1><span>Health & Medication Navigator</span></div>
+          <div className="brand-copy"><h1>CarePath</h1><span>Your Everyday Health Companion</span></div>
           <button className="close-menu" onClick={() => setMobileMenu(false)} aria-label="Close menu"><X size={20} /></button>
         </div>
         <div className="cp-sidebar-caption">YOUR CARE WORKSPACE</div>
