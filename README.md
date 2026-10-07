@@ -18,7 +18,7 @@ npm.cmd run build
 ## Workspaces and features
 
 - **Home** — a connected overview and quick actions.
-- **My Medicines & Medicine Passport** — keep personal medicine notes and print a reference.
+- **My Medicines & Medicine Passport** — keep personal medicine notes, print a reference, and optionally estimate days of supply from the remaining count and the usage rate you enter from current instructions.
 - **Scan & Upload** — capture a photo with a phone camera or choose a photo/PDF, then save a review reference.
 - **Safety Check & Safety Alerts** — review completeness, repeated names, missing details, and questions for a pharmacist.
 - **Health Tracker, Trends, Timeline & Calendar** — organize long-term BP, glucose, and other readings.
@@ -31,14 +31,16 @@ npm.cmd run build
 - **Tell CAREPATH** — optional browser speech input for navigation shortcuts, plus typed fallback. Commands are reviewed before use; confirming a dose note is a separate step.
 - **Read this to me** — uses speech synthesis where the browser supports it.
 - **Medicine reminders** — daily local time notes with optional browser notifications, vibration, and sound where supported.
-- **Help Hub** — organize your saved information on-device while offline, or open an explicitly confirmed Google search filtered toward WHO, NCI, MedlinePlus, and NHS sources.
+- **Medicine & Health Finder** — explicitly open Google Search filtered toward official medicine regulators by selected country (including CDSCO India, FDA US, MHRA UK, EMA EU, Health Canada, TGA Australia, and PMDA Japan), or trusted general health sources. Country databases differ; global search is only a starting point and is not a complete worldwide tablet catalogue.
 - **Installable offline app** — a web app manifest and service worker precache all built app resources after the first online load. Install where the browser supports it; health notes use this browser’s local storage.
 
 ## Demo, privacy, and safety limits
 
-CAREPATH is a personal organizer and project demo, not a clinical decision-support tool. Starter medicines and readings are illustrative. The scanner does not run OCR: its sample extraction fields are not read from the selected image or PDF, and document bytes are not uploaded or saved as the document reference. The Safety Check reviews saved fields only; it does not check interactions, suitability, or diagnose a problem. CAREPATH never prescribes or chooses a medicine. The Help Hub's local mode works offline. Its web search opens a separate Google Search tab only after the user confirms; the search text is then handled by Google, not saved by CAREPATH. Do not put names or identifying details in a search. The linked sources and search results are educational, not personal medical advice.
+CAREPATH is a personal organizer and project demo, not a clinical decision-support tool. Starter medicines and readings are illustrative. The scanner does not run OCR: its sample extraction fields are not read from the selected image or PDF, and document bytes are not uploaded or saved as the document reference. The Safety Check reviews saved fields only; it does not check interactions, suitability, or diagnose a problem. CAREPATH never prescribes or chooses a medicine. The Medicine & Health Finder works as a local interface when offline; its web search opens a separate Google Search tab only after the user confirms. Only the typed query and selected source filter are sent to Google; saved medicines, readings, and profile details are not attached. Do not put names or identifying details in a search. The linked sources and search results are educational, not personal medical advice.
 
-Gemini API calls are deliberately not built into this public health app: [Google's current API terms](https://ai.google.dev/gemini-api/terms) restrict the API to professional or business applications rather than consumer use and prohibit clinical-practice or medical-advice uses. CAREPATH uses on-device organization and source links instead.
+The optional medicine supply estimate uses only the remaining count and units-per-day rate entered by the user. It is a rough arithmetic estimate, not a dose or schedule recommendation; verify both values against current instructions. There is no single complete, current, official database of every medicine sold worldwide, so CAREPATH links to country-specific sources and does not claim global completeness.
+
+Gemini API calls are not built into this public consumer health app: [Google's current API terms](https://ai.google.dev/gemini-api/terms) restrict the API to professional or business applications and prohibit clinical-practice or medical-advice uses. CAREPATH uses on-device organization and direct source search instead.
 
 Voice recognition support varies by browser. Some browser speech-recognition services send audio to their service for processing; CAREPATH does not save audio or transcripts. Read-aloud uses the browser’s speech synthesis.
 

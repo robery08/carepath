@@ -7,7 +7,6 @@ import {
   ArrowRight,
   BadgeCheck,
   BookOpen,
-  Brain,
   CalendarDays,
   Camera,
   Check,
@@ -52,6 +51,8 @@ type Medicine = {
   form: string;
   schedule: string;
   instructions: string;
+  remainingUnits?: number;
+  unitsPerDay?: number;
 };
 
 type HealthReading = {
@@ -178,10 +179,6 @@ function saveStored<T>(key: string, value: T) {
   }
 }
 
-function initials(name: string) {
-  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CP";
-}
-
 function dateLabel(date: string) {
   const parsed = new Date(`${date}T12:00:00`);
   return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -240,7 +237,7 @@ export default function CarePathModules({ active, medicineCount, onOpenMedicines
 
   return (
     <div className="cp-module">
-      {active === "Help Hub" && <AIHub {...shared} />}
+      {active === "Medicine Finder" && <InformationFinder {...shared} />}
       {active === "My Medicines" && <MedicinePassport {...shared} />}
       {active === "Scan & Upload" && <Scanner {...shared} />}
       {active === "Medicine Passport" && <MedicinePassport {...shared} />}
@@ -272,50 +269,37 @@ type Shared = {
   onNavigate: (section: string) => void;
 };
 
-function AIHub({ medicines, readings, documents, profile, onNavigate }: Shared) {
-  type Message = { role: "user" | "assistant"; text: string; time: string };
+const MEDICINE_MARKETS = [
+  { id: "global", label: "Global starting points", sources: ["who.int", "fda.gov", "open.fda.gov", "cdsco.gov.in", "ema.europa.eu", "gov.uk", "canada.ca", "tga.gov.au", "pmda.go.jp"] },
+  { id: "india", label: "India · CDSCO", sources: ["cdsco.gov.in", "nppaindia.nic.in"] },
+  { id: "us", label: "United States · FDA", sources: ["fda.gov", "open.fda.gov"] },
+  { id: "uk", label: "United Kingdom · MHRA / NHS", sources: ["gov.uk", "nhs.uk", "medicines.org.uk"] },
+  { id: "eu", label: "European Union · EMA", sources: ["ema.europa.eu", "europa.eu"] },
+  { id: "canada", label: "Canada · Health Canada", sources: ["canada.ca"] },
+  { id: "australia", label: "Australia · TGA", sources: ["tga.gov.au"] },
+  { id: "japan", label: "Japan · PMDA", sources: ["pmda.go.jp"] },
+] as const;
+
+const HEALTH_SOURCES = ["who.int", "cancer.gov", "medlineplus.gov", "nhs.uk"];
+
+function InformationFinder({ medicines, readings, documents, profile, onNavigate }: Shared) {
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState<"local" | "sources">("local");
+  const [mode, setMode] = useState<"medicine" | "health">("medicine");
+  const [market, setMarket] = useState("global");
   const [consent, setConsent] = useState(false);
-  const [remoteNotice, setRemoteNotice] = useState("");
-  const [messages, setMessages] = useState<Message[]>(() => readStored<Message[]>("carepath_ai_conversation", []).map((message) => ({ ...message, origin: "local" })));
-  const answerFor = (question: string) => {
-    const q = question.toLowerCase();
-    const exampleList = medicines.length > 0 && medicines.every((item) => ["1", "2", "3", "4"].includes(item.id));
-    if (/dose|dosage|interaction|safe to take|should i take|side effect/.test(q)) {
-      return "I can help organize information, but I can’t determine a safe dose, diagnose a condition, or confirm whether medicines interact. Check the current package or prescription and ask a pharmacist or clinician before changing anything. If this may be an emergency, use Emergency Help now.";
-    }
-    if (/medicine|medication|prescription/.test(q)) {
-      return medicines.length
-        ? `${exampleList ? "The example CAREPATH list shows" : "Your CAREPATH list has"} ${medicines.length} medicine${medicines.length === 1 ? "" : "s"}: ${medicines.slice(0, 4).map((item) => `${item.name} ${item.strength}`).join(", ")}. These are saved notes, not verified prescribing instructions. Open My Medicines to review the details.`
-        : "There are no saved medicines yet. Add them from the package or prescription, then compare every detail with the original instructions.";
-    }
-    if (/visit|doctor|appointment|question/.test(q)) {
-      return `Your visit brief can include ${medicines.length} saved medicines, ${readings.length} health readings and ${documents.length} documents. Open Visit Prep to choose what to bring and add questions for your care team.`;
-    }
-    if (/reading|trend|health data|blood pressure|glucose/.test(q)) {
-      return readings.length
-        ? `You have ${readings.length} saved health readings. CAREPATH can organize dates and values for you to review with your care team; it does not interpret them as a diagnosis.`
-        : "No personal readings are saved yet. Open Health Tracker to record values with their date, time and context.";
-    }
-    if (/allerg/.test(q)) return profile.allergies.trim() ? `Your profile lists: ${profile.allergies}. Please verify this list with your care team and keep the original record available.` : "No allergies are recorded in your profile yet. Add known allergies in Care Circle, or confirm with a care professional what belongs on your list.";
-    return "I can organize information you have saved in CAREPATH and help you prepare questions. Try asking about your medicine list, a reading, allergies, or visit preparation. I don’t diagnose or recommend treatment.";
-  };
-  const clock = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const send = (event?: FormEvent) => {
-    event?.preventDefault();
+  const [notice, setNotice] = useState("");
+  const selectedMarket = MEDICINE_MARKETS.find((item) => item.id === market) ?? MEDICINE_MARKETS[0];
+  const prompts = mode === "medicine"
+    ? ["Paracetamol official patient information", "Metformin medicine label", "Check a medicine approval in my country"]
+    : ["WHO guidance for blood pressure", "Diabetes self-management", "Cancer treatment infection guidance"];
+  const search = (event: FormEvent) => {
+    event.preventDefault();
     const question = input.trim();
     if (!question) return;
-    if (mode === "local") {
-      const next = [...messages, { role: "user" as const, text: question, time: clock() }, { role: "assistant" as const, text: answerFor(question), time: clock() }].slice(-24);
-      setMessages(next);
-      saveStored("carepath_ai_conversation", next);
-      setInput("");
-      return;
-    }
-    if (!consent) { setRemoteNotice("Choose the sharing box before opening a web search. Nothing is sent before you submit."); return; }
-    if (!navigator.onLine) { setRemoteNotice("You are offline. Switch to On-device help or open the saved official guides."); return; }
-    const query = `${question} (site:who.int OR site:cancer.gov OR site:medlineplus.gov OR site:nhs.uk)`;
+    if (!consent) { setNotice("Please confirm before sending this search to Google. Nothing is shared until you submit."); return; }
+    if (!navigator.onLine) { setNotice("You are offline. Your saved CAREPATH records and guides remain available; searches need internet."); return; }
+    const domains = mode === "medicine" ? selectedMarket.sources : HEALTH_SOURCES;
+    const query = `${question} (${domains.map((domain) => `site:${domain}`).join(" OR ")})`;
     const searchLink = document.createElement("a");
     searchLink.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
     searchLink.target = "_blank";
@@ -323,23 +307,30 @@ function AIHub({ medicines, readings, documents, profile, onNavigate }: Shared) 
     searchLink.click();
     setInput("");
     setConsent(false);
-    setRemoteNotice("Google Search was opened with a filter for WHO, NCI, MedlinePlus, and NHS pages. If your browser blocked the tab, use the official source links beside this search. CAREPATH does not store this search.");
+    setNotice(mode === "medicine"
+      ? `Google Search opened for ${selectedMarket.label}. Results may not cover every product or confirm current local availability; check the regulator and package. CAREPATH did not attach saved records.`
+      : "Google Search opened with WHO, NCI, MedlinePlus, and NHS source filters. CAREPATH did not attach saved records.");
+  };
+  const setSearchMode = (next: "medicine" | "health") => {
+    setMode(next);
+    setConsent(false);
+    setNotice("");
   };
   return <>
-    <PageHeader eyebrow="ONE PLACE FOR YOUR CARE QUESTIONS" title="CarePath Help Hub" description="Organize your own information offline, or open an optional source-filtered web search when you want to learn more." icon={<Brain size={24} />} action={<span className="cp-local-pill"><span /> On-device help</span>} />
+    <PageHeader eyebrow="SOURCE-FIRST LOOKUP" title="Medicine & Health Finder" description="Find official medicine information by country or search trusted general health guidance. CAREPATH never sends your saved record with a search." icon={<Search size={24} />} action={<span className="cp-local-pill"><span /> Official source search</span>} />
     <div className="cp-ai-layout">
-      <Panel title={mode === "local" ? "Your saved CAREPATH information" : "Search trusted public health sources"} eyebrow={mode === "local" ? "PRIVATE · STORED ON THIS DEVICE" : "GOOGLE SEARCH · OPENS A NEW TAB"}>
-        <div className="cp-ai-mode-switch" role="group" aria-label="Choose CAREPATH help mode"><button className={mode === "local" ? "selected" : ""} onClick={() => { setMode("local"); setConsent(false); setRemoteNotice(""); }}><ShieldCheck size={16} /> On-device help</button><button className={mode === "sources" ? "selected" : ""} onClick={() => { setMode("sources"); setConsent(false); setRemoteNotice(""); }}><Search size={16} /> Trusted source search</button></div>
-        <div className="cp-chat-thread" aria-live="polite">
-          {mode === "local" && (messages.length === 0 ? <div className="cp-chat-welcome"><div className="cp-ai-orb"><Sparkles size={27} /></div><h3>Make your health information easier to use</h3><p>Ask about your saved medicine list, readings, allergies, or care preparation.</p><div className="cp-prompt-grid">{["Summarize my medicine list", "Help me prepare for a visit", "What health readings have I saved?"].map((prompt) => <button key={prompt} onClick={() => setInput(prompt)}>{prompt}<ArrowRight size={15} /></button>)}</div></div> : messages.map((message, index) => <div className={`cp-message ${message.role}`} key={`${message.time}-${index}`}><div className="cp-message-avatar">{message.role === "assistant" ? <Sparkles size={15} /> : initials(profile.name)}</div><div><p>{message.text}</p><small>{message.time}</small></div></div>))}
-          {mode === "sources" && <div className="cp-chat-welcome"><div className="cp-ai-orb"><Search size={25} /></div><h3>Search a general medicine or health topic</h3><p>CAREPATH will open a Google search filtered to WHO, National Cancer Institute, MedlinePlus, and NHS pages. Review the source page yourself; this does not make a personal treatment decision.</p><div className="cp-prompt-grid">{["WHO guidance for blood pressure", "Diabetes self-management", "Cancer treatment infection guidance", "Medicine patient information"].map((prompt) => <button key={prompt} onClick={() => setInput(prompt)}>{prompt}<ArrowRight size={15} /></button>)}</div></div>}
+      <Panel title={mode === "medicine" ? "Search medicine sources" : "Search trusted health sources"} eyebrow="GOOGLE SEARCH · OPENS A NEW TAB">
+        <div className="cp-ai-mode-switch" role="group" aria-label="Choose source search type"><button className={mode === "medicine" ? "selected" : ""} onClick={() => setSearchMode("medicine")}><Pill size={16} /> Medicine information</button><button className={mode === "health" ? "selected" : ""} onClick={() => setSearchMode("health")}><Search size={16} /> Health topics</button></div>
+        {mode === "medicine" && <label className="cp-market-select">Country or region<select value={market} onChange={(event) => setMarket(event.target.value)}>{MEDICINE_MARKETS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
+        <div className="cp-chat-thread">
+          <div className="cp-chat-welcome"><div className="cp-ai-orb">{mode === "medicine" ? <Pill size={25} /> : <Search size={25} />}</div><h3>{mode === "medicine" ? "Look up official medicine information" : "Find general health guidance"}</h3><p>{mode === "medicine" ? "Search by medicine name or active ingredient. Choose the country where the product is sold; national registers differ, so global results are only starting points." : "Search a general topic across WHO, National Cancer Institute, MedlinePlus, and NHS information. Review the original source page."}</p><div className="cp-prompt-grid">{prompts.map((prompt) => <button key={prompt} onClick={() => setInput(prompt)}>{prompt}<ArrowRight size={15} /></button>)}</div></div>
         </div>
-        <form className="cp-chat-composer" onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder={mode === "local" ? "Ask about your saved CAREPATH information…" : "Search a general health topic or medicine name…"} rows={2} maxLength={1200} /><button type="submit" aria-label={mode === "local" ? "Send question" : "Search trusted public sources"}><Send size={18} /></button></form>
-        {mode === "sources" && <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>Open Google Search with this question.</strong> Google receives the text you typed. Do not include names, phone numbers, or other identifying details. Your saved CAREPATH profile and records are not included.</span></label>}
-        {remoteNotice && <p className="cp-ai-status" role="status">{remoteNotice}</p>}
-        <p className="cp-composer-hint"><Info size={13} /> CAREPATH does not diagnose, choose a medicine for you, or prescribe a dose. For medicine choice, interactions, or treatment changes, ask a pharmacist or your care team.</p>
+        <form className="cp-chat-composer" onSubmit={search}><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={mode === "medicine" ? "Medicine name or active ingredient…" : "A general health topic…"} rows={2} maxLength={300} /><button type="submit" aria-label="Search selected sources"><Send size={18} /></button></form>
+        <label className="cp-ai-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>Share this search with Google.</strong> Only the text above and the selected source filter are sent. Saved medicines, readings, allergies, and profile details are not attached. Don’t include names or identifying health details.</span></label>
+        {notice && <p className="cp-ai-status" role="status">{notice}</p>}
+        <p className="cp-composer-hint"><Info size={13} /> Search results can be incomplete or outdated. CAREPATH does not identify tablets, verify a product, diagnose, select treatment, check interactions, or recommend a dose. Ask a local pharmacist or care professional for personal decisions.</p>
       </Panel>
-      <aside className="cp-ai-aside"><Panel title="Your CAREPATH snapshot"><div className="cp-snapshot-list"><Snapshot icon={<Pill />} label="Medicines" value={`${medicines.length} saved`} /><Snapshot icon={<Activity />} label="Health readings" value={`${readings.length} recorded`} /><Snapshot icon={<FileCheck2 />} label="Documents" value={`${documents.length} saved`} /><Snapshot icon={<Heart />} label="Allergy notes" value={profile.allergies.trim() ? "On file" : "Not added"} /></div></Panel><Panel title="Official starting points" eyebrow="OPEN A TRUSTED HEALTH SITE"><div className="cp-official-links"><a href="https://www.who.int/news-room/fact-sheets/detail/hypertension" target="_blank" rel="noreferrer">WHO · Hypertension <ArrowRight size={13} /></a><a href="https://www.who.int/news-room/fact-sheets/detail/diabetes" target="_blank" rel="noreferrer">WHO · Diabetes <ArrowRight size={13} /></a><a href="https://www.cancer.gov/about-cancer/treatment/side-effects/infection" target="_blank" rel="noreferrer">NCI · Cancer treatment infection <ArrowRight size={13} /></a><a href="https://medlineplus.gov/druginformation.html" target="_blank" rel="noreferrer">MedlinePlus · Drug information <ArrowRight size={13} /></a><a href="https://www.nhs.uk/conditions/common-cold/" target="_blank" rel="noreferrer">NHS · Common cold <ArrowRight size={13} /></a></div></Panel><Panel title="Go to a workspace"><div className="cp-link-list"><button onClick={() => onNavigate("Learn")}>Chronic-care guides <ArrowRight size={15} /></button><button onClick={() => onNavigate("Medicine Passport")}>Medicine passport <ArrowRight size={15} /></button><button onClick={() => onNavigate("Visit Prep")}>Prepare for a visit <ArrowRight size={15} /></button><button onClick={() => onNavigate("Health Map")}>Find a pharmacy <ArrowRight size={15} /></button></div></Panel></aside>
+      <aside className="cp-ai-aside"><Panel title="Your CAREPATH snapshot"><div className="cp-snapshot-list"><Snapshot icon={<Pill />} label="Medicines" value={`${medicines.length} saved`} /><Snapshot icon={<Activity />} label="Health readings" value={`${readings.length} recorded`} /><Snapshot icon={<FileCheck2 />} label="Documents" value={`${documents.length} saved`} /><Snapshot icon={<Heart />} label="Allergy notes" value={profile.allergies.trim() ? "On file" : "Not added"} /></div><p className="cp-muted-copy">This snapshot stays on this device and is never included in a search.</p></Panel><Panel title="Official starting points" eyebrow="SELECT A COUNTRY ABOVE TO SEARCH"><div className="cp-official-links"><a href="https://www.cdsco.gov.in/opencms/opencms/en/Approval_new/Approved-New-Drugs/" target="_blank" rel="noreferrer">India · CDSCO approved new drugs <ArrowRight size={13} /></a><a href="https://www.fda.gov/drugs/development-approval-process-drugs/drug-approvals-and-databases" target="_blank" rel="noreferrer">United States · FDA drug databases <ArrowRight size={13} /></a><a href="https://www.ema.europa.eu/en/medicines" target="_blank" rel="noreferrer">European Union · EMA medicines <ArrowRight size={13} /></a><a href="https://www.gov.uk/government/organisations/medicines-and-healthcare-products-regulatory-agency" target="_blank" rel="noreferrer">United Kingdom · MHRA <ArrowRight size={13} /></a><a href="https://www.who.int/" target="_blank" rel="noreferrer">Global health reference · WHO <ArrowRight size={13} /></a></div></Panel><Panel title="Go to a workspace"><div className="cp-link-list"><button onClick={() => onNavigate("Learn")}>Chronic-care guides <ArrowRight size={15} /></button><button onClick={() => onNavigate("Medicine Passport")}>Medicine passport <ArrowRight size={15} /></button><button onClick={() => onNavigate("Visit Prep")}>Prepare for a visit <ArrowRight size={15} /></button><button onClick={() => onNavigate("Health Map")}>Find a pharmacy <ArrowRight size={15} /></button></div></Panel></aside>
     </div>
   </>;
 }
@@ -596,12 +587,12 @@ function Learn({ onNavigate }: Shared) {
     { number: "02", title: "Diabetes day to day", badge: "DIABETES", color: "amber", text: "Keep your own diabetes plan easy to find: medicine instructions, meals, activity, monitoring guidance, and what to do if you feel unwell. Monitoring frequency and targets are personal; use the plan from your diabetes team. This app can organize readings and questions, not set targets or change insulin or other treatment.", route: "Health Tracker", action: "Log a reading", source: "WHO: Diabetes", url: "https://www.who.int/news-room/fact-sheets/detail/diabetes" },
     { number: "03", title: "Living with cancer and treatment", badge: "CANCER SUPPORT", color: "rose", text: "Keep your oncology team's contact, current treatment list, and written after-hours instructions together. During cancer treatment, infection can become serious; follow your team's personal fever plan and contact them promptly for fever or infection signs. Ask before taking a fever medicine because it may hide a symptom. Do not use this app to decide whether to delay treatment.", route: "Care Circle", action: "Save oncology contact", source: "NCI: Infection during cancer treatment", url: "https://www.cancer.gov/about-cancer/treatment/side-effects/infection" },
     { number: "04", title: "A steady medicine routine", badge: "REGULAR MEDICINES", color: "blue", text: "Use the current package or prescription as the source for each medicine's name, strength, time, and instructions. Keep a refill note, include non-prescription products and supplements in your list, and carry it when care changes. If a dose is missed or a label is unclear, ask a pharmacist or prescriber rather than doubling or guessing.", route: "Medicine Passport", action: "Review my medicine list", source: "WHO: Self-care for health and well-being", url: "https://www.who.int/news-room/fact-sheets/detail/self-care-health-interventions/" },
-    { number: "05", title: "Short-lived cold or fever symptoms", badge: "TEMPORARY ILLNESS", color: "violet", text: "For an otherwise mild common cold, basic self-care such as rest and fluids may be enough while symptoms improve. You do not need to turn every mild cold into an appointment. Get personalized advice sooner if you have a long-term condition, a weakened immune system, worsening or unusual symptoms, breathing difficulty, chest pain, or concern. If you are receiving cancer treatment, use your oncology team's fever instructions first.", route: "Help Hub", action: "Find trusted guidance", source: "NHS: Common cold", url: "https://www.nhs.uk/conditions/common-cold/" },
+    { number: "05", title: "Short-lived cold or fever symptoms", badge: "TEMPORARY ILLNESS", color: "violet", text: "For an otherwise mild common cold, basic self-care such as rest and fluids may be enough while symptoms improve. You do not need to turn every mild cold into an appointment. Get personalized advice sooner if you have a long-term condition, a weakened immune system, worsening or unusual symptoms, breathing difficulty, chest pain, or concern. If you are receiving cancer treatment, use your oncology team's fever instructions first.", route: "Medicine Finder", action: "Find trusted guidance", source: "NHS: Common cold", url: "https://www.nhs.uk/conditions/common-cold/" },
   ];
   const actions = ["Review medicine times using my own current instructions", "Record a BP or glucose reading if it is part of my care plan", "Write down one question, refill need, or symptom to remember"];
   const toggle = (key: string) => setDone((current) => { const next = { ...current, [key]: !current[key] }; saveStored(`carepath_daily_care_${todayISO()}`, next); return next; });
   return <>
-    <PageHeader eyebrow="LONG-TERM CARE, MADE EASIER TO ORGANIZE" title="My Everyday Health Guide" description="Put routines, trusted learning, and your own care team details together. Use the app between planned check-ins; it cannot replace an urgent response or make treatment decisions." icon={<BookOpen size={24} />} action={<button className="cp-button primary" onClick={() => onNavigate("Help Hub")}><Brain size={16} /> Search a health topic</button>} />
+    <PageHeader eyebrow="LONG-TERM CARE, MADE EASIER TO ORGANIZE" title="My Everyday Health Guide" description="Put routines, trusted learning, and your own care team details together. Use the app between planned check-ins; it cannot replace an urgent response or make treatment decisions." icon={<BookOpen size={24} />} action={<button className="cp-button primary" onClick={() => onNavigate("Medicine Finder")}><Search size={16} /> Search a health topic</button>} />
     <Notice tone="good"><strong>Not every minor, short-lived cold needs a clinic visit.</strong> Use practical self-care when appropriate, and know when your personal condition or symptoms call for help. Regular care for long-term conditions still matters; follow the schedule and action plan agreed with your team.</Notice>
     <div className="cp-care-routine-layout"><Panel title="A small plan for today" eyebrow="OPTIONAL · SAVED ON THIS DEVICE"><p className="cp-muted-copy">Choose the reminders that fit your own plan. These checkboxes do not change prescriptions or decide what measurements you need.</p><div className="cp-care-checklist">{actions.map((action, index) => { const key = `${index}-${action}`; return <label className={done[key] ? "checked" : ""} key={key}><input type="checkbox" checked={Boolean(done[key])} onChange={() => toggle(key)} /><span className="cp-checkbox"><Check size={14} /></span><span>{action}</span></label>; })}</div><small className="cp-private-note"><ShieldCheck size={14} /> Your checklist is stored in this browser. Clear browser data to remove it.</small></Panel><Panel title="Your one-tap workspaces" eyebrow="NO NEED TO SEARCH AROUND"><div className="cp-care-shortcuts"><button onClick={() => onNavigate("My Medicines")}><Pill size={18} /><span><strong>Medicine routine</strong><small>List, passport, and reminders</small></span><ArrowRight size={15} /></button><button onClick={() => onNavigate("Health Tracker")}><HeartPulse size={18} /><span><strong>BP, glucose & readings</strong><small>Record and see your own trends</small></span><ArrowRight size={15} /></button><button onClick={() => onNavigate("Care Circle")}><Phone size={18} /><span><strong>People who support me</strong><small>Doctor, pharmacy, and trusted contact</small></span><ArrowRight size={15} /></button></div></Panel></div>
     <section className="cp-condition-guides"><div className="cp-section-heading"><div><span className="cp-eyebrow">PLAIN-LANGUAGE STARTING POINTS</span><h2>Guidance for the whole journey</h2></div><span>Open each official source for full details</span></div><div className="cp-condition-grid">{topics.map((topic) => <article className={`cp-condition-card ${topic.color}`} key={topic.title}><div className="cp-condition-top"><span>{topic.badge}</span><b>{topic.number}</b></div><h3>{topic.title}</h3><p>{topic.text}</p><div className="cp-condition-actions"><button className="cp-button quiet" onClick={() => onNavigate(topic.route)}>{topic.action}<ArrowRight size={14} /></button><a href={topic.url} target="_blank" rel="noreferrer">{topic.source}<ArrowRight size={13} /></a></div></article>)}</div></section>

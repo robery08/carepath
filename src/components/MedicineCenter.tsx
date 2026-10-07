@@ -15,6 +15,8 @@ type Medicine = {
   form: string;
   schedule: string;
   instructions: string;
+  remainingUnits?: number;
+  unitsPerDay?: number;
 };
 
 const defaultMedicines: Medicine[] = [
@@ -124,6 +126,14 @@ export default function MedicineCenter({
         current.filter((item) => item.id !== id)
       );
     }
+  };
+
+  const updateSupply = (id: string, field: "remainingUnits" | "unitsPerDay", value: string) => {
+    const parsed = value === "" ? undefined : Number(value);
+    if (parsed !== undefined && (!Number.isFinite(parsed) || parsed < 0)) return;
+    setMedicines((current) => current.map((medicine) =>
+      medicine.id === id ? { ...medicine, [field]: parsed } : medicine,
+    ));
   };
 
   const filteredMedicines = medicines.filter((medicine) => {
@@ -295,8 +305,15 @@ export default function MedicineCenter({
         </div>
 
         <div className="medicine-list">
-          {filteredMedicines.map((medicine) => (
-            <div className="medicine-row" key={medicine.id}>
+          {filteredMedicines.map((medicine) => {
+            const validSupply = typeof medicine.remainingUnits === "number"
+              && typeof medicine.unitsPerDay === "number"
+              && medicine.unitsPerDay > 0;
+            const daysLeft = validSupply
+              ? Math.floor(medicine.remainingUnits! / medicine.unitsPerDay!)
+              : null;
+
+            return <div className="medicine-row" key={medicine.id}>
               <div className="row-pill">
                 <Pill size={21} />
               </div>
@@ -309,6 +326,26 @@ export default function MedicineCenter({
                 </p>
 
                 <span>{medicine.instructions}</span>
+
+                <details className="medicine-supply">
+                  <summary>Supply watch</summary>
+                  <div className="medicine-supply-fields">
+                    <label>
+                      Units remaining
+                      <input type="number" min="0" step="1" inputMode="numeric" value={medicine.remainingUnits ?? ""} onChange={(event) => updateSupply(medicine.id, "remainingUnits", event.target.value)} placeholder="Not set" />
+                    </label>
+                    <label>
+                      Units per day
+                      <input type="number" min="0.01" step="any" inputMode="decimal" value={medicine.unitsPerDay ?? ""} onChange={(event) => updateSupply(medicine.id, "unitsPerDay", event.target.value)} placeholder="From current label" />
+                    </label>
+                  </div>
+                  {medicine.remainingUnits === 0
+                    ? <p className="medicine-supply-estimate low">0 units entered. Check the package and arrange any next step with your pharmacy or care team.</p>
+                    : daysLeft !== null
+                      ? <p className={`medicine-supply-estimate${daysLeft <= 7 ? " low" : ""}`}>About {daysLeft} day{daysLeft === 1 ? "" : "s"} at the usage rate you entered. This is a rough count only.</p>
+                      : <p className="medicine-supply-estimate">Enter both values from your current package or instructions to see a rough supply estimate.</p>}
+                  <small>Optional on-device estimate. It does not set a dose or schedule. CAREPATH cannot verify the entered count or your instructions.</small>
+                </details>
               </div>
 
               <div className="medicine-time">
@@ -323,8 +360,8 @@ export default function MedicineCenter({
               >
                 <Trash2 size={17} />
               </button>
-            </div>
-          ))}
+            </div>;
+          })}
 
           {filteredMedicines.length === 0 && (
             <div className="empty-medicines">

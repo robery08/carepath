@@ -8,7 +8,6 @@ import {
   Bell,
   BellRing,
   BookOpen,
-  Brain,
   CalendarDays,
   Check,
   ChevronRight,
@@ -44,6 +43,8 @@ type Medicine = {
   form: string;
   schedule: string;
   instructions: string;
+  remainingUnits?: number;
+  unitsPerDay?: number;
 };
 
 type HealthReading = {
@@ -76,7 +77,7 @@ type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Pro
 
 const navItems = [
   { name: "Home", icon: Home },
-  { name: "Help Hub", icon: Brain },
+  { name: "Medicine Finder", icon: Search },
   { name: "My Medicines", icon: Pill },
   { name: "Medicine Passport", icon: FileCheck2 },
   { name: "Scan & Upload", icon: ScanLine },
@@ -304,7 +305,7 @@ function App() {
     }
     if (/\b(show|list|my)\b/.test(command) && /medicine|medication|pills/.test(command)) { openSection("Medicine Passport"); return; }
     if (/remind|reminder/.test(command)) { setShowReminders(true); return; }
-    openSection("Help Hub");
+    openSection("Medicine Finder");
     setNotice("Try: show my medicines, scan a document, log a reading, prepare a visit, or read this to me.");
   };
   const markDose = (medicine: Medicine) => {
@@ -480,7 +481,7 @@ function HomeDashboard({ name, medicines, readings, allergies, onNavigate, onOpe
   ];
   return <>
     <section className="cp-home-hero">
-      <div className="cp-home-hero-copy"><span className="cp-hero-kicker"><span /> YOUR PERSONAL HEALTH SPACE</span><h1>{greeting}, <span>{name}</span></h1><p>Bring your medicines, health notes, and care questions together in one calm place.</p><div className="cp-hero-buttons"><button className="cp-button light" onClick={() => onNavigate("My Medicines")}><Plus size={16} /> Add medicine</button><button className="cp-button glass" onClick={() => onNavigate("Help Hub")}><Brain size={16} /> Ask CarePath</button></div><div className="cp-hero-assurance"><ShieldCheck size={14} /> Your CAREPATH notes stay in this browser.</div></div>
+      <div className="cp-home-hero-copy"><span className="cp-hero-kicker"><span /> YOUR PERSONAL HEALTH SPACE</span><h1>{greeting}, <span>{name}</span></h1><p>Bring your medicines, health notes, and care questions together in one calm place.</p><div className="cp-hero-buttons"><button className="cp-button light" onClick={() => onNavigate("My Medicines")}><Plus size={16} /> Add medicine</button><button className="cp-button glass" onClick={() => onNavigate("Medicine Finder")}><Search size={16} /> Find trusted info</button></div><div className="cp-hero-assurance"><ShieldCheck size={14} /> Your CAREPATH notes stay in this browser.</div></div>
       <div className="cp-hero-art" aria-hidden="true"><div className="cp-orbit orbit-a" /><div className="cp-orbit orbit-b" /><div className="cp-orbit orbit-c" /><div className="cp-art-heart"><HeartPulse size={50} /></div><span className="cp-art-dot dot-a" /><span className="cp-art-dot dot-b" /><span className="cp-art-dot dot-c" /></div>
       <div className="cp-hero-date"><CalendarDays size={15} /> {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</div>
     </section>
@@ -492,7 +493,7 @@ function HomeDashboard({ name, medicines, readings, allergies, onNavigate, onOpe
       <Stat icon={<CalendarDays />} label="Visit prep" value="Ready" note="Build a personal brief" tone="violet" onClick={() => onNavigate("Visit Prep")} />
     </section>
 
-    <section className="cp-quick-section"><div className="cp-section-heading"><div><span className="cp-eyebrow">START WITH ONE STEP</span><h2>Quick actions</h2></div><span>Shortcuts to your most-used workspaces</span></div><div className="cp-quick-grid"><QuickAction icon={<Brain />} label="Ask CarePath" detail="Explore saved information" tone="violet" onClick={() => onNavigate("Help Hub")} /><QuickAction icon={<ScanLine />} label="Scan a document" detail="Save review notes" tone="blue" onClick={() => onNavigate("Scan & Upload")} /><QuickAction icon={<HeartPulse />} label="Log a reading" detail="Add date and context" tone="rose" onClick={onOpenMonitor} /><QuickAction icon={<ShieldCheck />} label="Review my list" detail="Check saved details" tone="mint" onClick={() => onNavigate("Safety Check")} /><QuickAction icon={<Stethoscope />} label="Prepare for a visit" detail="Gather questions and notes" tone="amber" onClick={() => onNavigate("Visit Prep")} /><QuickAction icon={<Siren />} label="Emergency card" detail="View local reference" tone="red" onClick={() => onNavigate("Emergency Help")} /></div></section>
+    <section className="cp-quick-section"><div className="cp-section-heading"><div><span className="cp-eyebrow">START WITH ONE STEP</span><h2>Quick actions</h2></div><span>Shortcuts to your most-used workspaces</span></div><div className="cp-quick-grid"><QuickAction icon={<Search />} label="Find medicine info" detail="Search official sources by country" tone="violet" onClick={() => onNavigate("Medicine Finder")} /><QuickAction icon={<ScanLine />} label="Scan a document" detail="Save review notes" tone="blue" onClick={() => onNavigate("Scan & Upload")} /><QuickAction icon={<HeartPulse />} label="Log a reading" detail="Add date and context" tone="rose" onClick={onOpenMonitor} /><QuickAction icon={<ShieldCheck />} label="Review my list" detail="Check saved details" tone="mint" onClick={() => onNavigate("Safety Check")} /><QuickAction icon={<Stethoscope />} label="Prepare for a visit" detail="Gather questions and notes" tone="amber" onClick={() => onNavigate("Visit Prep")} /><QuickAction icon={<Siren />} label="Emergency card" detail="View local reference" tone="red" onClick={() => onNavigate("Emergency Help")} /></div></section>
 
     <div className="cp-home-main-grid">
       <section className="cp-home-card cp-health-card"><div className="cp-card-head"><div><span className="cp-eyebrow">MY HEALTH NOTES</span><h2>Health overview</h2></div><button className="cp-text-link" onClick={() => onNavigate("Health Tracker")}>Open tracker <ArrowRight size={14} /></button></div><div className="cp-home-metrics">{metrics.map((metric) => <button key={metric.name} className={`cp-home-metric ${metric.tone}`} onClick={() => onNavigate("Health Tracker")}><span className="cp-home-metric-icon">{metric.icon}</span><span className="cp-home-metric-name">{metric.name}</span><strong>{metric.value}<small>{metric.unit}</small></strong><em>{metric.note}</em></button>)}</div><div className="cp-health-footnote"><Info size={14} /> Values appear as entered. CAREPATH does not interpret or diagnose.</div></section>
