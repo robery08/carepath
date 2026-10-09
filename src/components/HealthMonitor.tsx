@@ -29,7 +29,8 @@ type HealthMetric =
   | "Pulse"
   | "SpO₂"
   | "Temperature"
-  | "Weight";
+  | "Weight"
+  | "Steps";
 
 type HealthReading = {
   id: string;
@@ -140,6 +141,15 @@ const demoReadings: HealthReading[] = [
     time: "07:30",
     note: "Morning",
   },
+  {
+    id: "demo-10",
+    metric: "Steps",
+    value: 4200,
+    unit: "steps",
+    date: getDateOffset(0),
+    time: "08:45",
+    note: "Illustrative daily count",
+  },
 ];
 
 const metricOptions: Array<{
@@ -177,6 +187,11 @@ const metricOptions: Array<{
     unit: "kg",
     icon: Weight,
   },
+  {
+    name: "Steps",
+    unit: "steps",
+    icon: Activity,
+  },
 ];
 
 function getInitialReadings(): HealthReading[] {
@@ -213,43 +228,7 @@ function formatMetricValue(reading: HealthReading) {
   return String(reading.value);
 }
 
-function getMetricStatus(reading: HealthReading) {
-  if (reading.metric === "SpO₂") {
-    if (reading.value < 90) {
-      return "Urgent review";
-    }
-
-    if (reading.value < 94) {
-      return "Review";
-    }
-
-    return "Recorded";
-  }
-
-  if (reading.metric === "Temperature") {
-    if (reading.value >= 39) {
-      return "Review";
-    }
-
-    return "Recorded";
-  }
-
-  if (reading.metric === "Pulse") {
-    if (reading.value < 50 || reading.value > 120) {
-      return "Review";
-    }
-
-    return "Recorded";
-  }
-
-  if (reading.metric === "Blood Glucose") {
-    if (reading.value < 70 || reading.value > 250) {
-      return "Review";
-    }
-
-    return "Recorded";
-  }
-
+function getMetricStatus(_reading: HealthReading) {
   return "Recorded";
 }
 
@@ -684,6 +663,7 @@ export default function HealthMonitor({ onClose }: Props) {
                               {reading.note}
                             </span>
                           )}
+                          <span>{reading.id.startsWith("demo-") ? "Sample data" : "Entered on this device · not verified"}</span>
                         </div>
                       </div>
 
@@ -907,3 +887,4 @@ export default function HealthMonitor({ onClose }: Props) {
     </div>
   );
 }
+

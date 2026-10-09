@@ -18,12 +18,15 @@ npm.cmd run build
 ## Workspaces and features
 
 - **Home** — a connected overview and quick actions.
+- **Discover CAREPATH** — a rotating feature carousel for CAREPATH Easy, ASK CAREPATH, safety review, the health journey, Care Circle, and visit preparation.
+- **Browser navigation** — internal sections use URL hashes and the browser history, including Back/Forward restoration of the section, overlays, and scroll position.
 - **My Medicines & Medicine Passport** — keep personal medicine notes, print a reference, and optionally estimate days of supply from the remaining count and the usage rate you enter from current instructions.
+- **Medication Changes** — save a local medicine-list snapshot and review additions, removals, or changed personal entries with a professional.
 - **Scan & Upload** — capture a photo with a phone camera or choose a photo/PDF, then save a review reference.
 - **Safety Check & Safety Alerts** — review completeness, repeated names, missing details, and questions for a pharmacist.
 - **Health Tracker, Trends, Timeline & Calendar** — organize long-term BP, glucose, and other readings.
-- **Care Guide** — ask a common general-health question and see a structured, English/Kannada answer in the app. Reviewed local guides cover diabetes/blood sugar, high blood pressure, cancer-treatment support, and everyday medicine safety; questions stay in the browser and work offline. It does not use Gemini or answer every personal medical question.
 - **Everyday Health Guide** — practical starting points for hypertension, diabetes, cancer-treatment support, regular medicines, and short-lived cold symptoms, with links to WHO, NCI, and NHS resources.
+- **Care Guide** — structured English/Kannada cards for diabetes and blood sugar, high blood pressure, cancer-treatment support, and everyday medicine safety. The general guides are available in the app without Gemini or a network request.
 - **Visit Prep** — prepare a checklist, saved snapshot, and questions for an appointment.
 - **Care Circle & Emergency ID** — keep optional health details, doctor and pharmacy numbers, and trusted-contact information close by. Call and message buttons open your device's apps after you choose them.
 - **Health Map** — search pharmacies, medical stores, and hospitals in a typed area or with a one-time location request. CAREPATH sends a location to Google Maps only after you open a search; map results do not verify stock or quality.
@@ -32,16 +35,20 @@ npm.cmd run build
 - **Tell CAREPATH** — optional browser speech input for navigation shortcuts, plus typed fallback. Commands are reviewed before use; confirming a dose note is a separate step.
 - **Read this to me** — uses speech synthesis where the browser supports it.
 - **Medicine reminders** — daily local time notes with optional browser notifications, vibration, and sound where supported.
-- **Official Sources** — an optional, separate Google Search filtered toward official medicine regulators by selected country (including CDSCO India, FDA US, MHRA UK, EMA EU, Health Canada, TGA Australia, and PMDA Japan). The Care Guide answers common topics inside the app; opening Google is never required to read those guides. Country databases differ; global search is only a starting point and is not a complete worldwide tablet catalogue.
+- **Expiry watch and missed-dose guide** — optional package expiry notes, rough stock watch, and a source-first missed-dose flow that never suggests an extra dose.
+- **Lab/test explainer and report trends** — save values copied from reports, review them by date, include them in the timeline and visit brief, and use a clearly fictitious example trend. CAREPATH never interprets results or reference ranges.
+- **ASK CAREPATH** — a bilingual (English/Kannada) on-device guide for common medicine and health topics, with linked official sources and a clear fallback for questions it cannot answer. The typed question stays in the browser. Product-specific information links to country regulator resources; the list is not a complete worldwide tablet catalogue.
+- **Official Sources** — an optional, separate source search filtered toward official medicine regulators by selected country. It opens Google only after the user explicitly confirms; saved medicines, readings, and profile details are never attached.
 - **Installable offline app** — a web app manifest and service worker precache all built app resources after the first online load. Install where the browser supports it; health notes use this browser’s local storage.
+- **Privacy controls** — local last-saved status, JSON export for the full record and visit brief, and an explicit delete-local-record control.
 
 ## Demo, privacy, and safety limits
 
-CAREPATH is a personal organizer and project demo, not a clinical decision-support tool. Starter medicines and readings are illustrative. The scanner does not run OCR: its sample extraction fields are not read from the selected image or PDF, and document bytes are not uploaded or saved as the document reference. The Safety Check reviews saved fields only; it does not check interactions, suitability, or diagnose a problem. CAREPATH never prescribes or chooses a medicine. The Care Guide works offline and keeps common-topic answers in the app. The separate Official Sources workspace opens Google Search only after the user confirms. Only the typed query and selected source filter are sent to Google; saved medicines, readings, and profile details are not attached. Do not put names or identifying details in a search. The linked sources and search results are educational, not personal medical advice.
+CAREPATH is a personal organizer and project demo, not a clinical decision-support tool. Starter medicines and readings are illustrative. The scanner does not run OCR: its sample extraction fields are not read from the selected image or PDF, and document bytes are not uploaded or saved as the document reference. The Safety Check reviews saved fields only; it does not check interactions, suitability, or diagnose a problem. CAREPATH never prescribes or chooses a medicine. Care Guide provides curated offline topic cards. ASK CAREPATH matches a short question to a small curated offline guide; it is not Gemini or a live AI service and cannot answer every question. It does not send the typed question or saved records anywhere. External source pages and regulator registers open only when a user chooses a link; Google Search is limited to the separate Official Sources workspace and requires confirmation. The linked sources are general education, not personal medical advice.
 
 The optional medicine supply estimate uses only the remaining count and units-per-day rate entered by the user. It is a rough arithmetic estimate, not a dose or schedule recommendation; verify both values against current instructions. There is no single complete, current, official database of every medicine sold worldwide, so CAREPATH links to country-specific sources and does not claim global completeness.
 
-Gemini API calls are not built into this public consumer health app: [Google's current API terms](https://ai.google.dev/gemini-api/terms) restrict the API to professional or business applications and prohibit clinical-practice or medical-advice uses. CAREPATH provides a small, reviewed bilingual guide that runs locally, plus optional direct source links.
+This static GitHub Pages app does not make Gemini API calls and stores no AI key in its frontend. A live AI answering service would require a separately deployed secure server endpoint and a carefully limited health-information policy; do not add an API key to public client-side code.
 
 Voice recognition support varies by browser. Some browser speech-recognition services send audio to their service for processing; CAREPATH does not save audio or transcripts. Read-aloud uses the browser’s speech synthesis.
 
@@ -56,3 +63,4 @@ CAREPATH is a static Vite app and can be hosted on GitHub Pages. This repository
 For a static GitHub Pages deployment, open **Settings → Pages** in the GitHub repository and set **Build and deployment → Source** to **GitHub Actions**. A static Cloudflare Pages project can use `npm run build` as the build command and `dist` as the output directory. Neither host needs a medical AI API key for the current version. The local organizer and saved guides work offline after the first load; web searches, map lookups, calls, and messages need a network or device service.
 
 Publishing makes the website available to anyone with the link, and the source repository is public. Visitors' medicine and health notes stay in their own browser storage; this version has no account, shared family records, server backup, or multi-device sync. Browser storage is not an encrypted medical-record vault. Do not enter real patient information into public source files or commit personal records, API keys, or passwords.
+

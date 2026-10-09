@@ -17,6 +17,7 @@ type Medicine = {
   instructions: string;
   remainingUnits?: number;
   unitsPerDay?: number;
+  expiryDate?: string;
 };
 
 const defaultMedicines: Medicine[] = [
@@ -73,13 +74,14 @@ export default function MedicineCenter({
     form: "Tablet",
     schedule: "",
     instructions: "",
+    expiryDate: "",
   });
 
   useEffect(() => {
-    localStorage.setItem(
-      "carepath_medicines",
-      JSON.stringify(medicines)
-    );
+    try {
+      localStorage.setItem("carepath_medicines", JSON.stringify(medicines));
+      localStorage.setItem("carepath_last_local_save", new Date().toISOString());
+    } catch { /* Keep the session usable when browser storage is unavailable. */ }
 
     onCountChange(medicines.length);
   }, [medicines, onCountChange]);
@@ -97,6 +99,7 @@ export default function MedicineCenter({
       form: form.form,
       schedule: form.schedule || "Not specified",
       instructions: form.instructions || "Follow supplied instructions",
+      expiryDate: form.expiryDate || undefined,
     };
 
     setMedicines((current) => [newMedicine, ...current]);
@@ -107,6 +110,7 @@ export default function MedicineCenter({
       form: "Tablet",
       schedule: "",
       instructions: "",
+      expiryDate: "",
     });
 
     setShowForm(false);
@@ -272,6 +276,15 @@ export default function MedicineCenter({
                   placeholder="Example: After food"
                 />
               </label>
+
+              <label>
+                Package expiry (optional)
+                <input
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                />
+              </label>
             </div>
 
             <div className="form-actions">
@@ -339,12 +352,16 @@ export default function MedicineCenter({
                       <input type="number" min="0.01" step="any" inputMode="decimal" value={medicine.unitsPerDay ?? ""} onChange={(event) => updateSupply(medicine.id, "unitsPerDay", event.target.value)} placeholder="From current label" />
                     </label>
                   </div>
-                  {medicine.remainingUnits === 0
+                  {medicine.expiryDate && medicine.expiryDate < new Date().toISOString().slice(0, 10)
+                    ? <p className="medicine-supply-estimate low">The expiry date entered is past. Do not use this as a clinical decision; check the package and ask a pharmacist about the next step.</p>
+                    : medicine.expiryDate && medicine.expiryDate <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+                      ? <p className="medicine-supply-estimate low">The expiry date entered is within about 30 days. Check the package and plan a pharmacy question.</p>
+                      : medicine.remainingUnits === 0
                     ? <p className="medicine-supply-estimate low">0 units entered. Check the package and arrange any next step with your pharmacy or care team.</p>
                     : daysLeft !== null
                       ? <p className={`medicine-supply-estimate${daysLeft <= 7 ? " low" : ""}`}>About {daysLeft} day{daysLeft === 1 ? "" : "s"} at the usage rate you entered. This is a rough count only.</p>
                       : <p className="medicine-supply-estimate">Enter both values from your current package or instructions to see a rough supply estimate.</p>}
-                  <small>Optional on-device estimate. It does not set a dose or schedule. CAREPATH cannot verify the entered count or your instructions.</small>
+                  <small>{medicine.expiryDate ? `Expiry recorded: ${medicine.expiryDate}. ` : ""}Optional on-device estimate. It does not set a dose or schedule. CAREPATH cannot verify the entered count or your instructions.</small>
                 </details>
               </div>
 
@@ -385,3 +402,4 @@ export default function MedicineCenter({
     </div>
   );
 }
+
