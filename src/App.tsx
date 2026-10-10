@@ -82,6 +82,7 @@ type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Pro
 const navItems = [
   { name: "Home", icon: Home },
   { name: "Care Guide", icon: BookOpen },
+  { name: "Symptom Guide", icon: Activity },
   { name: "Official Sources", icon: Search },
   { name: "ASK CAREPATH", icon: Search },
   { name: "My Medicines", icon: Pill },
@@ -377,6 +378,7 @@ function App() {
     if (/\b(add|new) medicine\b/.test(command)) { openOverlay("medicines", "My Medicines"); return; }
     if (/\b(visit|doctor|appointment|prepare)\b/.test(command)) { openSection("Visit Prep"); return; }
     if (/\b(blood pressure|glucose|reading|health tracker|show my health)\b/.test(command)) { openSection("Health Tracker"); return; }
+    if (/\b(symptom|feeling unwell|not feeling well)\b/.test(command)) { openSection("Symptom Guide"); return; }
     if (/\b(forgot|missed|forget)\b/.test(command) && /medicine|dose|pill/.test(command)) {
       openSection("Safety Alerts");
       setNotice("If a dose was missed, check the current package or prescription instructions, or ask a pharmacist. Don’t take an extra dose unless a qualified professional tells you to.");
@@ -602,7 +604,7 @@ function HomeDashboard({ name, medicines, readings, medicationLog, allergies, on
 
     <DiscoverCarousel onNavigate={onNavigate} />
 
-    <section className="cp-quick-section"><div className="cp-section-heading"><div><span className="cp-eyebrow">START WITH ONE STEP</span><h2>Quick actions</h2></div><span>Shortcuts to your most-used workspaces</span></div><div className="cp-quick-grid"><QuickAction icon={<Search />} label="Find medicine info" detail="Search official sources by country" tone="violet" onClick={() => onNavigate("ASK CAREPATH")} /><QuickAction icon={<ScanLine />} label="Scan a document" detail="Save review notes" tone="blue" onClick={() => onNavigate("Scan & Upload")} /><QuickAction icon={<HeartPulse />} label="Log a reading" detail="Add date and context" tone="rose" onClick={onOpenMonitor} /><QuickAction icon={<ShieldCheck />} label="Review my list" detail="Check saved details" tone="mint" onClick={() => onNavigate("Safety Check")} /><QuickAction icon={<Stethoscope />} label="Prepare for a visit" detail="Gather questions and notes" tone="amber" onClick={() => onNavigate("Visit Prep")} /><QuickAction icon={<Siren />} label="Emergency card" detail="View local reference" tone="red" onClick={() => onNavigate("Emergency Help")} /></div></section>
+    <section className="cp-quick-section"><div className="cp-section-heading"><div><span className="cp-eyebrow">START WITH ONE STEP</span><h2>What do you need help with today?</h2></div><span>Shortcuts to your most-used workspaces</span></div><div className="cp-quick-grid"><QuickAction icon={<HeartPulse />} label="Understand a symptom" detail="Build a note for your care team" tone="violet" onClick={() => onNavigate("Symptom Guide")} /><QuickAction icon={<ScanLine />} label="Scan a document" detail="Save review notes" tone="blue" onClick={() => onNavigate("Scan & Upload")} /><QuickAction icon={<HeartPulse />} label="Log a reading" detail="Add date and context" tone="rose" onClick={onOpenMonitor} /><QuickAction icon={<ShieldCheck />} label="Review my list" detail="Check saved details" tone="mint" onClick={() => onNavigate("Safety Check")} /><QuickAction icon={<Stethoscope />} label="Prepare for a visit" detail="Gather questions and notes" tone="amber" onClick={() => onNavigate("Visit Prep")} /><QuickAction icon={<Siren />} label="Emergency card" detail="View local reference" tone="red" onClick={() => onNavigate("Emergency Help")} /></div></section>
 
     <div className="cp-home-main-grid">
       <section className="cp-home-card cp-health-card"><div className="cp-card-head"><div><span className="cp-eyebrow">MY HEALTH NOTES</span><h2>Health overview</h2></div><button className="cp-text-link" onClick={() => onNavigate("Health Tracker")}>Open tracker <ArrowRight size={14} /></button></div><div className="cp-home-metrics">{metrics.map((metric) => <button key={metric.name} className={`cp-home-metric ${metric.tone}`} onClick={() => onNavigate("Health Tracker")}><span className="cp-home-metric-icon">{metric.icon}</span><span className="cp-home-metric-name">{metric.name}</span><strong>{metric.value}<small>{metric.unit}</small></strong><em>{metric.note}</em></button>)}</div><div className="cp-health-footnote"><Info size={14} /> Values appear as entered. CAREPATH does not interpret or diagnose.</div></section>
@@ -632,6 +634,8 @@ function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => voi
     { title: "HEALTH JOURNEY", text: "Keep the story together", detail: "Bring readings, documents, and personal notes into one timeline.", action: "Open timeline", route: "Health Timeline", icon: <Clock3 size={24} />, tone: "blue" },
     { title: "CARE CIRCLE", text: "Keep support close", detail: "Save optional care-team and trusted-contact details on this device.", action: "Open Care Circle", route: "Care Circle", icon: <Users size={24} />, tone: "rose" },
     { title: "VISIT PREP", text: "Walk into conversations prepared", detail: "Build a concise, print-ready brief from your own saved notes.", action: "Build a visit brief", route: "Visit Prep", icon: <Stethoscope size={24} />, tone: "teal" },
+    { title: "SYMPTOM GUIDE", text: "Put what you feel into clear words", detail: "Record a symptom, its timing, and a question for your care team.", action: "Start a symptom note", route: "Symptom Guide", icon: <HeartPulse size={24} />, tone: "rose" },
+    { title: "SCAN · REVIEW · CONFIRM", text: "Keep document details under your control", detail: "Add a document reference and review each detail before saving it.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={24} />, tone: "blue" },
   ];
   const [index, setIndex] = useState(() => readStored<number>("carepath_discover_index", 0) % cards.length);
   const card = cards[index];

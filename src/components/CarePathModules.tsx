@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import CareGuide from "./CareGuide";
+import SymptomGuide from "./SymptomGuide";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
   Activity,
@@ -95,6 +96,7 @@ type DocumentRecord = {
 };
 
 type ReportResult = { id: string; test: string; value: number; unit: string; date: string };
+type SymptomEntry = { id: string; symptom: string; person: string; ageGroup: string; duration: string; measurement: string; measurementUnit: string; notes: string; date: string; time: string };
 
 type MedicationEvent = {
   id: string;
@@ -246,6 +248,7 @@ export default function CarePathModules({ active, medicineCount, onOpenMedicines
   return (
     <div className="cp-module">
       {active === "Care Guide" && <CareGuide />}
+      {active === "Symptom Guide" && <SymptomGuide onNavigate={onNavigate} />}
       {active === "Official Sources" && <OfficialSources {...shared} />}
       {active === "ASK CAREPATH" && <AskCarepath {...shared} />}
       {active === "My Medicines" && <MedicinePassport {...shared} />}
@@ -635,33 +638,36 @@ function HealthTracker({ readings, onOpenMonitor, onNavigate }: Shared) {
 
 function Timeline({ readings, documents, medEvents, onNavigate }: Shared) {
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
+  const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
   const entries = [
     ...readings.map((item) => ({ id: `reading-${item.id}`, date: item.date, time: item.time, title: item.metric, text: `${item.value}${item.secondValue !== undefined ? ` / ${item.secondValue}` : ""} ${item.unit}${item.note ? ` · ${item.note}` : ""}`, icon: <Activity size={16} />, kind: item.id.startsWith("demo-") ? "Example health reading" : "Health reading" })),
     ...labResults.map((item) => ({ id: item.id, date: item.date, time: "12:00", title: item.test, text: `${item.value} ${item.unit}`, icon: <FileCheck2 size={16} />, kind: "Lab result · entered by you" })),
     ...documents.map((item) => ({ id: item.id, date: item.date, time: "12:00", title: item.name, text: `${item.kind} · ${item.status}`, icon: <FileCheck2 size={16} />, kind: "Document" })),
     ...medEvents.map((item) => ({ id: item.id, date: item.date, time: item.time, title: item.medicine, text: `Dose marked ${item.status.toLowerCase()}`, icon: <Pill size={16} />, kind: "Medicine note" })),
+    ...symptomNotes.map((item) => ({ id: item.id, date: item.date, time: item.time, title: item.symptom, text: [item.person, item.duration, item.measurement && `${item.measurement} ${item.measurementUnit}`.trim(), item.notes].filter(Boolean).join(" · "), icon: <Activity size={16} />, kind: "Symptom note · recorded by you" })),
   ].sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`));
   return <>
     <PageHeader eyebrow="CONNECTED HISTORY" title="Health Timeline" description="See the health details you have saved together, in date order." icon={<CalendarDays size={24} />} action={<button className="cp-button quiet" onClick={() => onNavigate("Health Calendar")}><CalendarDays size={16} /> Open calendar</button>} />
-    <div className="cp-timeline-summary"><div><span className="cp-summary-number">{readings.length}</span><span>Health readings</span></div><div><span className="cp-summary-number">{labResults.length}</span><span>Report values</span></div><div><span className="cp-summary-number">{documents.length}</span><span>Documents saved</span></div><div><span className="cp-summary-number">{medEvents.length}</span><span>Medicine notes</span></div><div><span className="cp-summary-number">{new Set(entries.map((entry) => entry.date)).size}</span><span>Days with records</span></div></div>
-    <Panel title="Your saved events" eyebrow="MOST RECENT FIRST"><div className="cp-timeline">{entries.length ? entries.map((entry, index) => <div className="cp-timeline-entry" key={entry.id}><div className="cp-timeline-rail"><span>{entry.icon}</span>{index < entries.length - 1 && <i />}</div><div className="cp-timeline-content"><div><span className="cp-eyebrow">{entry.kind} · {dateLabel(entry.date)}</span><h3>{entry.title}</h3><p>{entry.text}</p></div><time>{entry.time}</time></div></div>) : <EmptyState icon={<Clock3 />} title="Your timeline will grow with you" text="Add a health reading, save a document, or record a medicine event to create your first entry." />}</div></Panel>
+    <div className="cp-timeline-summary"><div><span className="cp-summary-number">{readings.length}</span><span>Health readings</span></div><div><span className="cp-summary-number">{labResults.length}</span><span>Report values</span></div><div><span className="cp-summary-number">{documents.length}</span><span>Documents saved</span></div><div><span className="cp-summary-number">{medEvents.length}</span><span>Medicine notes</span></div><div><span className="cp-summary-number">{symptomNotes.length}</span><span>Symptom notes</span></div><div><span className="cp-summary-number">{new Set(entries.map((entry) => entry.date)).size}</span><span>Days with records</span></div></div>
+    <Panel title="Your saved events" eyebrow="MOST RECENT FIRST"><div className="cp-timeline">{entries.length ? entries.map((entry, index) => <div className="cp-timeline-entry" key={entry.id}><div className="cp-timeline-rail"><span>{entry.icon}</span>{index < entries.length - 1 && <i />}</div><div className="cp-timeline-content"><div><span className="cp-eyebrow">{entry.kind} · {dateLabel(entry.date)}</span><h3>{entry.title}</h3><p>{entry.text}</p></div><time>{entry.time}</time></div></div>) : <EmptyState icon={<Clock3 />} title="Your timeline will grow with you" text="Add a health reading, save a document, record a medicine event, or make a symptom note to create your first entry." />}</div></Panel>
     <div className="cp-inline-actions"><button className="cp-button quiet" onClick={() => onNavigate("Monitor")}><Plus size={16} /> Add health reading</button><button className="cp-button quiet" onClick={() => onNavigate("Scan & Upload")}><ScanLine size={16} /> Add document</button></div>
   </>;
 }
 
 function HealthCalendar({ readings, documents, medEvents }: Shared) {
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
+  const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
   const [month, setMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const firstDay = new Date(year, monthIndex, 1).getDay();
   const days = new Date(year, monthIndex + 1, 0).getDate();
   const today = todayISO();
-  const eventDates = new Set([...readings.map((item) => item.date), ...labResults.map((item) => item.date), ...documents.map((item) => item.date), ...medEvents.map((item) => item.date)]);
+  const eventDates = new Set([...readings.map((item) => item.date), ...labResults.map((item) => item.date), ...documents.map((item) => item.date), ...medEvents.map((item) => item.date), ...symptomNotes.map((item) => item.date)]);
   const eventsOnSelectedMonth = [...eventDates].filter((date) => date.startsWith(`${year}-${String(monthIndex + 1).padStart(2, "0")}`)).length;
   return <>
-    <PageHeader eyebrow="A CLEARER LOOK AT YOUR MONTH" title="Health Calendar" description="Find the days where you saved readings, medicine notes, or a document." icon={<CalendarDays size={24} />} />
-    <div className="cp-calendar-layout"><Panel title={month.toLocaleDateString(undefined, { month: "long", year: "numeric" })} eyebrow={`${eventsOnSelectedMonth} DAYS WITH SAVED DETAILS`}><div className="cp-calendar-head"><button className="cp-icon-button" aria-label="Previous month" onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}><ChevronLeft size={17} /></button><strong>{month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong><button className="cp-icon-button" aria-label="Next month" onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}><ChevronRight size={17} /></button></div><div className="cp-calendar-grid">{"SMTWTFS".split("").map((day, index) => <span className="weekday" key={`${day}-${index}`}>{day}</span>)}{Array.from({ length: firstDay }, (_, i) => <span className="calendar-blank" key={`blank-${i}`} />)}{Array.from({ length: days }, (_, i) => { const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`; return <div className={`calendar-day ${date === today ? "today" : ""} ${eventDates.has(date) ? "has-event" : ""}`} key={date}><span>{i + 1}</span>{eventDates.has(date) && <i />}</div>; })}</div><div className="cp-calendar-legend"><span><i /> Saved health details</span><span><i className="today-dot" /> Today</span></div></Panel><Panel title="Make the calendar useful" eyebrow="YOUR RECORDS"><div className="cp-calendar-note"><CalendarDays size={22} /><p>Calendar markers come from your saved readings, document references, and medicine notes. CAREPATH does not create appointments or send reminders.</p></div><div className="cp-calendar-totals"><span><strong>{readings.length}</strong> readings</span><span><strong>{documents.length}</strong> documents</span><span><strong>{medEvents.length}</strong> medicine notes</span></div></Panel></div>
+    <PageHeader eyebrow="A CLEARER LOOK AT YOUR MONTH" title="Health Calendar" description="Find the days where you saved readings, symptom notes, medicine notes, or a document." icon={<CalendarDays size={24} />} />
+    <div className="cp-calendar-layout"><Panel title={month.toLocaleDateString(undefined, { month: "long", year: "numeric" })} eyebrow={`${eventsOnSelectedMonth} DAYS WITH SAVED DETAILS`}><div className="cp-calendar-head"><button className="cp-icon-button" aria-label="Previous month" onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}><ChevronLeft size={17} /></button><strong>{month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong><button className="cp-icon-button" aria-label="Next month" onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}><ChevronRight size={17} /></button></div><div className="cp-calendar-grid">{"SMTWTFS".split("").map((day, index) => <span className="weekday" key={`${day}-${index}`}>{day}</span>)}{Array.from({ length: firstDay }, (_, i) => <span className="calendar-blank" key={`blank-${i}`} />)}{Array.from({ length: days }, (_, i) => { const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`; return <div className={`calendar-day ${date === today ? "today" : ""} ${eventDates.has(date) ? "has-event" : ""}`} key={date}><span>{i + 1}</span>{eventDates.has(date) && <i />}</div>; })}</div><div className="cp-calendar-legend"><span><i /> Saved health details</span><span><i className="today-dot" /> Today</span></div></Panel><Panel title="Make the calendar useful" eyebrow="YOUR RECORDS"><div className="cp-calendar-note"><CalendarDays size={22} /><p>Calendar markers come from your saved readings, symptom notes, document references, and medicine notes. CAREPATH does not create appointments or send reminders.</p></div><div className="cp-calendar-totals"><span><strong>{readings.length}</strong> readings</span><span><strong>{documents.length}</strong> documents</span><span><strong>{medEvents.length}</strong> medicine notes</span><span><strong>{symptomNotes.length}</strong> symptom notes</span></div></Panel></div>
   </>;
 }
 
@@ -744,8 +750,9 @@ function VisitPrep({ medicines, readings, documents, profile }: Shared) {
   const toggle = (index: number) => setChecked((current) => { const next = current.map((value, i) => i === index ? !value : value); saveStored("carepath_visit_checklist", next); return next; });
   const addQuestion = (event: FormEvent) => { event.preventDefault(); if (!question.trim()) return; const next = [...questions, question.trim()]; setQuestions(next); saveStored("carepath_visit_questions", next); setQuestion(""); };
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
-  const summaryItems = [medicines.length ? `${medicines.length} medicine entries saved` : "No medicine entries saved", readings.length ? `${readings.length} health readings saved` : "No health readings saved", labResults.length ? `${labResults.length} report values recorded by you` : "No report values saved", documents.length ? `${documents.length} document references saved` : "No documents saved", profile.allergies ? `Allergy notes: ${profile.allergies}` : "Allergy information not recorded"];
-  const exportBrief = () => { const payload = { exportedAt: new Date().toISOString(), purpose: "CAREPATH demo visit brief", profile, medicines, readings, labResults, documents, questions, checklist: defaultItems.map((item, index) => ({ item, ready: Boolean(checked[index]) })) }; const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = `carepath-visit-brief-${todayISO()}.json`; link.click(); URL.revokeObjectURL(url); };
+  const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
+  const summaryItems = [medicines.length ? `${medicines.length} medicine entries saved` : "No medicine entries saved", readings.length ? `${readings.length} health readings saved` : "No health readings saved", labResults.length ? `${labResults.length} report values recorded by you` : "No report values saved", documents.length ? `${documents.length} document references saved` : "No documents saved", symptomNotes.length ? `${symptomNotes.length} symptom notes saved` : "No symptom notes saved", profile.allergies ? `Allergy notes: ${profile.allergies}` : "Allergy information not recorded"];
+  const exportBrief = () => { const payload = { exportedAt: new Date().toISOString(), purpose: "CAREPATH demo visit brief", profile, medicines, readings, labResults, documents, symptomNotes, questions, checklist: defaultItems.map((item, index) => ({ item, ready: Boolean(checked[index]) })) }; const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = `carepath-visit-brief-${todayISO()}.json`; link.click(); URL.revokeObjectURL(url); };
   return <>
     <PageHeader eyebrow="A MORE PREPARED CONVERSATION" title="Doctor Visit Prep" description="Collect the details you want to bring and the questions you want to remember." icon={<Stethoscope size={24} />} action={<div className="cp-page-action-group"><button className="cp-button quiet" onClick={exportBrief}><ArrowDownToLine size={16} /> Export brief</button><button className="cp-button primary" onClick={() => window.print()}><Printer size={16} /> Print visit brief</button></div>} />
     <div className="cp-visit-grid"><Panel title="My visit checklist" eyebrow={`${checked.filter(Boolean).length} OF ${checked.length} READY`}><div className="cp-checklist">{defaultItems.map((item, index) => <label className={`cp-checklist-item ${checked[index] ? "checked" : ""}`} key={item}><input type="checkbox" checked={checked[index] ?? false} onChange={() => toggle(index)} /><span className="cp-checkbox"><Check size={14} /></span><span>{item}</span></label>)}</div><form className="cp-add-question" onSubmit={addQuestion}><label htmlFor="visit-question">A question I want to ask</label><div><input id="visit-question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Write a question to bring along…" /><button className="cp-button primary" type="submit"><Plus size={15} /> Add</button></div></form>{questions.length > 0 && <div className="cp-question-list">{questions.map((item, index) => <div key={`${item}-${index}`}><MessageCircle size={15} /><span>{item}</span><button aria-label={`Remove question ${index + 1}`} onClick={() => { const next = questions.filter((_, i) => i !== index); setQuestions(next); saveStored("carepath_visit_questions", next); }}><Trash2 size={14} /></button></div>)}</div>}</Panel>
@@ -755,6 +762,7 @@ function VisitPrep({ medicines, readings, documents, profile }: Shared) {
 
 function CareCircle({ profile, medicines, readings, documents, bump }: Shared) {
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
+  const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
   const [form, setForm] = useState(profile);
   const [saved, setSaved] = useState(false);
   const [shareChoices, setShareChoices] = useState<string[]>(() => readStored<string[]>("carepath_care_circle_permissions", []));
@@ -765,6 +773,7 @@ function CareCircle({ profile, medicines, readings, documents, bump }: Shared) {
     { key: "readings", label: "Health readings", description: "Saved values, dates, and source labels" },
     { key: "labResults", label: "Lab result notes", description: "Values and dates you copied from a report" },
     { key: "documents", label: "Document references", description: "Names, type, date, and review status" },
+    { key: "symptomNotes", label: "Symptom notes", description: "Your symptom notes and dates; review before sharing" },
   ];
   const toggleShareChoice = (key: string) => {
     const next = shareChoices.includes(key) ? shareChoices.filter((item) => item !== key) : [...shareChoices, key];
@@ -778,6 +787,7 @@ function CareCircle({ profile, medicines, readings, documents, bump }: Shared) {
     if (shareChoices.includes("readings")) payload.readings = readings;
     if (shareChoices.includes("labResults")) payload.labResults = labResults;
     if (shareChoices.includes("documents")) payload.documents = documents;
+    if (shareChoices.includes("symptomNotes")) payload.symptomNotes = symptomNotes;
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const link = document.createElement("a"); link.href = url; link.download = `carepath-care-circle-${todayISO()}.json`; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setShareNotice("Your selected copy is ready on this device. Check it before sharing.");
@@ -894,6 +904,7 @@ function Learn({ onNavigate }: Shared) {
 function SettingsPage({ profile, bump, medicines, readings, documents, onNavigate }: Shared) {
   const [notice, setNotice] = useState("");
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
+  const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
   const exportData = () => {
     const localRecord: Record<string, unknown> = {};
     try {
@@ -930,7 +941,7 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
   };
   return <>
     <PageHeader eyebrow="YOU ARE IN CONTROL" title="Settings & Privacy" description="Manage your local record, profile, and how your information is stored." icon={<ShieldCheck size={24} />} />
-    <div className="cp-settings-grid"><Panel title="Your data on this device" eyebrow="LOCAL-FIRST"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><ShieldCheck size={22} /></span><div><strong>CAREPATH stores your notes in this browser</strong><p>Medicines, readings, visit preparation, report values, and profile details use this device’s local storage. They are not synced to a server by this demo.</p></div></div><div className="cp-data-counts"><span><strong>{medicines.length}</strong> medicines</span><span><strong>{readings.length}</strong> readings</span><span><strong>{labResults.length}</strong> report values</span><span><strong>{documents.length}</strong> document references</span></div><div className="cp-settings-actions"><button className="cp-button primary" onClick={exportData}><ArrowDownToLine size={16} /> Export my record</button><button className="cp-button quiet" onClick={restoreDemo}><Sparkles size={15} /> Set up CAREPATH ID</button><button className="cp-button danger" onClick={deleteLocalRecord}><Trash2 size={15} /> Delete local record</button></div>{notice && <Notice tone="good">{notice}</Notice>}</Panel><Panel title="Profile & emergency details" eyebrow="OPTIONAL"><p className="cp-muted-copy">{profile.allergies || profile.emergencyName ? "Your profile includes saved personal details." : "You have not added personal allergy or trusted contact notes yet."}</p><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}>Open Care Circle profile</button></Panel></div>
+    <div className="cp-settings-grid"><Panel title="Your data on this device" eyebrow="LOCAL-FIRST"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><ShieldCheck size={22} /></span><div><strong>CAREPATH stores your notes in this browser</strong><p>Medicines, readings, symptom notes, visit preparation, report values, and profile details use this device’s local storage. They are not synced to a server by this demo.</p></div></div><div className="cp-data-counts"><span><strong>{medicines.length}</strong> medicines</span><span><strong>{readings.length}</strong> readings</span><span><strong>{labResults.length}</strong> report values</span><span><strong>{documents.length}</strong> document references</span><span><strong>{symptomNotes.length}</strong> symptom notes</span></div><div className="cp-settings-actions"><button className="cp-button primary" onClick={exportData}><ArrowDownToLine size={16} /> Export my record</button><button className="cp-button quiet" onClick={restoreDemo}><Sparkles size={15} /> Set up CAREPATH ID</button><button className="cp-button danger" onClick={deleteLocalRecord}><Trash2 size={15} /> Delete local record</button></div>{notice && <Notice tone="good">{notice}</Notice>}</Panel><Panel title="Profile & emergency details" eyebrow="OPTIONAL"><p className="cp-muted-copy">{profile.allergies || profile.emergencyName ? "Your profile includes saved personal details." : "You have not added personal allergy or trusted contact notes yet."}</p><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}>Open Care Circle profile</button></Panel></div>
     <Notice tone="warm">Deleting browser data or using another browser may remove or separate this record. Keep your clinical records in the original source system too.</Notice>
   </>;
 }

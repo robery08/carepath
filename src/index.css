@@ -3561,3 +3561,63 @@ footer strong {
 @media(max-width:900px){.cp-guide-layout{grid-template-columns:1fr}.cp-guide-side{grid-template-columns:repeat(2,minmax(0,1fr))}.cp-guide-side-link,.cp-guide-side-note{align-self:stretch}}
 @media(max-width:640px){.cp-guide-hero{align-items:flex-start;flex-direction:column;padding:18px}.cp-guide-language{align-self:flex-start}.cp-guide-topic-grid,.cp-guide-side{grid-template-columns:1fr}.cp-guide-ask,.cp-guide-topic-picker,.cp-guide-answer{padding:13px}.cp-guide-answer{padding:0}.cp-guide-input-row{flex-wrap:wrap}.cp-guide-input-row input{min-width:calc(100% - 40px)}.cp-guide-input-row button{width:100%}.cp-guide-section-title{align-items:flex-start;flex-direction:column}.cp-guide-topic{padding:12px}}
 
+
+.cp-symptom-page{display:grid;gap:16px;max-width:1080px;margin:0 auto}
+.cp-symptom-page .cp-page-header{gap:15px}
+.cp-language-switch{display:flex;gap:5px;padding:4px;border:1px solid #dce9e4;border-radius:13px;background:#fff}
+.cp-language-switch button{min-width:78px;min-height:42px;padding:8px 12px;border:0;border-radius:9px;color:#4d666b;background:transparent;font:inherit;font-weight:750;cursor:pointer}
+.cp-language-switch button.selected{color:#fff;background:#126b59;box-shadow:0 3px 9px rgba(14,91,74,.16)}
+.cp-symptom-urgent{display:grid;grid-template-columns:25px minmax(0,1fr) auto;align-items:center;gap:12px;padding:15px 17px;border:1px solid #f0d4c5;border-radius:16px;color:#7d4335;background:linear-gradient(120deg,#fff8f1,#fffdf9)}
+.cp-symptom-urgent>svg{color:#b55d3e}
+.cp-symptom-urgent p{margin:0;font-size:13px;line-height:1.6}
+.cp-symptom-urgent button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:9px 13px;border:1px solid #e5b59c;border-radius:11px;color:#773d31;background:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.cp-symptom-flow,.cp-symptom-history{padding:clamp(17px,3vw,28px)}
+.cp-symptom-progress{display:grid;grid-template-columns:auto minmax(90px,220px);align-items:center;justify-content:space-between;gap:14px;margin-bottom:27px;color:#60797b;font-size:12px;font-weight:750}
+.cp-symptom-progress>div{height:8px;overflow:hidden;border-radius:20px;background:#e8f0ed}
+.cp-symptom-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#168773,#72bd9e);transition:width .2s ease}
+.cp-symptom-step>.cp-eyebrow{font-size:10px;letter-spacing:1.1px}
+.cp-symptom-step h2{margin:8px 0;color:#20484b;font-size:clamp(20px,3vw,28px);line-height:1.25}
+.cp-symptom-step>p{max-width:680px;margin:8px 0 18px;color:#607679;font-size:14px;line-height:1.65}
+.cp-symptom-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cp-symptom-choices button{display:flex;align-items:center;gap:11px;min-height:58px;padding:12px 14px;border:1px solid #dce9e4;border-radius:13px;color:#34555a;text-align:left;background:#fff;font:inherit;font-size:14px;font-weight:700;line-height:1.35;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+.cp-symptom-choices button:hover{transform:translateY(-1px);border-color:#93cbb6;background:#f7fcf9}
+.cp-symptom-choices button.selected{border-color:#18816a;color:#125e4f;background:#eef8f3;box-shadow:0 0 0 2px rgba(24,129,106,.1)}
+.cp-symptom-choices button>span{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border-radius:9px;color:#147663;background:#e9f5ef;font-size:16px}
+.cp-symptom-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.cp-symptom-form-grid>label,.cp-symptom-notes-label{display:grid;gap:7px;color:#36585c;font-size:13px;font-weight:750;line-height:1.5}
+.cp-symptom-form-grid select,.cp-symptom-form-grid input,.cp-symptom-notes{width:100%;min-height:48px;padding:11px 12px;border:1px solid #d4e2dd;border-radius:11px;color:#29494f;background:#fff;font:inherit;font-size:14px}
+.cp-symptom-form-grid select:focus,.cp-symptom-form-grid input:focus,.cp-symptom-notes:focus{outline:3px solid rgba(31,142,113,.18);border-color:#238a72}
+.cp-symptom-optional{color:#788c8d;font-size:11px;font-weight:500}
+.cp-symptom-measurement{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.cp-symptom-notes-tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.cp-symptom-notes{min-height:132px;resize:vertical;line-height:1.6}
+.cp-symptom-voice{margin:8px 0;color:#42635e;font-size:12px;line-height:1.5}
+.cp-symptom-review{display:grid;gap:0;margin:16px 0 0;border:1px solid #e1ebe7;border-radius:13px;overflow:hidden}
+.cp-symptom-review>div{display:grid;grid-template-columns:minmax(120px,.4fr) minmax(0,1fr);gap:14px;padding:12px 14px;border-bottom:1px solid #e9efec}
+.cp-symptom-review>div:last-child{border-bottom:0}
+.cp-symptom-review dt{color:#718588;font-size:12px}
+.cp-symptom-review dd{margin:0;color:#34565a;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.cp-symptom-private{display:flex;align-items:flex-start;gap:8px;margin:14px 0 0;color:#476963;font-size:12px;line-height:1.5}
+.cp-symptom-private svg{flex:0 0 16px;color:#18816a}
+.cp-symptom-nav{display:flex;justify-content:space-between;gap:10px;margin-top:21px;padding-top:16px;border-top:1px solid #edf2ef}
+.cp-symptom-nav .cp-button{min-height:46px}
+.cp-symptom-nav button:disabled{opacity:.48;cursor:not-allowed}
+.cp-symptom-error{padding:11px 13px;border:1px solid #efc9bd;border-radius:10px;color:#873c31;background:#fff7f3;font-size:13px}
+.cp-symptom-saved{display:flex;align-items:flex-start;gap:10px;margin-top:14px;padding:13px;border:1px solid #cfe8d9;border-radius:12px;color:#22654f;background:#f2faf5;font-size:13px;font-weight:700}
+.cp-symptom-saved>span{display:grid;gap:4px}
+.cp-symptom-saved small{color:#647d72;font-size:11px;font-weight:500;line-height:1.5}
+.cp-symptom-boundary{margin:0;padding:13px 15px;border-left:3px solid #d8a86d;border-radius:0 11px 11px 0;color:#6b6255;background:#fffaf2;font-size:12px;line-height:1.65}
+.cp-symptom-history .cp-panel-heading{margin-bottom:12px}
+.cp-symptom-entry-list{display:grid;gap:9px}
+.cp-symptom-entry{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:12px;padding:13px;border:1px solid #e2ece8;border-radius:13px;background:#fcfefd}
+.cp-symptom-entry-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;color:#16806a;background:#edf7f2}
+.cp-symptom-entry>div{display:grid;gap:4px;min-width:0}
+.cp-symptom-entry>div>strong{color:#315358;font-size:14px}
+.cp-symptom-entry>div>small,.cp-symptom-entry>div>p{margin:0;color:#708487;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.cp-symptom-remove{display:flex;align-items:center;gap:5px;min-height:42px;padding:8px 10px;border:1px solid #eadbd8;border-radius:10px;color:#814e48;background:#fff;font:inherit;font-size:11px;cursor:pointer}
+.cp-symptom-empty{display:flex;align-items:center;gap:11px;padding:16px;border:1px dashed #d5e3de;border-radius:12px;color:#62797b;background:#fbfdfc}
+.cp-symptom-empty svg{flex:0 0 23px;color:#22806d}
+.cp-symptom-empty p{margin:0;font-size:13px;line-height:1.5}
+.cp-timeline-summary{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+@media(max-width:680px){.cp-symptom-page{gap:12px}.cp-symptom-page .cp-page-header{align-items:flex-start}.cp-symptom-page .cp-page-action{margin-left:auto}.cp-symptom-urgent{grid-template-columns:23px minmax(0,1fr)}.cp-symptom-urgent button{grid-column:2;justify-self:start}.cp-symptom-choices,.cp-symptom-form-grid{grid-template-columns:1fr}.cp-symptom-choices button{min-height:54px}.cp-symptom-entry{grid-template-columns:34px minmax(0,1fr)}.cp-symptom-entry-icon{width:32px;height:32px}.cp-symptom-remove{grid-column:2;justify-self:start}.cp-timeline-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.cp-symptom-page .cp-page-header{display:grid;grid-template-columns:42px minmax(0,1fr)}.cp-symptom-page .cp-page-action{grid-column:1/-1;margin:0}.cp-symptom-progress{grid-template-columns:1fr;gap:8px}.cp-symptom-review>div{grid-template-columns:1fr;gap:4px}.cp-symptom-urgent{padding:12px}.cp-timeline-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -24,10 +24,11 @@ npm.cmd run build
 - **Medication Changes** — save a local medicine-list snapshot and review additions, removals, or changed personal entries with a professional.
 - **Scan & Upload** — capture a photo with a phone camera or choose a photo/PDF, then save a review reference.
 - **Safety Check & Safety Alerts** — review completeness, repeated names, missing details, and questions for a pharmacist.
-- **Health Tracker, Trends, Timeline & Calendar** — organize long-term BP, glucose, and other readings.
+- **Health Tracker, Trends, Timeline & Calendar** — organize long-term BP, glucose, and other readings, with symptom notes included in the date-based history.
 - **Everyday Health Guide** — practical starting points for hypertension, diabetes, cancer-treatment support, regular medicines, and short-lived cold symptoms, with links to WHO, NCI, and NHS resources.
 - **Care Guide** — structured English/Kannada cards for diabetes and blood sugar, high blood pressure, cancer-treatment support, and everyday medicine safety. The general guides are available in the app without Gemini or a network request.
-- **Visit Prep** — prepare a checklist, saved snapshot, and questions for an appointment.
+- **Symptom Guide** — a four-step English/Kannada note builder with optional browser voice input and read-aloud. It saves what a person reports locally and makes the note available in the timeline, visit brief, and explicitly selected caregiver export. It does not diagnose, triage urgency, interpret readings, or recommend treatment.
+- **Visit Prep** — prepare a checklist, saved snapshot, symptom-note summary, and questions for an appointment.
 - **Care Circle & Emergency ID** — keep optional health details, doctor and pharmacy numbers, and trusted-contact information close by. Call and message buttons open your device's apps after you choose them.
 - **Health Map** — search pharmacies, medical stores, and hospitals in a typed area or with a one-time location request. CAREPATH sends a location to Google Maps only after you open a search; map results do not verify stock or quality.
 - **CAREPATH Easy Mode** — larger controls and clearer text, saved as a local preference.
@@ -54,7 +55,7 @@ Voice recognition support varies by browser. Some browser speech-recognition ser
 
 Reminder times are daily personal notes. The in-page timer works only while CAREPATH remains open and running. Browser notifications require your explicit permission and depend on the browser and device. A closed or suspended browser may not deliver a reminder; CAREPATH is not a guaranteed alarm service. Verify every time and instruction against the current medicine package or prescription. For a missed dose, check that source or ask a pharmacist; do not take an extra dose unless a qualified professional tells you to.
 
-This demo stores profile, medicine, and health notes in local browser storage, without an account, encryption layer, server sync, or caregiver sharing. Voice input may use browser services as described above. Clearing browser data can remove the local record; use **Settings & Privacy → Export my record** to save a copy. Do not rely on this demo as your only copy of clinical records. In an emergency, contact local emergency services directly.
+This demo stores profile, medicine, symptom, and health notes in local browser storage, without an account, encryption layer, server sync, or live caregiver sharing. Voice input may use browser services as described above. Clearing browser data can remove the local record; use **Settings & Privacy → Export my record** to save a copy. Do not rely on this demo as your only copy of clinical records. In an emergency, contact local emergency services directly.
 
 ## Publish a web version
 
