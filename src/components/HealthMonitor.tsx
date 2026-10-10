@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   CalendarDays,
@@ -7,12 +7,15 @@ import {
   Clock3,
   Droplets,
   HeartPulse,
+  Mic,
   Plus,
   Thermometer,
   Weight,
   X,
   Zap,
 } from "lucide-react";
+import { getVoiceLanguage, saveVoiceLanguage } from "../voice";
+import type { VoiceLanguage } from "../voice";
 import {
   CartesianGrid,
   Line,
@@ -41,11 +44,26 @@ type HealthReading = {
   date: string;
   time: string;
   note: string;
+  source?: "voice" | "typed";
 };
 
 type Props = {
   onClose: () => void;
+  voiceEnabled: boolean;
 };
+
+type SpeechResultEvent = Event & { results: ArrayLike<ArrayLike<{ transcript: string }>> };
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((event: SpeechResultEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+type SpeechWindow = Window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor };
 
 const STORAGE_KEY = "carepath_health_readings";
 
@@ -232,7 +250,64 @@ function getMetricStatus(_reading: HealthReading) {
   return "Recorded";
 }
 
-export default function HealthMonitor({ onClose }: Props) {
+const spokenNumberWords: Record<string, number> = {
+  zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+  twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+  ಶೂನ್ಯ: 0, ಸೊನ್ನೆ: 0, ಒಂದು: 1, ಎರಡು: 2, ಮೂರು: 3, ನಾಲ್ಕು: 4, ಐದು: 5, ಆರು: 6, ಏಳು: 7, ಎಂಟು: 8, ಒಂಬತ್ತು: 9,
+  ಹತ್ತು: 10, ಹನ್ನೊಂದು: 11, ಹನ್ನೆರಡು: 12, ಹದಿಮೂರು: 13, ಹದಿನಾಲ್ಕು: 14, ಹದಿನೈದು: 15, ಹದಿನಾರು: 16, ಹದಿನೇಳು: 17, ಹದಿನೆಂಟು: 18, ಹತ್ತೊಂಬತ್ತು: 19,
+  ಇಪ್ಪತ್ತು: 20, ಮೂವತ್ತು: 30, ನಲವತ್ತು: 40, ಐವತ್ತು: 50, ಅರವತ್ತು: 60, ಎಪ್ಪತ್ತು: 70, ಎಂಭತ್ತು: 80, ತೊಂಬತ್ತು: 90,
+};
+
+function parseSpokenNumber(phrase: string): number | null {
+  const kannadaDigits = "೦೧೨೩೪೫೬೭೮೯";
+  const normalized = phrase.toLowerCase().replace(/[೦-೯]/g, (digit) => String(kannadaDigits.indexOf(digit))).replace(/-/g, " ").trim();
+  const direct = normalized.match(/[0-9]+(?:[.,][0-9]+)?/g);
+  if (direct?.length === 1) {
+    const parsed = Number(direct[0].replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  const unitWords = /\b(?:my|the|reading|is|was|show|shows|value|blood|pressure|systolic|diastolic|glucose|sugar|pulse|heart|rate|temperature|oxygen|saturation|weight|steps|millimeters?|millimetres?|mercury|mmhg|degrees?|celsius|fahrenheit|percent|bpm|mg|dl|kg|per|of)\b/g;
+  const tokens = normalized.replace(unitWords, " ").replace(/[^a-z0-9.\s\u0C80-\u0CFF]/g, " ").split(/\s+/).filter(Boolean);
+  let total = 0;
+  let current = 0;
+  let decimal = false;
+  let decimalDigits = "";
+  let sawNumber = false;
+  for (const token of tokens) {
+    if (token === "and" || token === "ಮತ್ತು") continue;
+    if (token === "point" || token === "dot") { decimal = true; continue; }
+    if (token === "hundred" || token === "ನೂರು" || token === "ನೂರ") { current = Math.max(1, current) * 100; sawNumber = true; continue; }
+    if (token === "thousand" || token === "ಸಾವಿರ") { total += Math.max(1, current) * 1000; current = 0; sawNumber = true; continue; }
+    const number = spokenNumberWords[token];
+    if (number === undefined) return null;
+    sawNumber = true;
+    if (decimal) decimalDigits += String(number);
+    else current += number;
+  }
+  if (!sawNumber) return null;
+  const whole = total + current;
+  return decimalDigits ? whole + Number(`0.${decimalDigits}`) : whole;
+}
+
+function parseSpokenReading(transcript: string, metric: HealthMetric) {
+  const expected = metric === "Blood Pressure" ? 2 : 1;
+  const digitValues = transcript.match(/[0-9]+(?:[.,][0-9]+)?/g)?.map((item) => Number(item.replace(",", "."))) ?? [];
+  if (digitValues.length === expected && digitValues.every(Number.isFinite)) return digitValues;
+  if (metric === "Blood Pressure") {
+    const parts = transcript.split(/\b(?:over|slash|above)\b|\/|ಮೇಲೆ|ಒವರ್/i).map((part) => part.trim()).filter(Boolean);
+    if (parts.length === 2) {
+      const values = parts.map(parseSpokenNumber);
+      if (values.every((item): item is number => item !== null)) return values;
+    }
+    return null;
+  }
+  if (digitValues.length) return null;
+  const value = parseSpokenNumber(transcript);
+  return value === null ? null : [value];
+}
+
+export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
   const [readings, setReadings] =
     useState<HealthReading[]>(getInitialReadings);
 
@@ -252,6 +327,21 @@ export default function HealthMonitor({ onClose }: Props) {
   const [date, setDate] = useState(getCurrentDate);
   const [time, setTime] = useState(getCurrentTime);
   const [note, setNote] = useState("");
+  const [voiceLanguage, setVoiceLanguage] = useState<VoiceLanguage>(getVoiceLanguage);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceNotice, setVoiceNotice] = useState("");
+  const [formError, setFormError] = useState("");
+  const [listening, setListening] = useState(false);
+  const [entrySource, setEntrySource] = useState<"voice" | "typed">("typed");
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  useEffect(() => () => speechRecognitionRef.current?.stop(), []);
+  useEffect(() => {
+    if (!voiceEnabled) {
+      speechRecognitionRef.current?.stop();
+      speechRecognitionRef.current = null;
+    }
+  }, [voiceEnabled]);
 
   const selectedMetricInfo = metricOptions.find(
     (item) => item.name === metric,
@@ -325,15 +415,13 @@ export default function HealthMonitor({ onClose }: Props) {
   }, [filteredReadings, selectedMetric]);
 
   function persist(nextReadings: HealthReading[]) {
-    setReadings(nextReadings);
-
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(nextReadings),
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextReadings));
+      setReadings(nextReadings);
+      return true;
     } catch {
-      // Continue working even if local storage is unavailable.
+      setFormError("Your browser could not save this reading. Free device storage and try again.");
+      return false;
     }
   }
 
@@ -344,26 +432,71 @@ export default function HealthMonitor({ onClose }: Props) {
     setTime(getCurrentTime());
     setNote("");
     setMetric("Blood Pressure");
+    setVoiceTranscript("");
+    setVoiceNotice("");
+    setFormError("");
+    setEntrySource("typed");
+  }
+
+  function startVoiceEntry() {
+    if (!voiceEnabled) { setVoiceNotice("Turn on voice support in the accessibility bar first."); return; }
+    const Speech = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
+    if (!Speech) { setVoiceNotice("Voice input is not available in this browser. Enter the numbers below instead."); return; }
+    speechRecognitionRef.current?.stop();
+    setVoiceTranscript("");
+    setVoiceNotice("Listening for a single measurement. Review the words and numbers before using them.");
+    try {
+      const recognition = new Speech();
+      recognition.lang = voiceLanguage === "kn" ? "kn-IN" : "en-IN";
+      recognition.interimResults = false;
+      recognition.onresult = (event) => {
+        const transcript = event.results[0]?.[0]?.transcript?.trim() || "";
+        setVoiceTranscript(transcript);
+        setVoiceNotice(transcript ? "Review what CAREPATH heard, then choose Use numbers. Nothing is saved yet." : "No words were heard. Try again or type the numbers.");
+        setListening(false);
+      };
+      recognition.onerror = () => { setListening(false); setVoiceNotice("The microphone did not capture a clear reading. Try again or type it."); };
+      recognition.onend = () => setListening(false);
+      speechRecognitionRef.current = recognition;
+      setListening(true);
+      recognition.start();
+    } catch {
+      speechRecognitionRef.current = null;
+      setListening(false);
+      setVoiceNotice("Microphone input could not start. Check browser permission or type the numbers.");
+    }
+  }
+
+  function useVoiceNumbers() {
+    const parsed = parseSpokenReading(voiceTranscript, metric);
+    if (!parsed || parsed.length !== (metric === "Blood Pressure" ? 2 : 1)) {
+      setVoiceNotice(metric === "Blood Pressure" ? "I could not separate two blood-pressure numbers. Type systolic and diastolic values yourself." : "I could not confidently find one number. Type the value yourself.");
+      return;
+    }
+    setValue(String(parsed[0]));
+    setSecondValue(parsed.length === 2 ? String(parsed[1]) : "");
+    setEntrySource("voice");
+    setFormError("");
+    setVoiceNotice("Numbers filled in for review. CAREPATH will not save until you confirm the values and press Save reading.");
   }
 
   function handleAddReading() {
     const numericValue = Number(value);
     const numericSecondValue = Number(secondValue);
 
-    if (!value || Number.isNaN(numericValue)) {
-      alert("Please enter a valid reading.");
+    if (!value.trim() || !Number.isFinite(numericValue) || numericValue <= 0) {
+      setFormError("Enter a number greater than zero, then check it against your device.");
       return;
     }
 
     if (
       metric === "Blood Pressure" &&
-      (!secondValue || Number.isNaN(numericSecondValue))
+      (!secondValue.trim() || !Number.isFinite(numericSecondValue) || numericSecondValue <= 0)
     ) {
-      alert(
-        "Please enter both systolic and diastolic values.",
-      );
+      setFormError("Enter both blood-pressure numbers and check them against your monitor.");
       return;
     }
+    if (!date || !time) { setFormError("Choose the date and time for this reading."); return; }
 
     const newReading: HealthReading = {
       id: `${Date.now()}`,
@@ -376,10 +509,13 @@ export default function HealthMonitor({ onClose }: Props) {
       unit: selectedMetricInfo?.unit ?? "",
       date,
       time,
-      note,
+      note: [note.trim(), entrySource === "voice" ? "Entered using voice · user verified" : ""].filter(Boolean).join(" · "),
+      source: entrySource,
     };
 
-    persist([newReading, ...readings]);
+    if (!persist([newReading, ...readings])) return;
+    try { localStorage.setItem("carepath_last_local_save", new Date().toISOString()); } catch { /* Keep the session useful if storage is restricted. */ }
+    window.dispatchEvent(new Event("carepath:refresh"));
 
     setSelectedMetric(metric);
     setShowForm(false);
@@ -387,9 +523,7 @@ export default function HealthMonitor({ onClose }: Props) {
   }
 
   function deleteReading(id: string) {
-    persist(
-      readings.filter((reading) => reading.id !== id),
-    );
+    persist(readings.filter((reading) => reading.id !== id));
   }
 
   return (
@@ -663,7 +797,7 @@ export default function HealthMonitor({ onClose }: Props) {
                               {reading.note}
                             </span>
                           )}
-                          <span>{reading.id.startsWith("demo-") ? "Sample data" : "Entered on this device · not verified"}</span>
+                          <span>{reading.id.startsWith("demo-") ? "Sample data · example only" : reading.source === "voice" ? "Voice entered · not verified" : "Entered on this device · not verified"}</span>
                         </div>
                       </div>
 
@@ -745,6 +879,16 @@ export default function HealthMonitor({ onClose }: Props) {
                   <X size={19} />
                 </button>
               </div>
+
+              <div className="health-voice-entry">
+                <div className="health-voice-entry-copy"><strong>Say the numbers instead</strong><span>For blood pressure, say “128 over 82”. Review before anything is saved.</span></div>
+                <label className="health-voice-language">Voice language<select value={voiceLanguage} onChange={(event) => { const next = event.target.value as VoiceLanguage; setVoiceLanguage(next); saveVoiceLanguage(next); }}><option value="en">English</option><option value="kn">Kannada</option></select></label>
+                <button type="button" className="health-voice-button" onClick={startVoiceEntry} disabled={!voiceEnabled || listening}><Mic size={17} />{listening ? "Listening…" : voiceEnabled ? "Speak reading" : "Voice off"}</button>
+                {voiceTranscript && <div className="health-voice-transcript"><span><strong>Heard:</strong> {voiceTranscript}</span><button type="button" onClick={useVoiceNumbers}>Use numbers</button></div>}
+                {voiceNotice && <p className="health-form-message" role="status">{voiceNotice}</p>}
+                <small className="health-voice-privacy">Browser speech recognition may use your browser’s speech service. Do not speak your name or other identifying details.</small>
+              </div>
+              {formError && <p className="health-form-error" role="alert">{formError}</p>}
 
               <label>
                 Measurement

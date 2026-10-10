@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Activity,
@@ -32,6 +32,8 @@ import {
   Volume2,
   X,
 } from "lucide-react";
+import { speakText, stopReading } from "./voice";
+import { getVoiceLanguage } from "./voice";
 
 const CarePathModules = lazy(() => import("./components/CarePathModules"));
 const HealthMonitor = lazy(() => import("./components/HealthMonitor"));
@@ -175,6 +177,8 @@ function App() {
   const [voiceText, setVoiceText] = useState("");
   const [voiceStatus, setVoiceStatus] = useState("");
   const [listening, setListening] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(() => readStored<boolean>("carepath_voice_support", true));
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [confirmDose, setConfirmDose] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>(() => readStored<Reminder[]>("carepath_reminders", []));
@@ -189,6 +193,7 @@ function App() {
   const medicationLog = useMemo(() => readStored<MedicationEvent[]>("carepath_medication_log", []), [refresh]);
   const profile = useMemo(() => readStored<{ name?: string; allergies?: string }>("carepath_profile", {}), [refresh]);
   const name = profile.name?.trim() || "Demo User";
+
 
   const refreshApp = useCallback(() => setRefresh((current) => current + 1), []);
   const applyRoute = useCallback((route: RouteState) => {
@@ -326,12 +331,24 @@ function App() {
     try { localStorage.setItem("carepath_start_guide_complete", "true"); } catch { /* Keep the guide usable when storage is unavailable. */ }
   };
   const readAloud = (text?: string) => {
-    if (!("speechSynthesis" in window)) { setNotice("Read aloud is not available in this browser."); return; }
-    window.speechSynthesis.cancel();
-    const content = text || document.querySelector(".content")?.textContent || "Welcome to CAREPATH. Your personal health organizer.";
-    const utterance = new SpeechSynthesisUtterance(content.replace(/\s+/g, " ").slice(0, 1800));
-    utterance.rate = easyMode ? 0.86 : 0.98;
-    window.speechSynthesis.speak(utterance);
+    if (!voiceEnabled) { setNotice("Turn on voice support in the accessibility bar to listen."); return; }
+    const selected = window.getSelection()?.toString().trim();
+    const content = text || selected || document.querySelector(".content")?.textContent || "Welcome to CAREPATH. Your personal health organizer.";
+    if (!speakText(content, { rate: easyMode ? 0.82 : undefined })) setNotice("Read aloud is not available in this browser.");
+  };
+  const toggleVoiceSupport = () => {
+    const next = !voiceEnabled;
+    if (!next) {
+      speechRecognitionRef.current?.stop();
+      speechRecognitionRef.current = null;
+      setListening(false);
+      setVoiceOpen(false);
+      stopReading();
+    }
+    setVoiceEnabled(next);
+    try { localStorage.setItem("carepath_voice_support", JSON.stringify(next)); } catch { /* Voice remains available for this visit. */ }
+    window.dispatchEvent(new Event("carepath:voice-setting"));
+    setNotice(next ? "Voice support is on. Use Listen for a page or section." : "Voice support is off and active speech has stopped.");
   };
   const installApp = async () => {
     if (!installPrompt) return;
@@ -343,6 +360,7 @@ function App() {
     } catch { setNotice("Use your browser menu to install CAREPATH on this device."); }
   };
   const startVoice = () => {
+    if (!voiceEnabled) { setNotice("Turn on voice support in the accessibility bar to use voice input."); return; }
     setVoiceOpen(true);
     setVoiceText("");
     setVoiceStatus("");
@@ -350,7 +368,7 @@ function App() {
     if (!Speech) { setVoiceStatus("Voice input is not supported here. Type a command below, or use the large quick-action buttons."); return; }
     try {
       const recognition = new Speech();
-      recognition.lang = navigator.language || "en-US";
+      recognition.lang = getVoiceLanguage() === "kn" ? "kn-IN" : "en-IN";
       recognition.interimResults = false;
       recognition.onresult = (event) => {
         const transcript = event.results[0]?.[0]?.transcript || "";
@@ -359,7 +377,8 @@ function App() {
         setListening(false);
       };
       recognition.onerror = () => { setListening(false); setVoiceStatus("I couldn’t hear that clearly. Try again or type a short command."); };
-      recognition.onend = () => setListening(false);
+      recognition.onend = () => { setListening(false); speechRecognitionRef.current = null; };
+      speechRecognitionRef.current = recognition;
       setListening(true);
       setVoiceStatus("Listening… Speak a short command.");
       recognition.start();
@@ -478,8 +497,9 @@ function App() {
         <section className="content">
           <div className="cp-accessibility-bar" aria-label="Accessibility and quick help">
             <button className={easyMode ? "selected" : ""} aria-pressed={easyMode} onClick={() => { const next = !easyMode; setEasyMode(next); try { localStorage.setItem("carepath_easy_mode", JSON.stringify(next)); } catch { /* Optional preference. */ } }}><Accessibility size={17} /><span>{easyMode ? "Easy mode on" : "Easy mode"}</span></button>
-            <button onClick={startVoice}><Mic size={17} /><span>Tell CAREPATH</span></button>
-            <button onClick={() => readAloud()}><Volume2 size={17} /><span>Read this to me</span></button>
+            <button className={voiceEnabled ? "selected" : ""} aria-pressed={voiceEnabled} onClick={toggleVoiceSupport}><Volume2 size={17} /><span>Voice {voiceEnabled ? "on" : "off"}</span></button>
+            <button onClick={startVoice} disabled={!voiceEnabled}><Mic size={17} /><span>Tell CAREPATH</span></button>
+            <button onClick={() => readAloud()} disabled={!voiceEnabled}><Volume2 size={17} /><span>Read this to me</span></button>
             <button onClick={() => setShowReminders(true)}><BellRing size={17} /><span>Reminders{reminders.filter((item) => item.enabled).length ? ` · ${reminders.filter((item) => item.enabled).length}` : ""}</span></button>
             {installPrompt && <button onClick={() => void installApp()}><Plus size={17} /><span>Install app</span></button>}
             <button onClick={() => setShowGuide(true)}><BookOpen size={17} /><span>Show me how</span></button>
@@ -494,14 +514,14 @@ function App() {
 
       {notice && <div className="cp-toast" role="status"><Check size={16} />{notice}</div>}
       {showGuide && <StartGuide onClose={finishGuide} onNavigate={(section) => { finishGuide(); if (section === "__reminders") { setShowReminders(true); return; } if (section === "My Medicines") { openOverlay("medicines", "My Medicines"); return; } openSection(section); }} />}
-      {voiceOpen && <VoiceDialog text={voiceText} status={voiceStatus} listening={listening} onText={setVoiceText} onListen={startVoice} onUse={() => handleVoiceCommand(voiceText)} onClose={() => setVoiceOpen(false)} />}
+      {voiceOpen && <VoiceDialog text={voiceText} status={voiceStatus} listening={listening} onText={setVoiceText} onListen={startVoice} onUse={() => handleVoiceCommand(voiceText)} onClose={() => { speechRecognitionRef.current?.stop(); speechRecognitionRef.current = null; setListening(false); setVoiceOpen(false); }} />}
       {confirmDose && <DoseConfirm medicines={medicines} onCancel={() => setConfirmDose(false)} onConfirm={(medicine) => { setConfirmDose(false); markDose(medicine); }} />}
       {showReminders && <ReminderCenter medicines={medicines} reminders={reminders} onSave={saveReminders} onClose={() => setShowReminders(false)} />}
       {dueReminder && <div className="cp-reminder-toast" role="alert"><div className="cp-reminder-toast-icon"><BellRing size={22} /></div><div><strong>Time for your reminder</strong><p>{dueReminder.name} · {dueReminder.time}</p><small>Check your current package or prescription before acting.</small></div><button onClick={() => { setDueReminder(null); setConfirmDose(true); }}>I took it · log</button><button aria-label="Dismiss reminder" onClick={() => setDueReminder(null)}><X size={16} /></button></div>}
       {dueReviewReminder && <div className="cp-reminder-toast cp-review-reminder-toast" role="alert"><div className="cp-reminder-toast-icon"><Info size={22} /></div><div><strong>Review your missed-dose guidance</strong><p>{dueReviewReminder.medicine}</p><small>This is a reminder to check the package or ask a pharmacist. It is not a dose instruction.</small></div><button onClick={() => finishReviewReminder(true)}>Remind in 1 hour</button><button onClick={() => finishReviewReminder()} aria-label="Dismiss review reminder"><Check size={16} /></button></div>}
       <Suspense fallback={<ModuleLoading overlay />}>
         {showMedicines && <MedicineCenter onClose={() => { closeOverlay("medicines"); refreshApp(); }} onCountChange={onCountChange} />}
-        {showHealthMonitor && <HealthMonitor onClose={() => { closeOverlay("monitor"); refreshApp(); }} />}
+        {showHealthMonitor && <HealthMonitor voiceEnabled={voiceEnabled} onClose={() => { closeOverlay("monitor"); refreshApp(); }} />}
       </Suspense>
     </div>
   );
@@ -510,7 +530,7 @@ function App() {
 function StartGuide({ onClose, onNavigate }: { onClose: () => void; onNavigate: (section: string) => void }) {
   const steps = [
     { title: "Save a medicine", text: "Record what is written on your current package or prescription. CAREPATH won’t choose a dose for you.", action: "Open My Medicines", route: "My Medicines", icon: <Pill size={22} /> },
-    { title: "Capture a document", text: "Use your phone camera or choose a photo/PDF. The demo keeps a review note; it does not read the document automatically.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={22} /> },
+    { title: "Capture and read a document", text: "Choose a photo or PDF. CAREPATH can extract text in this browser; review every word against the original before keeping it.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={22} /> },
     { title: "Set a personal reminder", text: "Add a time from your existing instructions. Reminders only run while CAREPATH is open.", action: "Open reminders", route: "__reminders", icon: <BellRing size={22} /> },
     { title: "Keep urgent details nearby", text: "Add a trusted contact and review your emergency card. In an emergency, contact local services directly.", action: "Open Emergency Help", route: "Emergency Help", icon: <Siren size={22} /> },
   ];

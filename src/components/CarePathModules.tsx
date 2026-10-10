@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CareGuide from "./CareGuide";
 import SymptomGuide from "./SymptomGuide";
+import ReadAloudButton from "./ReadAloudButton";
+import { clearDocumentFiles, deleteDocumentFile, getDocumentFile, saveDocumentFile } from "../documentFiles";
+import { readDocumentText } from "../documentReader";
+import { getVoiceLanguage, getVoiceRate, saveVoiceLanguage, saveVoiceRate } from "../voice";
+import type { VoiceLanguage } from "../voice";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
   Activity,
@@ -19,14 +24,17 @@ import {
   CircleAlert,
   Clock3,
   Copy,
+  Download,
   FileCheck2,
   FileImage,
   FilePlus2,
+  FileText,
   Heart,
   HeartPulse,
   Info,
   ListChecks,
   LocateFixed,
+  LoaderCircle,
   MapPin,
   MapPinned,
   MessageCircle,
@@ -93,6 +101,9 @@ type DocumentRecord = {
   date: string;
   status: string;
   fields: string[];
+  fileStored?: boolean;
+  mimeType?: string;
+  size?: number;
 };
 
 type ReportResult = { id: string; test: string; value: number; unit: string; date: string };
@@ -130,12 +141,6 @@ const DEFAULT_PROFILE: Profile = {
   pharmacyPhone: "",
   locationHint: "",
 };
-
-const EXTRACTED_SAMPLE = [
-  { name: "Amlodipine", strength: "5 mg", form: "Tablet", schedule: "8:00 AM", instructions: "Morning" },
-  { name: "Atorvastatin", strength: "10 mg", form: "Tablet", schedule: "10:00 PM", instructions: "Night" },
-  { name: "Metformin", strength: "500 mg", form: "Tablet", schedule: "1:00 PM", instructions: "After food" },
-];
 
 const DEFAULT_MEDICINES: Medicine[] = [
   { id: "2", name: "Amlodipine", strength: "5 mg", form: "Tablet", schedule: "8:00 AM", instructions: "Morning" },
@@ -203,16 +208,21 @@ function PageHeader({ eyebrow, title, description, icon, action }: { eyebrow: st
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      {action && <div className="cp-page-action">{action}</div>}
+      <div className="cp-page-action">
+        <ReadAloudButton text={`${title}. ${description}`} label={`Listen to ${title}`} />
+        {action}
+      </div>
     </header>
   );
 }
 
 function Panel({ title, eyebrow, children, className = "" }: { title: string; eyebrow?: string; children: ReactNode; className?: string }) {
+  const panelRef = useRef<HTMLElement>(null);
   return (
-    <section className={`cp-panel ${className}`}>
+    <section className={`cp-panel ${className}`} ref={panelRef}>
       <div className="cp-panel-heading">
         <div>{eyebrow && <span className="cp-eyebrow">{eyebrow}</span>}<h2>{title}</h2></div>
+        <ReadAloudButton text={() => panelRef.current?.textContent || title} label={`Listen to ${title}`} />
       </div>
       {children}
     </section>
@@ -453,60 +463,161 @@ function OfficialSources({ medicines, readings, documents, profile, onNavigate }
 
 function Snapshot({ icon, label, value }: { icon: ReactNode; label: string; value: string }) { return <div className="cp-snapshot-row"><span className="cp-snapshot-icon">{icon}</span><span>{label}</span><strong>{value}</strong></div>; }
 
-function Scanner({ medicines, documents, bump, onOpenMedicines }: Shared) {
-  const [fileName, setFileName] = useState("");
-  const [preview, setPreview] = useState("");
+function Scanner({ documents, bump, onOpenMedicines, onNavigate }: Shared) {
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const [kind, setKind] = useState("Prescription");
-  const [selected, setSelected] = useState([true, true, true]);
-  const [saved, setSaved] = useState(false);
-  const [confirmedDemo, setConfirmedDemo] = useState(false);
+  const [language, setLanguage] = useState<VoiceLanguage>(getVoiceLanguage);
+  const [extracting, setExtracting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("");
+  const [notice, setNotice] = useState("");
+  const [extractedText, setExtractedText] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
+  const [savedReview, setSavedReview] = useState<{ id: string; name: string; mimeType: string; extractedText: string; reviewNote: string } | null>(null);
+  const [savedUrl, setSavedUrl] = useState("");
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => () => { if (savedUrl) URL.revokeObjectURL(savedUrl); }, [savedUrl]);
+
   const onFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-    setSaved(false);
-    setConfirmedDemo(false);
-    if (preview) URL.revokeObjectURL(preview);
-    setPreview(file.type.startsWith("image/") ? URL.createObjectURL(file) : "");
+    const selectedFile = event.target.files?.[0];
+    event.target.value = "";
+    if (!selectedFile) return;
+    const isPdf = selectedFile.type === "application/pdf" || selectedFile.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf && !selectedFile.type.startsWith("image/")) { setNotice("Choose a photo or PDF file."); return; }
+    if (selectedFile.size > 15 * 1024 * 1024) { setNotice("This file is over 15 MB. Choose a smaller photo or PDF to keep CAREPATH responsive."); return; }
+    setFile(selectedFile);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
+    setExtractedText("");
+    setReviewNote("");
+    setSavedReview(null);
+    setNotice("");
+    setStatus("File selected. Choose “Read text” to extract words on this device.");
   };
-  const addSelected = () => {
-    const additions = EXTRACTED_SAMPLE.filter((_, index) => selected[index]).map((item) => ({ ...item, id: `scan-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }));
-    const existing = readStored<Medicine[]>("carepath_medicines", medicines);
-    const known = new Set(existing.map((item) => `${item.name.toLowerCase()}-${item.strength.toLowerCase()}`));
-    const next = [...additions.filter((item) => !known.has(`${item.name.toLowerCase()}-${item.strength.toLowerCase()}`)), ...existing];
-    saveStored("carepath_medicines", next);
-    const record: DocumentRecord = { id: `doc-${Date.now()}`, name: fileName || `${kind} demo sample`, kind, date: todayISO(), status: "Review before use", fields: EXTRACTED_SAMPLE.filter((_, index) => selected[index]).map((item) => `${item.name} ${item.strength}`) };
-    saveStored("carepath_documents", [record, ...readStored<DocumentRecord[]>("carepath_documents", documents)]);
-    setSaved(true);
-    bump();
-    window.dispatchEvent(new Event("carepath:refresh"));
+
+  const extract = async () => {
+    if (!file || extracting) return;
+    setExtracting(true);
+    setProgress(0);
+    setStatus("Preparing local document reader…");
+    setNotice("");
+    try {
+      const result = await readDocumentText(file, language, (message, value) => {
+        setStatus(message);
+        if (typeof value === "number") setProgress(Math.max(0, Math.min(1, value)));
+      });
+      setExtractedText(result.text);
+      const pageSummary = result.totalPages > 1 ? ` Read ${result.pagesRead} of ${result.totalPages} pages.` : "";
+      const limitSummary = result.truncated ? " Only the first 8 pages were processed to keep the app responsive." : "";
+      setStatus(result.text ? `Text is ready for your review.${pageSummary}${limitSummary}` : `No readable text was found.${pageSummary} You can still save the original and add your own note.`);
+      setNotice(result.usedOcr ? "OCR may misread names, numbers, and instructions. Check every word against the original." : "Text came from the PDF itself. Check it against the original before relying on it.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not read this file. You can still save the original and add a note.");
+    } finally {
+      setExtracting(false);
+    }
   };
+
+  const saveFile = async () => {
+    if (!file || saving) return;
+    setSaving(true);
+    const id = `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const record: DocumentRecord = {
+      id,
+      name: file.name,
+      kind,
+      date: todayISO(),
+      status: extractedText.trim() ? "Extracted text · review needed" : "Original saved · no text extracted",
+      fields: extractedText.trim() ? [`${extractedText.trim().length} text characters`, ...(reviewNote.trim() ? ["Personal note added"] : [])] : reviewNote.trim() ? ["Personal note added", "Text not extracted"] : ["Text not extracted"],
+      fileStored: true,
+      mimeType: file.type,
+      size: file.size,
+    };
+    const nextDocuments = [record, ...readStored<DocumentRecord[]>("carepath_documents", documents)];
+    try {
+      await saveDocumentFile({ id, name: file.name, mimeType: file.type, size: file.size, createdAt: new Date().toISOString(), file, extractedText, reviewNote });
+      if (!saveStored("carepath_documents", nextDocuments)) throw new Error("Browser storage is full. Remove an old file or free device storage, then try again.");
+      setNotice("Original file and review notes saved on this device. No file was sent to an account or AI service.");
+      setStatus("Saved. Reopen it from Recent documents when you need it.");
+      bump();
+      window.dispatchEvent(new Event("carepath:refresh"));
+    } catch (error) {
+      await deleteDocumentFile(id).catch(() => undefined);
+      setNotice(error instanceof Error ? error.message : "Could not save this file in browser storage.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openSaved = async (document: DocumentRecord) => {
+    try {
+      const stored = await getDocumentFile(document.id);
+      if (!stored) { setNotice("The saved original file is not available in this browser. Its reference remains, but the file may have been cleared."); return; }
+      setSavedReview({ id: stored.id, name: stored.name, mimeType: stored.mimeType, extractedText: stored.extractedText, reviewNote: stored.reviewNote });
+      setSavedUrl(URL.createObjectURL(stored.file));
+      setNotice("");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not open the saved file.");
+    }
+  };
+
+  const removeSaved = async (document: DocumentRecord) => {
+    if (!window.confirm(`Remove “${document.name}” and its local notes from this browser?`)) return;
+    try {
+      if (document.fileStored) await deleteDocumentFile(document.id);
+      const next = documents.filter((item) => item.id !== document.id);
+      if (!saveStored("carepath_documents", next)) throw new Error("Could not update the local document list.");
+      if (savedReview?.id === document.id) { setSavedReview(null); setSavedUrl(""); }
+      setNotice("Document removed from this browser.");
+      bump();
+      window.dispatchEvent(new Event("carepath:refresh"));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not remove this document.");
+    }
+  };
+
   return <>
-    <PageHeader eyebrow="DOCUMENT WORKSPACE" title="Scan & Understand" description="Keep a document beside its reviewable notes. Confirm every detail against the original before using it." icon={<ScanLine size={24} />} />
+    <PageHeader eyebrow="PRIVATE DOCUMENT WORKSPACE" title="Scan & Understand" description="Choose a photo or PDF. CAREPATH reads text in your browser, lets you check it, and saves the original only after you choose." icon={<ScanLine size={24} />} />
+    <Notice><strong>Your file stays on this device.</strong> The first OCR scan downloads an English or Kannada reading model. It can take time on older phones. CAREPATH does not send the file to Gemini or a server.</Notice>
     <div className="cp-scanner-grid">
-      <Panel title="Add a document" eyebrow="PRIVATE ON THIS DEVICE" className="cp-scanner-upload">
+      <Panel title="Choose a photo or PDF" eyebrow="LOCAL FILE · UP TO 15 MB" className="cp-scanner-upload">
         <div className="cp-upload-stage">
-          {preview ? <img src={preview} alt="Selected document preview" /> : <div className="cp-upload-illustration"><div><FileImage size={34} /></div><strong>{fileName || "Your document preview"}</strong><span>{fileName ? "PDF preview is not shown here." : "Add a photo or PDF to create a review workspace."}</span></div>}
+          {file && previewUrl && file.type.startsWith("image/") ? <img src={previewUrl} alt={`Preview of ${file.name}`} /> : file && previewUrl ? <iframe title={`PDF preview of ${file.name}`} src={previewUrl} /> : <div className="cp-upload-illustration"><div><FileImage size={34} /></div><strong>{file?.name || "Your document preview"}</strong><span>{file ? "PDF selected. Use the preview or read its text." : "Add a prescription, label, lab report, or other health file."}</span></div>}
         </div>
         <div className="cp-upload-controls"><label className="cp-button primary"><Camera size={16} /> Take photo<input type="file" accept="image/*" capture="environment" onChange={onFile} /></label><label className="cp-button quiet"><Upload size={16} /> Choose file<input type="file" accept="image/*,.pdf,application/pdf" onChange={onFile} /></label><select aria-label="Document type" value={kind} onChange={(event) => setKind(event.target.value)}><option>Prescription</option><option>Medicine label</option><option>Lab report</option><option>Discharge summary</option><option>Other record</option></select></div>
-        <div className="cp-step-row"><span className="active">1</span><div><strong>Choose</strong><small>Photo or PDF</small></div><i /><span className="active">2</span><div><strong>Review</strong><small>Verify the notes</small></div><i /><span>3</span><div><strong>Save</strong><small>Keep a copy</small></div></div>
+        {file && <div className="cp-document-selected"><FileText size={16} /><span><strong>{file.name}</strong><small>{Math.max(1, Math.round(file.size / 1024))} KB · local preview</small></span></div>}
+        <div className="cp-step-row"><span className="active">1</span><div><strong>Choose</strong><small>Photo or PDF</small></div><i /><span className={extractedText ? "active" : ""}>2</span><div><strong>Review</strong><small>Check every word</small></div><i /><span className={savedReview ? "active" : ""}>3</span><div><strong>Save</strong><small>On this device</small></div></div>
       </Panel>
-      <Panel title="Review extracted fields" eyebrow="ILLUSTRATIVE PREVIEW" className="cp-extraction-panel">
-        <Notice tone="warm">This demo does not perform OCR. The sample fields below are illustrative and are not read from your file. Check the original document before saving or acting on any detail.</Notice>
-        <div className="cp-extraction-list">{EXTRACTED_SAMPLE.map((item, index) => <label className="cp-extraction-row" key={item.name}><input type="checkbox" checked={selected[index]} onChange={() => setSelected((current) => current.map((value, i) => i === index ? !value : value))} /><span className="cp-extraction-icon"><Pill size={17} /></span><span><strong>{item.name} <small>{item.strength}</small></strong><em>{item.schedule} · {item.instructions}</em></span><BadgeCheck size={17} /></label>)}</div>
-        <label className="cp-scan-confirm"><input type="checkbox" checked={confirmedDemo} onChange={(event) => setConfirmedDemo(event.target.checked)} /><span><strong>Confirm demo notes</strong><small>I understand these sample values were not read from my file. Save them only if I want these example entries in my CAREPATH list.</small></span></label>
-        <div className="cp-extraction-actions"><button className="cp-button primary" onClick={addSelected} disabled={!selected.some(Boolean) || !confirmedDemo}><Plus size={16} /> Save selected notes</button><button className="cp-button quiet" onClick={() => { setSelected([true, true, true]); setSaved(false); setConfirmedDemo(false); }}>Reset preview</button></div>
-        {saved && <Notice tone="good">Review notes and the document reference are saved on this device. Open My Medicines to review your list.</Notice>}
-        <button className="cp-text-link" onClick={onOpenMedicines}>Open My Medicines <ArrowRight size={15} /></button>
+      <Panel title="Read and review" eyebrow="NOT A MEDICAL INTERPRETATION" className="cp-extraction-panel">
+        <div className="cp-document-language"><label>Document language<select value={language} onChange={(event) => { const next = event.target.value as VoiceLanguage; setLanguage(next); saveVoiceLanguage(next); }}><option value="en">English</option><option value="kn">Kannada</option></select></label><span>Photos use OCR. PDFs read selectable text and OCR scanned pages.</span></div>
+        <div className="cp-document-reader-note"><Info size={16} /><span>OCR can mistake medicine names, decimal points, strengths, and handwriting. CAREPATH does not turn extracted text into medicine instructions.</span></div>
+        <div className="cp-extraction-actions"><button className="cp-button primary" type="button" onClick={() => void extract()} disabled={!file || extracting}><ScanLine size={16} /> {extracting ? "Reading…" : "Read text on this device"}</button>{file && <button className="cp-button quiet" type="button" onClick={() => void saveFile()} disabled={saving}>{saving ? <LoaderCircle size={15} className="cp-spin" /> : <Download size={15} />} Save original</button>}</div>
+        {extracting && <div className="cp-document-progress" aria-live="polite"><div><span>{status}</span><strong>{Math.round(progress * 100)}%</strong></div><progress max="1" value={progress} /></div>}
+        {status && <p className="cp-document-status" role="status">{status}</p>}
+        {notice && <Notice tone={notice.startsWith("OCR") || notice.startsWith("Text came") ? "warm" : "info"}>{notice}</Notice>}
+        {extractedText && <label className="cp-document-text-label">Extracted words — edit mistakes before keeping them<textarea value={extractedText} onChange={(event) => setExtractedText(event.target.value)} rows={9} spellCheck /></label>}
+        {extractedText && <ReadAloudButton text={extractedText} label="Listen to extracted document text" className="cp-document-listen" />}
+        <label className="cp-document-text-label">What do you want to remember about this file?<textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} rows={3} placeholder="Optional note in your own words" /></label>
+        <div className="cp-inline-actions"><button className="cp-button quiet" onClick={onOpenMedicines}><Pill size={16} /> Open My Medicines</button><button className="cp-button quiet" onClick={() => onNavigate("Visit Prep")}><Stethoscope size={16} /> Prepare for a visit</button></div>
       </Panel>
     </div>
-    <Panel title="Recent documents" eyebrow={`${documents.length} SAVED`}>
-      {documents.length ? <div className="cp-document-list">{documents.slice(0, 5).map((document) => <DocumentRow key={document.id} document={document} />)}</div> : <EmptyState icon={<FilePlus2 />} title="Your document shelf is ready" text="Saved document references and their review notes will appear here." />}
+    {savedReview && <Panel title={`Saved file: ${savedReview.name}`} eyebrow="LOCAL ORIGINAL · REVIEWABLE TEXT">
+      <div className="cp-saved-document-tools"><a className="cp-button quiet" href={savedUrl} target="_blank" rel="noreferrer"><Download size={15} /> Open / download original</a><button className="cp-button quiet" onClick={() => { setSavedReview(null); setSavedUrl(""); }}>Close review</button></div>
+      {savedReview.mimeType.startsWith("image/") && savedUrl && <img className="cp-saved-document-image" src={savedUrl} alt={`Saved original ${savedReview.name}`} />}
+      {savedReview.extractedText ? <><label className="cp-document-text-label">Saved extracted text<textarea value={savedReview.extractedText} readOnly rows={8} /></label><ReadAloudButton text={savedReview.extractedText} label="Listen to saved document text" /></> : <Notice>There is no extracted text for this file. Open the original and add notes after reviewing it.</Notice>}
+      {savedReview.reviewNote && <div className="cp-document-saved-note"><strong>Your note</strong><p>{savedReview.reviewNote}</p></div>}
+    </Panel>}
+    <Panel title="Recent documents" eyebrow={`${documents.length} SAVED ON THIS DEVICE`}>
+      {documents.length ? <div className="cp-document-list">{documents.slice(0, 8).map((document) => <DocumentRow key={document.id} document={document} onOpen={() => void openSaved(document)} onDelete={() => void removeSaved(document)} />)}</div> : <EmptyState icon={<FilePlus2 />} title="Your document shelf is ready" text="Original files and reviewed text appear here after you save them." />}
     </Panel>
   </>;
 }
 
-function DocumentRow({ document }: { document: DocumentRecord }) { return <div className="cp-document-row"><span className="cp-file-icon"><FileCheck2 size={19} /></span><span className="cp-document-name"><strong>{document.name}</strong><small>{document.kind} · {dateLabel(document.date)}</small>{document.fields.length > 0 && <em>{document.fields.join(" · ")}</em>}</span><span className="cp-status-tag warm">{document.status}</span></div>; }
+function DocumentRow({ document, onOpen, onDelete }: { document: DocumentRecord; onOpen?: () => void; onDelete?: () => void }) {
+  return <div className="cp-document-row"><span className="cp-file-icon"><FileCheck2 size={19} /></span><span className="cp-document-name"><strong>{document.name}</strong><small>{document.kind} · {dateLabel(document.date)}{document.size ? ` · ${Math.max(1, Math.round(document.size / 1024))} KB` : ""}</small>{document.fields?.length > 0 && <em>{document.fields.join(" · ")}</em>}</span><span className={`cp-status-tag ${document.fileStored ? "good" : "warm"}`}>{document.fileStored ? document.status : "Old reference only"}</span>{(onOpen || onDelete) && <div className="cp-document-row-actions"><button className="cp-button quiet" onClick={onOpen} disabled={!document.fileStored || !onOpen} aria-label={`Review ${document.name}`}><FileText size={14} /> Review</button>{onDelete && <button className="cp-button quiet" onClick={onDelete} aria-label={`Remove ${document.name}`}><Trash2 size={14} /></button>}</div>}</div>;
+}
 
 function MedicationChanges({ medicines, onOpenMedicines, onNavigate }: Shared) {
   type Snapshot = { savedAt: string; entries: Record<string, Medicine> };
@@ -600,7 +711,7 @@ function SafetyReview({ medicines, profile, onOpenMedicines, onNavigate }: Share
     { title: "Duplicate ingredients", detail: "Not assessed. CAREPATH does not collect or verify active ingredients, so different product names cannot be safely compared here.", status: "Not checked", tone: "info", icon: <Info size={18} /> },
     { title: "Instructions & schedule", detail: missingInfo.length ? `${missingInfo.length} entry${missingInfo.length === 1 ? "" : "ies"} need schedule or instruction notes.` : "Saved schedule and instruction fields are present; confirm against the original.", status: missingInfo.length ? "Review entries" : "Confirm source", tone: missingInfo.length ? "warm" : "info", icon: <Clock3 size={18} /> },
     { title: "Interactions & suitability", detail: "Not assessed by this offline demo. Ask a pharmacist or clinician to review your full list, allergies, and health history.", status: "Professional review", tone: "info", icon: <Stethoscope size={18} /> },
-    { title: "Source confidence", detail: "No source document is verified against these entries. A scan preview, if used, is illustrative demo text and is not OCR.", status: "Not verified", tone: "info", icon: <FileCheck2 size={18} /> },
+    { title: "Source confidence", detail: "CAREPATH can extract text from a saved document, but does not verify that text or match it to a medicine record. Compare the original package or prescription yourself.", status: "User review required", tone: "info", icon: <FileCheck2 size={18} /> },
   ];
   return <>
     <PageHeader eyebrow="MEDICATION ORGANIZER" title="Safety Check" description="Review what is recorded, spot missing details, and prepare a complete list for a pharmacist or clinician." icon={<ShieldCheck size={24} />} action={<button className="cp-button primary" onClick={onOpenMedicines}><Pill size={16} /> Review medicine list</button>} />
@@ -903,6 +1014,8 @@ function Learn({ onNavigate }: Shared) {
 
 function SettingsPage({ profile, bump, medicines, readings, documents, onNavigate }: Shared) {
   const [notice, setNotice] = useState("");
+  const [voiceLanguage, setVoiceLanguage] = useState<VoiceLanguage>(getVoiceLanguage);
+  const [voiceRate, setVoiceRate] = useState(getVoiceRate);
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
   const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
   const exportData = () => {
@@ -914,7 +1027,7 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
         try { localRecord[key] = JSON.parse(raw); } catch { localRecord[key] = raw; }
       });
     } catch { setNotice("This browser could not read the local CAREPATH record for export."); return; }
-    const payload = { exportedAt: new Date().toISOString(), purpose: "Personal CAREPATH browser record backup", storage: "This export includes the CAREPATH data keys saved in this browser, including records, preferences, and reminders.", records: localRecord };
+    const payload = { exportedAt: new Date().toISOString(), purpose: "Personal CAREPATH browser record backup", storage: "This export includes CAREPATH localStorage records and preferences. Original document files stored in browser IndexedDB are not embedded; download each from Scan & Understand before clearing browser data.", records: localRecord };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -922,14 +1035,20 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
     link.download = `carepath-record-${todayISO()}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setNotice("Your record export was prepared by this browser.");
+    setNotice("Your record export was prepared. Original document files are not inside this JSON; download them from Scan & Understand separately.");
   };
-  const deleteLocalRecord = () => {
+  const deleteLocalRecord = async () => {
     if (!window.confirm("Delete CAREPATH notes saved in this browser? This cannot be undone here. Keep an export first if you may need it.")) return;
-    Object.keys(localStorage).filter((key) => key.startsWith("carepath_")).forEach((key) => localStorage.removeItem(key));
-    setNotice("Your CAREPATH notes were deleted from this browser.");
-    bump();
-    window.dispatchEvent(new Event("carepath:refresh"));
+    try {
+      await clearDocumentFiles();
+      Object.keys(localStorage).filter((key) => key.startsWith("carepath_")).forEach((key) => localStorage.removeItem(key));
+      setNotice("CAREPATH notes and saved document files were deleted from this browser.");
+      window.dispatchEvent(new Event("carepath:voice-setting"));
+      bump();
+      window.dispatchEvent(new Event("carepath:refresh"));
+    } catch (error) {
+      setNotice(error instanceof Error ? `Could not finish deleting all local data: ${error.message}` : "Could not finish deleting local document data.");
+    }
   };
   const restoreDemo = () => {
     const id = `CP-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -941,7 +1060,8 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
   };
   return <>
     <PageHeader eyebrow="YOU ARE IN CONTROL" title="Settings & Privacy" description="Manage your local record, profile, and how your information is stored." icon={<ShieldCheck size={24} />} />
-    <div className="cp-settings-grid"><Panel title="Your data on this device" eyebrow="LOCAL-FIRST"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><ShieldCheck size={22} /></span><div><strong>CAREPATH stores your notes in this browser</strong><p>Medicines, readings, symptom notes, visit preparation, report values, and profile details use this device’s local storage. They are not synced to a server by this demo.</p></div></div><div className="cp-data-counts"><span><strong>{medicines.length}</strong> medicines</span><span><strong>{readings.length}</strong> readings</span><span><strong>{labResults.length}</strong> report values</span><span><strong>{documents.length}</strong> document references</span><span><strong>{symptomNotes.length}</strong> symptom notes</span></div><div className="cp-settings-actions"><button className="cp-button primary" onClick={exportData}><ArrowDownToLine size={16} /> Export my record</button><button className="cp-button quiet" onClick={restoreDemo}><Sparkles size={15} /> Set up CAREPATH ID</button><button className="cp-button danger" onClick={deleteLocalRecord}><Trash2 size={15} /> Delete local record</button></div>{notice && <Notice tone="good">{notice}</Notice>}</Panel><Panel title="Profile & emergency details" eyebrow="OPTIONAL"><p className="cp-muted-copy">{profile.allergies || profile.emergencyName ? "Your profile includes saved personal details." : "You have not added personal allergy or trusted contact notes yet."}</p><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}>Open Care Circle profile</button></Panel></div>
+    <div className="cp-settings-grid"><Panel title="Your data on this device" eyebrow="LOCAL-FIRST"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><ShieldCheck size={22} /></span><div><strong>CAREPATH stores your notes in this browser</strong><p>Medicines, readings, symptom notes, visit preparation, report values, and profile details use this device’s local storage. They are not synced to a server by this demo.</p></div></div><div className="cp-data-counts"><span><strong>{medicines.length}</strong> medicines</span><span><strong>{readings.length}</strong> readings</span><span><strong>{labResults.length}</strong> report values</span><span><strong>{documents.length}</strong> document references</span><span><strong>{symptomNotes.length}</strong> symptom notes</span></div><div className="cp-settings-actions"><button className="cp-button primary" onClick={exportData}><ArrowDownToLine size={16} /> Export my record</button><button className="cp-button quiet" onClick={restoreDemo}><Sparkles size={15} /> Create device reference</button><button className="cp-button danger" onClick={() => void deleteLocalRecord()}><Trash2 size={15} /> Delete local record</button></div>{notice && <Notice tone="info">{notice}</Notice>}</Panel><Panel title="Profile & emergency details" eyebrow="OPTIONAL"><p className="cp-muted-copy">{profile.allergies || profile.emergencyName ? "Your profile includes saved personal details." : "You have not added personal allergy or trusted contact notes yet."}</p><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}>Open Care Circle profile</button></Panel></div>
+    <div className="cp-settings-grid cp-settings-followup"><Panel title="Voice & reading" eyebrow="ACCESSIBILITY"><p className="cp-muted-copy">Use the Voice on/off control at the top of the app to stop or enable reading and microphone features. Read-aloud buttons work on individual sections. Browser voice recognition may use the browser’s speech service; do not say names or identifying details.</p><div className="cp-settings-voice-controls"><label>Voice language<select value={voiceLanguage} onChange={(event) => { const next = event.target.value as VoiceLanguage; setVoiceLanguage(next); saveVoiceLanguage(next); }}><option value="en">English</option><option value="kn">Kannada</option></select></label><label>Reading speed <span>{voiceRate.toFixed(2)}×</span><input type="range" min="0.65" max="1.15" step="0.05" value={voiceRate} onChange={(event) => { const next = Number(event.target.value); setVoiceRate(next); saveVoiceRate(next); }} /></label></div></Panel><Panel title="CAREPATH ID & sign-in" eyebrow="ACCOUNT STATUS"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><Info size={22} /></span><div><strong>This version has no login, logout, or cloud account</strong><p>“CAREPATH ID” is only a reference stored in this browser. It does not verify identity, sync records, or protect a shared device with a password. Avoid using this browser for private health details if others can access it.</p></div></div><div className="cp-settings-actions"><button className="cp-button quiet" onClick={() => onNavigate("Emergency Help")}>Review emergency card</button></div></Panel></div>
     <Notice tone="warm">Deleting browser data or using another browser may remove or separate this record. Keep your clinical records in the original source system too.</Notice>
   </>;
 }
