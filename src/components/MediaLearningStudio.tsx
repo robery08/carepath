@@ -63,9 +63,13 @@ const copy = {
 } as const;
 
 function parseSeconds(value: string): number | undefined {
-  const match = value.trim().match(/(?:(\d{2}):)?(\d{2}):(\d{2})[.,](\d{3})/);
-  if (!match) return undefined;
-  return (Number(match[1] || 0) * 3600) + (Number(match[2]) * 60) + Number(match[3]) + (Number(match[4]) / 1000);
+  const normalized = value.trim().replace(",", ".");
+  const [clock, fraction = "0"] = normalized.split(".");
+  const parts = clock.split(":").map(Number);
+  if (!parts.length || parts.some((part) => !Number.isFinite(part))) return undefined;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2] + Number("0." + fraction);
+  if (parts.length === 2) return parts[0] * 60 + parts[1] + Number("0." + fraction);
+  return undefined;
 }
 
 function parseTranscript(value: string): Cue[] {
