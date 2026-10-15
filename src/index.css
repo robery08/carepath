@@ -3636,3 +3636,20 @@ footer strong {
 @media(prefers-reduced-motion:reduce){.cp-tour-scene-orb{animation:none}.cp-tour-progress span{transition:none}}
 @media(max-width:760px){.cp-admin-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.cp-admin-metrics>.cp-button{grid-column:1/-1;justify-self:start}.cp-admin-content-list,.cp-admin-updates-grid{grid-template-columns:1fr}.cp-tour-screen{min-height:285px}.cp-admin-history-list>article{grid-template-columns:30px minmax(0,1fr)}.cp-admin-history-list>article>.cp-button{grid-column:2;justify-self:start}.cp-admin-hero{align-items:flex-start;flex-wrap:wrap}.cp-admin-hero>.cp-button{margin-left:65px}}
 @media(max-width:560px){.cp-admin-form-grid{grid-template-columns:1fr}.cp-admin-form-grid .span-two{grid-column:auto}.cp-admin-metrics{grid-template-columns:1fr}.cp-admin-metrics>.cp-button{grid-column:auto}.cp-admin-hero{gap:10px}.cp-admin-mark{flex-basis:42px;width:42px;height:42px}.cp-admin-hero>.cp-button{margin-left:0}.cp-admin-section-heading{align-items:flex-start;flex-wrap:wrap}.cp-admin-section-heading select{width:100%}.cp-tour-heading{display:grid}.cp-tour-language{width:max-content}.cp-tour-screen{min-height:265px;padding:18px}.cp-tour-controls{align-items:flex-start;flex-direction:column}.cp-tour-buttons,.cp-tour-options{width:100%;justify-content:space-between}.cp-tour-options button{flex:1}.cp-admin-footnote{flex-wrap:wrap}.cp-admin-footnote span{flex-basis:calc(100% - 30px)}.cp-admin-footnote button{margin-left:25px}}
+
+/* In-app MedlinePlus medicine lookup */
+.cp-live-med-search>label:first-of-type { display:grid;gap:6px;color:#466466;font-size:11px;font-weight:750; }
+.cp-live-med-search>label:first-of-type input { width:100%;min-height:43px;padding:9px 11px;border:1px solid #dbe8e2;border-radius:10px;color:#294f51;background:#fff;font:inherit;font-size:14px; }
+.cp-live-med-consent { display:flex!important;align-items:flex-start;gap:8px!important;padding:10px;border-radius:10px;background:#fff; }
+.cp-live-med-consent input { margin:2px 0 0; }
+.cp-live-med-search>.cp-button { width:max-content;max-width:100%;min-height:43px; }
+.cp-drug-result { display:grid;gap:8px;margin-top:12px;padding:15px;border:1px solid #cfe3d8;border-radius:13px;background:linear-gradient(145deg,#fff,#f5faf7); }
+.cp-drug-result h3 { margin:0;color:#294e50;font-size:16px; }
+.cp-drug-result p { margin:0;color:#536c6e;font-size:12px;line-height:1.7; }
+.cp-drug-result>a { display:flex;align-items:center;gap:5px;color:#087d67;font-size:12px;font-weight:800;text-decoration:none; }
+.cp-drug-result>small { color:#728787;font-size:10px;line-height:1.55; }
+.cp-ai-security-note { display:flex;align-items:flex-start;gap:7px;margin-top:11px;padding:10px;border:1px solid #e0ebe4;border-radius:10px;color:#607876;background:#f7faf8;font-size:10px;line-height:1.5; }
+.cp-ai-security-note svg { flex:0 0 15px;color:#13836b; }
+@media (max-width:640px) {
+  .cp-live-med-search>.cp-button { width:100%;justify-content:center; }
+}
