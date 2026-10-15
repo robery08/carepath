@@ -101,6 +101,7 @@ const navItems = [
   { name: "Care Circle", icon: Users },
   { name: "Safety Alerts", icon: AlertTriangle },
   { name: "Learn", icon: BookOpen },
+  { name: "Admin Preview", icon: ShieldCheck },
 ];
 
 type RouteOverlay = "medicines" | "monitor" | null;
