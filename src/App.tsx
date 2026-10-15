@@ -507,7 +507,7 @@ function App() {
           </div>
         {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} allergies={profile.allergies || ""} onNavigate={openSection} onOpenMonitor={openMonitor} onMarkDose={markDose} /> : <>
             <div className="cp-route-topline"><button onClick={() => openSection("Home")}><Home size={14} /> Home</button><ChevronRight size={13} /><span>{active}</span></div>
-            <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} /></Suspense>
+            <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onInstallApp={() => void installApp()} /></Suspense>
           </>}
           <footer className="cp-app-footer"><div><strong>CAREPATH</strong><span>Your health information. Your control.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
         </section>
@@ -651,6 +651,7 @@ function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => voi
   const cards = [
     { title: "CAREPATH EASY", text: "A calmer way to use your health workspace", detail: "Large controls, read-aloud support, and clear next steps.", action: "Turn on Easy mode", route: "__easy", icon: <Accessibility size={24} />, tone: "mint" },
     { title: "ASK CAREPATH", text: "Find information with a safer starting point", detail: "Read curated answers and official sources. Your typed question stays on this device.", action: "Open ASK CAREPATH", route: "ASK CAREPATH", icon: <Search size={24} />, tone: "violet" },
+    { title: "LEARN WITH AUDIO & VIDEO", text: "Play a clip and find the moment you need", detail: "Add a device-local video or audio clip, search its captions, and hear matching lines.", action: "Open learning studio", route: "Learn", icon: <BookOpen size={24} />, tone: "blue" },
     { title: "SAFETY REVIEW", text: "See what needs a second look", detail: "Review missing notes, repeated names, and questions for a professional.", action: "Review my list", route: "Safety Check", icon: <ShieldCheck size={24} />, tone: "amber" },
     { title: "HEALTH JOURNEY", text: "Keep the story together", detail: "Bring readings, documents, and personal notes into one timeline.", action: "Open timeline", route: "Health Timeline", icon: <Clock3 size={24} />, tone: "blue" },
     { title: "CARE CIRCLE", text: "Keep support close", detail: "Save optional care-team and trusted-contact details on this device.", action: "Open Care Circle", route: "Care Circle", icon: <Users size={24} />, tone: "rose" },

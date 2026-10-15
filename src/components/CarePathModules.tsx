@@ -128,6 +128,7 @@ type Props = {
   onOpenMonitor: () => void;
   onScheduleReview: (medicine: string, at: string) => void;
   onNavigate: (section: string) => void;
+  onInstallApp: () => void;
 };
 
 const DEFAULT_PROFILE: Profile = {
@@ -238,7 +239,7 @@ function Notice({ children, tone = "info" }: { children: ReactNode; tone?: "info
   return <div className={`cp-notice ${tone}`}><Icon size={17} /><p>{children}</p></div>;
 }
 
-export default function CarePathModules({ active, medicineCount, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate }: Props) {
+export default function CarePathModules({ active, medicineCount, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate, onInstallApp }: Props) {
   const [refresh, setRefresh] = useState(0);
   const medicines = useMemo(() => readStored<Medicine[]>("carepath_medicines", DEFAULT_MEDICINES), [medicineCount, refresh]);
   const readings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", DEFAULT_READINGS), [refresh]);
@@ -257,7 +258,7 @@ export default function CarePathModules({ active, medicineCount, onOpenMedicines
     };
   }, []);
 
-  const shared = { medicines, readings, documents, profile, medEvents, bump, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate };
+  const shared = { medicines, readings, documents, profile, medEvents, bump, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate, onInstallApp };
 
   return (
     <div className="cp-module">
@@ -297,6 +298,7 @@ type Shared = {
   onOpenMonitor: () => void;
   onScheduleReview: (medicine: string, at: string) => void;
   onNavigate: (section: string) => void;
+  onInstallApp: () => void;
 };
 
 const MEDICINE_MARKETS = [
@@ -1146,7 +1148,7 @@ function Learn({ onNavigate }: Shared) {
   </>;
 }
 
-function SettingsPage({ profile, bump, medicines, readings, documents, onNavigate }: Shared) {
+function SettingsPage({ profile, bump, medicines, readings, documents, onNavigate, onInstallApp }: Shared) {
   const [notice, setNotice] = useState("");
   const [voiceLanguage, setVoiceLanguage] = useState<VoiceLanguage>(getVoiceLanguage);
   const [voiceRate, setVoiceRate] = useState(getVoiceRate);
@@ -1170,6 +1172,16 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
     link.click();
     URL.revokeObjectURL(url);
     setNotice("Your record export was prepared. Original document files are not inside this JSON; download them from Scan & Understand separately.");
+  };
+  const copyAppLink = async () => {
+    try {
+      const appUrl = new URL(window.location.href);
+      appUrl.hash = "";
+      await navigator.clipboard.writeText(appUrl.toString());
+      setNotice("The CAREPATH app link was copied. Your personal notes are not included or synced.");
+    } catch {
+      setNotice("Clipboard access is unavailable here. Copy the app address from your browser; it does not include your personal notes.");
+    }
   };
   const deleteLocalRecord = async () => {
     if (!window.confirm("Delete CAREPATH notes saved in this browser? This cannot be undone here. Keep an export first if you may need it.")) return;
@@ -1196,6 +1208,7 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
     <PageHeader eyebrow="YOU ARE IN CONTROL" title="Settings & Privacy" description="Manage your local record, profile, and how your information is stored." icon={<ShieldCheck size={24} />} />
     <div className="cp-settings-grid"><Panel title="Your data on this device" eyebrow="LOCAL-FIRST"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><ShieldCheck size={22} /></span><div><strong>CAREPATH stores your notes in this browser</strong><p>Medicines, readings, symptom notes, visit preparation, report values, and profile details use this device’s local storage. They are not synced to a server by this demo.</p></div></div><div className="cp-data-counts"><span><strong>{medicines.length}</strong> medicines</span><span><strong>{readings.length}</strong> readings</span><span><strong>{labResults.length}</strong> report values</span><span><strong>{documents.length}</strong> document references</span><span><strong>{symptomNotes.length}</strong> symptom notes</span></div><div className="cp-settings-actions"><button className="cp-button primary" onClick={exportData}><ArrowDownToLine size={16} /> Export my record</button><button className="cp-button quiet" onClick={restoreDemo}><Sparkles size={15} /> Create device reference</button><button className="cp-button danger" onClick={() => void deleteLocalRecord()}><Trash2 size={15} /> Delete local record</button></div>{notice && <Notice tone="info">{notice}</Notice>}</Panel><Panel title="Profile & emergency details" eyebrow="OPTIONAL"><p className="cp-muted-copy">{profile.allergies || profile.emergencyName ? "Your profile includes saved personal details." : "You have not added personal allergy or trusted contact notes yet."}</p><button className="cp-button quiet" onClick={() => onNavigate("Care Circle")}>Open Care Circle profile</button></Panel></div>
     <div className="cp-settings-grid cp-settings-followup"><Panel title="Voice & reading" eyebrow="ACCESSIBILITY"><p className="cp-muted-copy">Use the Voice on/off control at the top of the app to stop or enable reading and microphone features. Read-aloud buttons work on individual sections. Browser voice recognition may use the browser’s speech service; do not say names or identifying details.</p><div className="cp-settings-voice-controls"><label>Voice language<select value={voiceLanguage} onChange={(event) => { const next = event.target.value as VoiceLanguage; setVoiceLanguage(next); saveVoiceLanguage(next); }}><option value="en">English</option><option value="kn">Kannada</option></select></label><label>Reading speed <span>{voiceRate.toFixed(2)}×</span><input type="range" min="0.65" max="1.15" step="0.05" value={voiceRate} onChange={(event) => { const next = Number(event.target.value); setVoiceRate(next); saveVoiceRate(next); }} /></label></div></Panel><Panel title="CAREPATH ID & sign-in" eyebrow="ACCOUNT STATUS"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><Info size={22} /></span><div><strong>This version has no login, logout, or cloud account</strong><p>“CAREPATH ID” is only a reference stored in this browser. It does not verify identity, sync records, or protect a shared device with a password. Avoid using this browser for private health details if others can access it.</p></div></div><div className="cp-settings-actions"><button className="cp-button quiet" onClick={() => onNavigate("Emergency Help")}>Review emergency card</button></div></Panel></div>
+    <div className="cp-settings-grid cp-settings-followup"><Panel title="Use CAREPATH on another device" eyebrow="INSTALL OR OPEN THE PUBLIC APP"><div className="cp-privacy-summary"><span className="cp-privacy-icon"><Download size={22} /></span><div><strong>Keep the app one tap away</strong><p>Install CAREPATH on this device or copy its public link to open the app elsewhere. Personal notes stay in this browser and do not sync to another device.</p></div></div><div className="cp-settings-actions"><button className="cp-button primary" onClick={onInstallApp}><Download size={16} /> Install CAREPATH</button><button className="cp-button quiet" onClick={() => void copyAppLink()}><Copy size={15} /> Copy app link</button></div></Panel></div>
     <Notice tone="warm">Deleting browser data or using another browser may remove or separate this record. Keep your clinical records in the original source system too.</Notice>
   </>;
 }

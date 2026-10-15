@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Square, Volume2 } from "lucide-react";
 import { speakText, stopReading } from "../voice";
+import type { VoiceLanguage } from "../voice";
 
 type Props = {
   text: string | (() => string);
   label: string;
   className?: string;
+  language?: VoiceLanguage;
 };
 
-export default function ReadAloudButton({ text, label, className = "" }: Props) {
+export default function ReadAloudButton({ text, label, className = "", language }: Props) {
   const [speaking, setSpeaking] = useState(false);
   const [message, setMessage] = useState("");
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
@@ -36,7 +38,7 @@ export default function ReadAloudButton({ text, label, className = "" }: Props) 
       return;
     }
     const content = typeof text === "function" ? text() : text;
-    if (!speakText(content)) setMessage("Read-aloud is not available in this browser.");
+    if (!speakText(content, { language })) setMessage("Read-aloud is not available in this browser.");
     else setMessage("");
   };
 

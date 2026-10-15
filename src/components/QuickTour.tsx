@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import MediaLearningStudio from "./MediaLearningStudio";
 import {
   Activity,
   ArrowLeft,
@@ -84,6 +85,7 @@ export default function QuickTour() {
       <div className="cp-tour-controls"><div className="cp-tour-buttons"><button onClick={() => step(-1)} disabled={index === 0} aria-label="Previous tour step"><ArrowLeft size={17} /></button><button className="cp-tour-play" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause the tour" : "Play the tour"}>{playing ? <CirclePause size={20} /> : <CirclePlay size={20} />}{playing ? "Pause" : index === slides.length - 1 ? "Replay tour" : "Play tour"}</button><button onClick={() => step(1)} disabled={index === slides.length - 1} aria-label="Next tour step"><ArrowRight size={17} /></button></div><div className="cp-tour-options"><button className={narration ? "selected" : ""} aria-pressed={narration} onClick={() => setNarration((value) => !value)}>{narration ? <Volume2 size={15} /> : <VolumeX size={15} />} Narration {narration ? "on" : "off"}</button><button className={captions ? "selected" : ""} aria-pressed={captions} onClick={() => setCaptions((value) => !value)}><Captions size={16} /> Captions {captions ? "on" : "off"}</button></div></div>
       <div className="cp-tour-progress" role="progressbar" aria-label="Tour progress" aria-valuemin={1} aria-valuemax={slides.length} aria-valuenow={index + 1}><span style={{ width: `${((index + 1) / slides.length) * 100}%` }} /></div>
     </div>
+    <MediaLearningStudio language={language} />
     <details className="cp-tour-transcript"><summary><BookOpen size={16} /> Read the full tour transcript</summary><ol>{slides.map((slide, itemIndex) => <li key={slide.title}><strong>{itemIndex + 1}. {slide.title}</strong><p>{slide.caption}</p></li>)}</ol><small><Mic size={13} /> Narration uses your browser’s built-in text-to-speech, when available. No AI video or AI medical response is generated here.</small></details>
   </section>;
 }
