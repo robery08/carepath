@@ -267,7 +267,7 @@ export default function CarePathModules({ active, medicineCount, initialQuestion
   return (
     <div className="cp-module">
       {active === "Care Guide" && <CareGuide />}
-      {active === "Symptom Guide" && <SymptomGuide onNavigate={onNavigate} />}
+      {active === "Symptom Guide" && <SymptomGuide onNavigate={onNavigate} onAskQuestion={onAskQuestion} />}
       {active === "My Journeys" && <LifeToAction onNavigate={onNavigate} onAskQuestion={onAskQuestion} />}
       {active === "Official Sources" && <OfficialSources {...shared} />}
       {active === "ASK CARE CONNECTED" && <AskCarepath {...shared} initialQuestion={initialQuestion} onQuestionConsumed={onQuestionConsumed} />}

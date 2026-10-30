@@ -247,3 +247,133 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .cp-search-results button>span:first-child{color:#a34b98;background:#f7e9f4}
 @media(max-width:700px){.cp-action-center{background:radial-gradient(ellipse at 100% 0%,rgba(255,196,103,.3),transparent 25%),linear-gradient(135deg,#432655,#a04491 65%,#e76768)}.cp-action-center::before{top:8%;right:8%;width:11px;height:11px}.cp-home-feature-1,.cp-home-feature-2,.cp-home-feature-3{background:#fff}}
 @media(prefers-reduced-motion:no-preference){.brand-logo{animation:cc-logo-glow 5s ease-in-out infinite alternate}.cp-action-center-icon{animation:cc-float 4s ease-in-out infinite}@keyframes cc-logo-glow{from{box-shadow:0 8px 20px rgba(199,70,146,.22)}to{box-shadow:0 10px 30px rgba(255,138,110,.42)}}@keyframes cc-float{50%{transform:translateY(-3px) rotate(4deg)}}}
+
+/* Symptom guidance: answer first, private note second. */
+.cc-symptom-page{gap:15px;max-width:1100px}
+.cc-symptom-header .cp-page-title-icon{color:#fff;background:linear-gradient(145deg,#e76793,#a94ac0);box-shadow:0 9px 22px rgba(177,72,150,.2)}
+.cc-symptom-search{position:relative;overflow:hidden;padding:clamp(18px,3vw,27px);border:1px solid #ecd8e8;border-radius:22px;background:radial-gradient(circle at 96% 0%,rgba(251,194,115,.3),transparent 28%),radial-gradient(circle at 0% 100%,rgba(202,140,224,.16),transparent 34%),linear-gradient(135deg,#fffaf8,#fff 52%,#fbf2fb);box-shadow:0 14px 34px rgba(73,40,78,.075)}
+.cc-symptom-search-heading{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.cc-symptom-search-heading>span{display:grid;place-items:center;width:40px;height:40px;border-radius:14px;color:#9c4898;background:linear-gradient(145deg,#ffe7de,#f4e6fa)}
+.cc-symptom-search-heading>div{display:grid;gap:3px}
+.cc-symptom-search-heading strong{color:#4a2f58;font-size:16px}
+.cc-symptom-search-heading small{color:#776b7d;font-size:12px;line-height:1.5}
+.cc-symptom-search-form{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;align-items:center;gap:10px;min-height:60px;padding:7px 8px 7px 16px;border:1px solid #ead9e8;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(78,44,81,.07)}
+.cc-symptom-search-form>svg{color:#946b9b}
+.cc-symptom-search-form input{width:100%;min-width:0;min-height:44px;border:0;outline:0;color:#3e3249;background:transparent;font:inherit;font-size:15px}
+.cc-symptom-search-form input::placeholder{color:#a092a5}
+.cc-symptom-search-form input:focus-visible{outline:0}
+.cc-symptom-mic,.cc-symptom-submit{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 13px;border:1px solid #eadce9;border-radius:12px;color:#73527d;background:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+.cc-symptom-mic:hover,.cc-symptom-submit:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(76,43,82,.12)}
+.cc-symptom-mic.listening{color:#fff;border-color:#c54f91;background:#c54f91}
+.cc-symptom-submit{border-color:#5b3476;color:#fff;background:linear-gradient(110deg,#52316e,#a34692 65%,#e76768)}
+.cc-symptom-submit:disabled{opacity:.52;cursor:not-allowed;transform:none;box-shadow:none}
+.cc-symptom-popular{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:15px}
+.cc-symptom-popular>span{margin-right:3px;color:#786b7b;font-size:11px;font-weight:800}
+.cc-symptom-popular button{min-height:36px;padding:7px 12px;border:1px solid #eadfea;border-radius:999px;color:#684771;background:rgba(255,255,255,.88);font:inherit;font-size:12px;font-weight:750;cursor:pointer;transition:transform .15s ease,border-color .15s ease,background .15s ease}
+.cc-symptom-popular button:nth-of-type(3n+1){border-color:#f0d9c9;color:#9a573d;background:#fff6ef}
+.cc-symptom-popular button:nth-of-type(3n+2){border-color:#d6e9dc;color:#28745f;background:#f2fbf5}
+.cc-symptom-popular button:nth-of-type(3n){border-color:#e8d8f0;color:#875295;background:#faf2fc}
+.cc-symptom-popular button:hover{transform:translateY(-2px);border-color:#d5a8ce}
+.cc-symptom-drug-toggle{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:0;border:0;color:#8c408b;background:none;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.cc-symptom-drug-help{display:block;margin:5px 0 0 24px;color:#847587;font-size:10px;line-height:1.45}
+.cc-symptom-voice{margin:8px 0 0;color:#795282;font-size:11px}
+.cc-symptom-emergency{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:12px;padding:15px 17px;border:1px solid #f2b6a8;border-radius:16px;color:#762a36;background:linear-gradient(110deg,#fff0ec,#fff8eb);box-shadow:0 8px 18px rgba(147,46,48,.08)}
+.cc-symptom-emergency>svg{color:#d94848}
+.cc-symptom-emergency strong{font-size:14px}
+.cc-symptom-emergency p{margin:4px 0 0;font-size:12px;line-height:1.55}
+.cc-symptom-emergency button,.cc-symptom-info-card.urgent-care button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 12px;border:1px solid #e8a199;border-radius:11px;color:#8d2c37;background:#fff;font:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.cc-symptom-match{display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border:1px solid #cfe8d9;border-radius:12px;color:#306b53;background:#f4fbf6;font-size:12px;line-height:1.5}
+.cc-symptom-match svg{flex:0 0 17px;color:#239276}
+.cc-symptom-result{display:grid;gap:16px;padding:clamp(17px,3vw,25px);border:1px solid #ebdce8;border-radius:20px;background:linear-gradient(160deg,#fff 0%,#fff 72%,#fff9f5 100%);box-shadow:0 12px 30px rgba(71,39,77,.07);animation:cc-guide-in .22s ease-out}
+.cc-symptom-result-heading{display:flex;align-items:center;gap:12px}
+.cc-symptom-result-icon{display:grid;place-items:center;flex:0 0 46px;width:46px;height:46px;border:1px solid #f3dfdf;border-radius:16px;color:#c84e89;background:linear-gradient(145deg,#ffebe2,#f7e7fb)}
+.cc-symptom-result-icon.cough{color:#198b7f;background:linear-gradient(145deg,#e3faf1,#e8f6ff)}
+.cc-symptom-result-icon.leg-pain{color:#c87b25;background:linear-gradient(145deg,#fff1dd,#ffe7e0)}
+.cc-symptom-result-heading>div{min-width:0;flex:1}
+.cc-symptom-result-heading h2{margin:3px 0 0;color:#462b55;font-size:clamp(20px,3vw,27px)}
+.cc-symptom-result-heading .cp-eyebrow{color:#a34d96;font-size:9px;letter-spacing:1px}
+.cc-symptom-read .cp-read-button{min-height:39px;border-color:#e8d9e9;color:#75477d;background:#fff}
+.cc-symptom-result-summary{display:flex;align-items:flex-start;gap:9px;padding:13px 14px;border:1px solid #eadff0;border-radius:13px;color:#5b4a63;background:linear-gradient(110deg,#faf3fc,#fffaf5);font-size:12px;line-height:1.65}
+.cc-symptom-result-summary svg{flex:0 0 17px;margin-top:2px;color:#9b55a2}
+.cc-symptom-result-summary p{margin:0}
+.cc-symptom-result-summary strong{display:block;margin-top:4px;color:#684276;font-size:11px}
+.cc-symptom-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cc-symptom-info-card{padding:16px;border:1px solid #e9e3e9;border-radius:16px;background:#fff}
+.cc-symptom-info-card.self-care{background:linear-gradient(145deg,#f2fbf6,#fff 85%)}
+.cc-symptom-info-card.urgent-care{border-color:#f1d9c9;background:linear-gradient(145deg,#fff7ee,#fff 85%)}
+.cc-symptom-info-card h3{display:flex;align-items:center;gap:8px;margin:0;color:#4c3557;font-size:14px}
+.cc-symptom-info-card.self-care h3 svg{color:#23876f}
+.cc-symptom-info-card.urgent-care h3 svg{color:#bf673b}
+.cc-symptom-info-card ul{display:grid;gap:9px;margin:12px 0 0;padding-left:18px;color:#5e5864;font-size:12px;line-height:1.65}
+.cc-symptom-info-card.self-care li::marker{color:#3aaf90}
+.cc-symptom-info-card.urgent-care li::marker{color:#de8b50}
+.cc-symptom-info-card.urgent-care button{margin-top:12px}
+.cc-symptom-medicine-section{display:grid;gap:13px;padding:17px;border:1px solid #e8dced;border-radius:17px;background:linear-gradient(140deg,#fbf6fd,#fff 52%,#fff7f1)}
+.cc-symptom-section-title{display:flex;align-items:flex-start;gap:10px}
+.cc-symptom-section-title>span{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:12px;color:#9650a0;background:linear-gradient(145deg,#f3e4fb,#ffebe4)}
+.cc-symptom-section-title h3{margin:0;color:#4b3158;font-size:15px}
+.cc-symptom-section-title small{display:block;margin-top:4px;color:#867888;font-size:10px;line-height:1.4}
+.cc-symptom-medicine-note{margin:0;padding:10px 12px;border-left:3px solid #b77bc3;border-radius:0 10px 10px 0;color:#635366;background:#fff;font-size:11px;line-height:1.6}
+.cc-symptom-medicine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cc-symptom-medicine-card{display:grid;align-content:start;gap:10px;padding:15px;border:1px solid #e9deeb;border-radius:14px;background:#fff;box-shadow:0 6px 16px rgba(80,48,84,.04)}
+.cc-symptom-medicine-card h4{margin:0;color:#563a66;font-size:14px}
+.cc-symptom-medicine-card>div{display:grid;gap:4px}
+.cc-symptom-medicine-card>div strong{color:#685974;font-size:10px}
+.cc-symptom-medicine-card>div p{margin:0;color:#5f5c64;font-size:11px;line-height:1.6}
+.cc-symptom-medicine-card>div.caution{padding:9px 10px;border:1px solid #f0dfce;border-radius:10px;background:#fffaf4}
+.cc-symptom-medicine-card>div.caution strong{color:#9a5c34}
+.cc-symptom-medicine-card>a{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;padding-top:7px;border-top:1px solid #f0e8f0;color:#8b4c94;text-decoration:none;font-size:10px;font-weight:800}
+.cc-symptom-medicine-card>a:hover{text-decoration:underline}
+.cc-symptom-lookup-button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px;border:1px solid #e5d2e6;border-radius:10px;color:#824287;background:#fff9ff;font:inherit;font-size:10px;font-weight:850;cursor:pointer}
+.cc-symptom-lookup-button:hover{background:#f8ebfa}
+.cc-symptom-no-medicine{display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px dashed #e2cedf;border-radius:12px;color:#635367;background:rgba(255,255,255,.7);font-size:12px;line-height:1.6}
+.cc-symptom-no-medicine svg{flex:0 0 18px;margin-top:1px;color:#9650a0}
+.cc-symptom-no-medicine p{margin:0}
+.cc-symptom-label-reminder{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid #d9e8dc;border-radius:12px;color:#526b5b;background:#f4fbf4;font-size:11px;line-height:1.6}
+.cc-symptom-label-reminder svg{flex:0 0 17px;margin-top:1px;color:#27836c}
+.cc-symptom-label-reminder p{margin:0}
+.cc-symptom-label-reminder strong{color:#315f4e}
+.cc-symptom-follow-up{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border:1px solid #e7dbe8;border-radius:13px;color:#66566e;background:#fff}
+.cc-symptom-follow-up>svg{flex:0 0 18px;margin-top:2px;color:#9e5ca1}
+.cc-symptom-follow-up>div{flex:1}
+.cc-symptom-follow-up strong{color:#50375d;font-size:12px}
+.cc-symptom-follow-up p{margin:4px 0 0;font-size:11px;line-height:1.55}
+.cc-symptom-follow-up button{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:6px 10px;border:1px solid #e5d8e8;border-radius:9px;color:#794582;background:#fff;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
+.cc-symptom-result-actions{display:flex;flex-wrap:wrap;gap:8px}
+.cc-symptom-result-actions .cp-button{min-height:42px}
+.cc-symptom-sources{display:grid;gap:8px;padding-top:13px;border-top:1px solid #efe7ee}
+.cc-symptom-sources>strong{color:#705d74;font-size:11px}
+.cc-symptom-sources>div{display:flex;flex-wrap:wrap;gap:7px}
+.cc-symptom-sources a{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 9px;border:1px solid #eee4ed;border-radius:9px;color:#80558a;background:#fff;font-size:10px;font-weight:750;text-decoration:none}
+.cc-symptom-sources a:hover{border-color:#d9b6d7;background:#fff8ff}
+.cc-symptom-sources small{color:#8b808d;font-size:9px;line-height:1.4}
+.cc-symptom-lookup-panel{position:relative;padding:17px;border:1px solid #e8dced;border-radius:16px;background:#fff;box-shadow:0 10px 26px rgba(73,40,78,.07)}
+.cc-symptom-lookup-close{float:right;min-height:34px;padding:5px 10px;border:1px solid #e7dbe7;border-radius:9px;color:#79547e;background:#fff;font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.cc-symptom-no-match{display:flex;align-items:flex-start;gap:12px;padding:17px;border:1px solid #e8d7eb;border-radius:16px;background:linear-gradient(135deg,#fcf6fd,#fffaf5)}
+.cc-symptom-no-match>span{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:13px;color:#9951a1;background:#f3e5f7}
+.cc-symptom-no-match>div{display:grid;justify-items:start;gap:10px}
+.cc-symptom-no-match strong{color:#4f3858;font-size:14px}
+.cc-symptom-no-match strong p{margin:5px 0 0;color:#6f6374;font-size:11px;font-weight:500;line-height:1.6}
+.cc-symptom-note-panel{overflow:hidden;border:1px solid #e9dce8;border-radius:15px;background:#fff;box-shadow:0 6px 17px rgba(77,44,80,.035)}
+.cc-symptom-note-panel.open{border-color:#d8badc;background:linear-gradient(140deg,#fff,#fff9fc)}
+.cc-symptom-note-toggle{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;padding:10px 14px;border:0;color:#57405e;background:transparent;text-align:left;font:inherit;cursor:pointer}
+.cc-symptom-note-toggle>span:first-child{display:grid;place-items:center;width:33px;height:33px;border-radius:11px;color:#95539d;background:#f4e9f7}
+.cc-symptom-note-toggle strong{flex:1;font-size:12px}
+.cc-symptom-note-chevron{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;color:#854f8d;background:#fbf4fc;font-size:19px;font-weight:600}
+.cc-symptom-note-content{display:grid;gap:12px;padding:0 15px 16px}
+.cc-symptom-note-content>p{margin:0;color:#817583;font-size:11px;line-height:1.5}
+.cc-symptom-note-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.cc-symptom-note-grid label,.cc-symptom-note-label{display:grid;gap:6px;color:#57475e;font-size:11px;font-weight:750}
+.cc-symptom-note-grid select,.cc-symptom-note-label textarea{width:100%;min-height:43px;padding:9px 10px;border:1px solid #e6dce7;border-radius:10px;color:#4b3d51;background:#fff;font:inherit;font-size:12px}
+.cc-symptom-note-label textarea{min-height:88px;resize:vertical;line-height:1.55}
+.cc-symptom-note-grid select:focus,.cc-symptom-note-label textarea:focus{outline:3px solid rgba(178,91,172,.18);border-color:#b35bad}
+.cc-symptom-note-save-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.cc-symptom-note-save-row>span{display:inline-flex;align-items:center;gap:6px;color:#28765a;font-size:11px}
+.cc-symptom-history{padding:17px}
+.cc-symptom-boundary{display:flex;align-items:flex-start;gap:7px;margin:0;padding:11px 13px;border:1px solid #efe0cf;border-radius:11px;color:#786955;background:#fffaf2;font-size:10px;line-height:1.55}
+.cc-symptom-boundary svg{flex:0 0 16px;margin-top:1px;color:#ae7943}
+.cc-symptom-page button:focus-visible,.cc-symptom-page a:focus-visible,.cc-symptom-page input:focus-visible,.cc-symptom-page textarea:focus-visible,.cc-symptom-page select:focus-visible{outline:3px solid rgba(188,88,165,.27);outline-offset:2px}
+@keyframes cc-guide-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:760px){.cc-symptom-search-form{grid-template-columns:20px minmax(0,1fr) auto}.cc-symptom-search-form input{grid-column:2/4}.cc-symptom-submit{grid-column:1/-1}.cc-symptom-info-grid,.cc-symptom-medicine-grid{grid-template-columns:1fr}.cc-symptom-note-grid{grid-template-columns:1fr 1fr}.cc-symptom-emergency{grid-template-columns:24px minmax(0,1fr)}.cc-symptom-emergency button{grid-column:2;justify-self:start}.cc-symptom-follow-up{flex-wrap:wrap}.cc-symptom-follow-up button{margin-left:28px}}
+@media(max-width:480px){.cc-symptom-search{padding:15px;border-radius:17px}.cc-symptom-search-form{grid-template-columns:20px minmax(0,1fr) 42px;gap:7px;padding:7px}.cc-symptom-search-form input{grid-column:2/4;font-size:13px}.cc-symptom-mic{grid-column:1/2;grid-row:2;padding:0 8px}.cc-symptom-mic span{display:none}.cc-symptom-submit{grid-column:2/4;grid-row:2}.cc-symptom-popular{gap:6px}.cc-symptom-popular>span{flex:0 0 100%}.cc-symptom-popular button{min-height:34px;padding:6px 9px;font-size:11px}.cc-symptom-result{padding:14px}.cc-symptom-result-heading{flex-wrap:wrap}.cc-symptom-read{margin-left:auto}.cc-symptom-result-summary{font-size:11px}.cc-symptom-info-card{padding:13px}.cc-symptom-medicine-section{padding:13px}.cc-symptom-medicine-card{padding:12px}.cc-symptom-note-grid{grid-template-columns:1fr}.cc-symptom-emergency{padding:12px}.cc-symptom-no-match{padding:13px}}
+@media(prefers-reduced-motion:reduce){.cc-symptom-result{animation:none}.cc-symptom-popular button,.cc-symptom-mic,.cc-symptom-submit{transition:none}}
