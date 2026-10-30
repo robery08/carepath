@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent } from "react";
-import { AlertTriangle, ArrowDown, Bot, Check, Copy, ExternalLink, FileText, LoaderCircle, Mic, Pencil, Plus, RotateCcw, Search, Send, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
+import type { FormEvent, ReactNode } from "react";
+import { AlertTriangle, ArrowDown, BookOpen, Bot, Check, Copy, ExternalLink, FileText, LoaderCircle, Mic, Pencil, Pill, Plus, RotateCcw, Search, Send, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
 import ReadAloudButton from "./ReadAloudButton";
 import "./AskAssistantChat.css";
+import "./ShowcaseAsk.css";
 import { getDocumentFile } from "../documentFiles";
 
 type AskLanguage = "en" | "kn";
@@ -13,6 +14,20 @@ const QUICK_PROMPTS: Record<AskLanguage, string[]> = {
   en: ["I have a cough", "I have leg pain", "What is metformin used for?", "I missed a dose"],
   kn: ["ನನಗೆ ಕೆಮ್ಮು ಇದೆ", "ನನಗೆ ಕಾಲು ನೋವು ಇದೆ", "ಮೆಟ್‌ಫಾರ್ಮಿನ್ ಏಕೆ ಬಳಸುತ್ತಾರೆ?", "ನಾನು ಡೋಸ್ ಮರೆತಿದ್ದೇನೆ"],
 };
+const CHAT_FEATURES = {
+  en: [
+    { title: "Explain simply", detail: "Put a health topic into plain language", prompt: "Explain this health topic in simple language.", icon: <BookOpen size={18} /> },
+    { title: "Find trusted sources", detail: "Look for official information when available", prompt: "Where can I find official information about this health topic?", icon: <Search size={18} /> },
+    { title: "Understand a document", detail: "Choose a reviewed file before sharing", prompt: "Help me understand the details in my selected health document.", icon: <FileText size={18} /> },
+    { title: "Medicine information", detail: "Learn what to check on the label", prompt: "What information should I check on a medicine label?", icon: <Pill size={18} /> },
+  ],
+  kn: [
+    { title: "ಸರಳವಾಗಿ ವಿವರಿಸಿ", detail: "ಆರೋಗ್ಯ ವಿಷಯವನ್ನು ಸುಲಭ ಪದಗಳಲ್ಲಿ ತಿಳಿಯಿರಿ", prompt: "ಈ ಆರೋಗ್ಯ ವಿಷಯವನ್ನು ಸರಳ ಕನ್ನಡದಲ್ಲಿ ವಿವರಿಸಿ.", icon: <BookOpen size={18} /> },
+    { title: "ನಂಬಿಕಸ್ಥ ಮೂಲಗಳು", detail: "ಅಧಿಕೃತ ಮಾಹಿತಿ ಲಭ್ಯವಿದ್ದರೆ ಹುಡುಕಿ", prompt: "ಈ ಆರೋಗ್ಯ ವಿಷಯದ ಅಧಿಕೃತ ಮಾಹಿತಿಯನ್ನು ಎಲ್ಲಿ ನೋಡಬಹುದು?", icon: <Search size={18} /> },
+    { title: "ದಾಖಲೆ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ", detail: "ಹಂಚುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿದ ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ", prompt: "ನಾನು ಆಯ್ಕೆಮಾಡಿದ ಆರೋಗ್ಯ ದಾಖಲೆಯ ವಿವರಗಳನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಹಾಯ ಮಾಡಿ.", icon: <FileText size={18} /> },
+    { title: "ಔಷಧಿ ಮಾಹಿತಿ", detail: "ಲೇಬಲ್‌ನಲ್ಲಿ ಏನು ಪರಿಶೀಲಿಸಬೇಕು ತಿಳಿಯಿರಿ", prompt: "ಔಷಧಿ ಲೇಬಲ್‌ನಲ್ಲಿ ಯಾವ ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಬೇಕು?", icon: <Pill size={18} /> },
+  ],
+} satisfies Record<AskLanguage, Array<{ title: string; detail: string; prompt: string; icon: ReactNode }>>;
 type Message = { id: string; role: "user" | "assistant"; text: string; sources?: Source[]; error?: boolean; pending?: boolean };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
 type RetryRequest = { conversationId: string; question: string; excerpt: string; prior: Message[]; responseId: string };
@@ -357,7 +372,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
 
       {!ASSISTANT_ENDPOINT && <div className="cp-assistant-not-configured" role="status"><AlertTriangle size={18} /><p>{copy.notConfigured}</p></div>}
       <div className="cp-assistant-chat" ref={threadRef} aria-live="polite" aria-label={language === "en" ? "Chat messages" : "ಚಾಟ್ ಸಂದೇಶಗಳು"}>
-        {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p><strong>{language === "en" ? "Try a question" : "ಪ್ರಶ್ನೆ ಪ್ರಯತ್ನಿಸಿ"}</strong><div className="cp-assistant-quick-prompts">{QUICK_PROMPTS[language].map((prompt) => <button key={prompt} type="button" onClick={() => setInput(prompt)}>{prompt}<Send size={13} /></button>)}</div></div>}
+        {!messages.length && <div className="cp-assistant-empty"><span><Bot size={24} /></span><p>{copy.intro}</p><strong>{language === "en" ? "How can I help today?" : "ಇಂದು ನಾನು ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?"}</strong><div className="cp-chat-feature-grid">{CHAT_FEATURES[language].map((feature) => <button className="cp-chat-feature-card" key={feature.title} type="button" onClick={() => setInput(feature.prompt)}><span>{feature.icon}</span><strong>{feature.title}</strong><small>{feature.detail}</small><ArrowDown size={13} /></button>)}</div><div className="cp-assistant-quick-prompts" aria-label={language === "en" ? "Common questions" : "ಸಾಮಾನ್ಯ ಪ್ರಶ್ನೆಗಳು"}>{QUICK_PROMPTS[language].map((prompt) => <button key={prompt} type="button" onClick={() => setInput(prompt)}>{prompt}<Send size={13} /></button>)}</div></div>}
         {messages.map((message, index) => <article key={message.id} className={`cp-assistant-message ${message.role}`}>
           <div className="cp-assistant-bubble">
             <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : message.error ? (language === "en" ? "CARE CONNECTED · connection status" : "CARE CONNECTED · ಸಂಪರ್ಕ ಸ್ಥಿತಿ") : !ASSISTANT_ENDPOINT && message.sources?.length ? (language === "en" ? "CARE CONNECTED · reviewed guide" : "CARE CONNECTED · ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ") : !ASSISTANT_ENDPOINT ? (language === "en" ? "CARE CONNECTED · offline reply" : "CARE CONNECTED · ಆಫ್‌ಲೈನ್ ಉತ್ತರ") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>

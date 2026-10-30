@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import {
   Activity,
   Accessibility,
@@ -10,12 +10,14 @@ import {
   BookOpen,
   CalendarDays,
   Check,
-  ChevronLeft,
   ChevronRight,
   ClipboardList,
   Clock3,
   FileCheck2,
+  FilePlus2,
   FileUp,
+  FolderHeart,
+  GitBranch,
   HeartPulse,
   Home,
   Info,
@@ -36,6 +38,7 @@ import {
 import { getVoiceLanguage, saveVoiceLanguage, speakText, stopReading } from "./voice";
 import type { VoiceLanguage } from "./voice";
 import { readPersonalMedicines } from "./medicineStorage";
+import "./showcase-interface.css";
 
 const CarePathModules = lazy(() => import("./components/CarePathModules"));
 const HealthMonitor = lazy(() => import("./components/HealthMonitor"));
@@ -86,6 +89,7 @@ type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Pro
 
 const navItems = [
   { name: "Home", icon: Home },
+  { name: "My Journeys", icon: FolderHeart },
   { name: "Care Guide", icon: BookOpen },
   { name: "Symptom Guide", icon: Activity },
   { name: "Official Sources", icon: Search },
@@ -107,9 +111,15 @@ const navItems = [
   { name: "Admin Preview", icon: ShieldCheck },
 ];
 
-const primaryNavItems = navItems.filter((item) => ["Home", "ASK CARE CONNECTED"].includes(item.name));
-const everydayNavItems = navItems.filter((item) => ["My Medicines", "Scan & Upload", "Health Tracker"].includes(item.name));
-const moreNavItems = navItems.filter((item) => !primaryNavItems.includes(item) && !everydayNavItems.includes(item));
+const visibleNavItems = navItems.filter((item) => item.name !== "Admin Preview");
+const primaryNavItems = visibleNavItems.filter((item) => ["Home", "My Journeys", "ASK CARE CONNECTED"].includes(item.name));
+const everydayNavItems = visibleNavItems.filter((item) => ["My Medicines", "Scan & Upload", "Health Tracker"].includes(item.name));
+const moreNavGroups = [
+  { label: "LEARN & UNDERSTAND", names: ["Care Guide", "Symptom Guide", "Official Sources", "Learn"] },
+  { label: "MEDICINES & RECORDS", names: ["Medicine Passport", "Safety Check", "Medication Changes", "Health Timeline", "Health Calendar", "Tests & Reports"] },
+  { label: "PEOPLE & PLACES", names: ["Health Map", "Visit Prep", "Care Circle", "Safety Alerts"] },
+].map((group) => ({ ...group, items: group.names.map((name) => visibleNavItems.find((item) => item.name === name)).filter((item): item is typeof visibleNavItems[number] => Boolean(item)) }));
+const moreNavItems = moreNavGroups.flatMap((group) => group.items);
 
 type RouteOverlay = "medicines" | "monitor" | null;
 type RouteState = { section: string; overlay: RouteOverlay; scrollY: number };
@@ -458,7 +468,7 @@ function App() {
 
   const results = query.trim()
     ? [
-        ...navItems.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).map((item) => ({ label: item.name, detail: "Open CARE CONNECTED workspace", action: () => openSection(item.name), icon: item.icon })),
+        ...visibleNavItems.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).map((item) => ({ label: item.name, detail: "Open CARE CONNECTED workspace", action: () => openSection(item.name), icon: item.icon })),
         ...medicines.filter((item) => `${item.name} ${item.strength}`.toLowerCase().includes(query.toLowerCase())).slice(0, 4).map((item) => ({ label: item.name, detail: `${item.strength} · ${item.form}`, action: () => openSection("Medicine Passport"), icon: Pill })),
       ].slice(0, 7)
     : [];
@@ -491,13 +501,16 @@ function App() {
             })}
           </div>
           <details className="cp-nav-more" open={moreToolsOpen || moreNavItems.some((item) => item.name === active)} onToggle={(event) => setMoreToolsOpen(event.currentTarget.open)}>
-            <summary><span>More tools</span><span className="cp-nav-count">{moreNavItems.length}</span></summary>
-            <div className="cp-nav-group cp-nav-extra">
-              {moreNavItems.map((item) => {
+            <summary><span>Explore workspaces</span><span className="cp-nav-count">{moreNavItems.length}</span></summary>
+            <div className="cp-nav-extra">
+              {moreNavGroups.map((group) => <div className="cp-nav-group cp-nav-subgroup" key={group.label}>
+                <span className="cp-nav-group-label">{group.label}</span>
+                {group.items.map((item) => {
                 const Icon = item.icon;
                 const selected = active === item.name;
                 return <button key={item.name} className={`nav-item ${selected ? "active" : ""}`} onClick={() => openSection(item.name)} aria-current={selected ? "page" : undefined}><Icon size={18} /><span>{item.name}</span>{item.name === "Safety Alerts" && !profile.allergies?.trim() && <span className="cp-nav-dot" />}</button>;
-              })}
+                })}
+              </div>)}
             </div>
           </details>
         </nav>
@@ -536,9 +549,9 @@ function App() {
             {installPrompt && <button onClick={() => void installApp()}><Plus size={17} /><span>Install app</span></button>}
             <button onClick={() => setShowGuide(true)}><BookOpen size={17} /><span>Show me how</span></button>
           </div>
-        {active === "Home" ? <HomeDashboard name={name} medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} onAskQuestion={(question) => { setPendingAskQuestion(question); openSection("ASK CARE CONNECTED"); }} onStartVoice={startVoice} onUploadFile={(file) => { setPendingUploadFile(file); openSection("Scan & Upload"); }} /> : <>
+        {active === "Home" ? <HomeDashboard medicines={medicines} readings={healthReadings} medicationLog={medicationLog} reminders={reminders} onNavigate={openSection} onOpenMonitor={openMonitor} onOpenReminders={() => setShowReminders(true)} onMarkDose={markDose} onAskQuestion={(question) => { setPendingAskQuestion(question); openSection("ASK CARE CONNECTED"); }} onStartVoice={startVoice} onUploadFile={(file) => { setPendingUploadFile(file); openSection("Scan & Upload"); }} /> : <>
             <div className="cp-route-topline"><button onClick={() => openSection("Home")}><Home size={14} /> Home</button><ChevronRight size={13} /><span>{active}</span></div>
-            <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} initialQuestion={pendingAskQuestion} onQuestionConsumed={clearPendingAskQuestion} initialFile={pendingUploadFile} onInitialFileHandled={clearPendingUploadFile} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onInstallApp={() => void installApp()} /></Suspense>
+            <Suspense fallback={<ModuleLoading />}><CarePathModules active={active} medicineCount={medicineCount} initialQuestion={pendingAskQuestion} onQuestionConsumed={clearPendingAskQuestion} initialFile={pendingUploadFile} onInitialFileHandled={clearPendingUploadFile} onOpenMedicines={() => openOverlay("medicines")} onOpenMonitor={openMonitor} onScheduleReview={scheduleReviewReminder} onNavigate={openSection} onAskQuestion={(question) => { setPendingAskQuestion(question); openSection("ASK CARE CONNECTED"); }} onInstallApp={() => void installApp()} /></Suspense>
           </>}
           <footer className="cp-app-footer"><div><strong>CARE CONNECTED</strong><span>Ask anything. Understand better. Stay connected.</span></div><span>Personal organization tool · Verify health details with a qualified professional.</span></footer>
         </section>
@@ -600,8 +613,7 @@ function ReminderCenter({ medicines, reminders, onSave, onClose }: { medicines: 
   return <div className="cp-modal-backdrop" role="presentation"><section className="cp-reminder-modal" role="dialog" aria-modal="true" aria-labelledby="cp-reminder-title"><button className="cp-modal-close" onClick={onClose} aria-label="Close reminders"><X size={19} /></button><span className="cp-guide-modal-icon"><BellRing size={22} /></span><span className="cp-eyebrow">PERSONAL TIME NOTES</span><h2 id="cp-reminder-title">Medicine reminders</h2><p>Set a daily reminder time copied from your current instructions. It only runs while this page is open; it is not a background alarm or clinical instruction.</p><div className="cp-reminder-form"><label>Medicine<select value={medicineId} onChange={(event) => setMedicineId(event.target.value)}>{medicines.length ? medicines.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.strength}</option>) : <option value="">Add a medicine first</option>}</select></label><label>Reminder time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label><button className="cp-button primary" onClick={add}><Plus size={16} /> Add reminder</button></div>{message && <p className="cp-voice-status" role="status">{message}</p>}<div className="cp-reminder-list">{reminders.map((item) => <div key={item.id}><span><strong>{item.name}</strong><small>{item.time} · daily personal note</small></span><label className="cp-switch"><input type="checkbox" checked={item.enabled} onChange={(event) => update(item.id, { enabled: event.target.checked, lastFiredDate: undefined })} /><span>{item.enabled ? "On" : "Off"}</span></label><button aria-label={`Remove reminder for ${item.name}`} onClick={() => onSave(reminders.filter((reminder) => reminder.id !== item.id))}><X size={16} /></button></div>)}</div><div className="cp-reminder-actions"><button className="cp-button quiet" onClick={allowNotifications}><Bell size={16} /> Enable browser notifications</button><button className="cp-button quiet" aria-pressed={soundEnabled} onClick={() => { const next = !soundEnabled; setSoundEnabled(next); try { localStorage.setItem("carepath_reminder_sound", JSON.stringify(next)); } catch { /* Optional preference. */ } setMessage(next ? "Reminder sound enabled where the device permits it." : "Reminder sound disabled."); }}>Sound: {soundEnabled ? "On" : "Off"}</button></div><div className="cp-voice-privacy"><Info size={15} /> Notifications need your explicit browser permission. Timing varies by device; no reminder is guaranteed if the browser is closed.</div><div className="cp-guide-modal-footer"><button className="cp-button quiet" onClick={onClose}>Close</button></div></section></div>;
 }
 
-function HomeDashboard({ name, medicines, readings, medicationLog, reminders, onNavigate, onOpenMonitor, onOpenReminders, onMarkDose, onAskQuestion, onStartVoice, onUploadFile }: {
-  name: string;
+function HomeDashboard({ medicines, readings, medicationLog, reminders, onNavigate, onOpenMonitor, onOpenReminders, onMarkDose, onAskQuestion, onStartVoice, onUploadFile }: {
   medicines: Medicine[];
   readings: HealthReading[];
   medicationLog: MedicationEvent[];
@@ -623,6 +635,10 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
   const latestReadings = Array.from(new Map(personalReadings.map((reading) => [reading.metric, reading])).values()).slice(0, 3);
   const todayNotes = medicationLog.filter((entry) => entry.date === today).slice(0, 3);
   const activeReminders = reminders.filter((reminder) => reminder.enabled).slice().sort((a, b) => a.time.localeCompare(b.time));
+  const journeyEvents = [
+    ...personalReadings.slice(0, 3).map((reading) => ({ id: reading.id, kind: "reading" as const, title: reading.metric, detail: `${reading.value}${reading.secondValue === undefined ? "" : ` / ${reading.secondValue}`} ${reading.unit}`, date: `${reading.date} ${reading.time}`, source: "Entered by you" })),
+    ...todayNotes.map((entry) => ({ id: entry.id, kind: "medicine" as const, title: entry.medicine, detail: `${entry.status} · personal note`, date: `${entry.date} ${entry.time}`, source: "Logged by you" })),
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   const [actionQuestion, setActionQuestion] = useState("");
   const [useSavedRecords, setUseSavedRecords] = useState(false);
   const [recordAnswer, setRecordAnswer] = useState<{ title: string; lines: string[]; sources: string[] } | null>(null);
@@ -651,9 +667,6 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
     documents: "Saved documents:", noDocuments: "No original documents are saved in this browser.", noMatch: "Your saved records do not answer this question. I will not guess from unrelated records. Open the relevant record, or ask CARE CONNECTED for general information.",
     medicinesSource: "Medicine entries saved in this browser", readingsSource: "Health readings entered in this browser", docsSource: "Document names and review status saved in this browser",
   };
-  const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
-  const firstName = name === "Demo User" ? "there" : name.trim().split(/\s+/)[0] || "there";
-  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   const nextStep = personalMedicines.length === 0 && personalReadings.length === 0
     ? { title: "Start with one useful thing", detail: "Add a medicine from its label, scan a report, or simply leave this space empty until you need it.", action: "Scan a document", route: "Scan & Upload", icon: <ScanLine size={20} /> }
     : personalMedicines.length === 0
@@ -661,6 +674,11 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
       : personalReadings.length === 0
         ? { title: "Keep a reading when it is useful", detail: "Enter a value from your own device with its date and time. CARE CONNECTED will show it as entered.", action: "Add a reading", route: "__monitor", icon: <HeartPulse size={20} /> }
         : { title: "Bring your notes to a care visit", detail: "Gather your own saved medicines, readings, and questions into a short visit brief.", action: "Prepare a visit brief", route: "Visit Prep", icon: <Stethoscope size={20} /> };
+  const homeFeatures = [
+    { title: actionLanguage === "kn" ? "ದಾಖಲೆ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ" : "Understand a document", detail: actionLanguage === "kn" ? "ವರದಿ ಅಥವಾ ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ಸೇರಿಸಿ" : "Review a report or prescription", icon: <FileCheck2 size={18} />, route: "Scan & Upload" },
+    { title: actionLanguage === "kn" ? "ಆರೋಗ್ಯ ದಾಖಲಿಸಿ" : "Track my health", detail: actionLanguage === "kn" ? "ಮೌಲ್ಯವನ್ನು ಟೈಪ್ ಮಾಡಿ ಅಥವಾ ಹೇಳಿ" : "Type or speak a reading", icon: <HeartPulse size={18} />, action: "monitor" },
+    { title: actionLanguage === "kn" ? "ಭೇಟಿಗೆ ತಯಾರಿ" : "Prepare for a visit", detail: actionLanguage === "kn" ? "ನಿಮ್ಮ ಪ್ರಶ್ನೆಗಳನ್ನು ಒಟ್ಟುಗೂಡಿಸಿ" : "Gather questions and notes", icon: <Stethoscope size={18} />, route: "Visit Prep" },
+  ];
   const submitActionQuestion = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const question = actionQuestion.trim();
@@ -708,22 +726,6 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
     setRecordAnswer({ title: actionCopy.recordTitle, lines, sources });
   };
   return <>
-    <section className="cp-today-hero">
-      <div className="cp-today-hero-copy">
-        <div className="cp-today-topline"><span className="cp-today-date"><CalendarDays size={15} /> {dateLabel}</span><span className="cp-today-private"><ShieldCheck size={15} /> Saved on this device</span></div>
-        <span className="cp-today-eyebrow">YOUR HEALTH, MADE SIMPLER</span>
-        <h1>{greeting}, <span>{firstName}</span></h1>
-        <p>Get a clear starting point for medicines, health notes, and questions you want to understand.</p>
-        <div className="cp-today-hero-actions">
-          <button className="cp-button cp-today-primary" onClick={() => onNavigate("ASK CARE CONNECTED")}><Search size={17} /> Ask a question</button>
-          <button className="cp-button cp-today-secondary" onClick={() => onNavigate("Scan & Upload")}><ScanLine size={17} /> Scan a document</button>
-          <button className="cp-today-emergency" onClick={() => onNavigate("Emergency Help")}><Siren size={16} /> Need urgent help?</button>
-        </div>
-        <small>General health information and personal organization. Not a diagnosis or emergency service.</small>
-      </div>
-      <div className="cp-today-hero-mark" aria-hidden="true"><span><HeartPulse size={42} /></span><i /><i /><i /></div>
-    </section>
-
     <section className="cp-action-center" aria-labelledby="cp-action-center-title">
       <div className="cp-action-center-heading"><span className="cp-action-center-icon"><HeartPulse size={20} /></span><div><span className="cp-eyebrow">ONE PLACE TO START · {actionLanguage === "kn" ? "ಸರಳವಾಗಿ ಪ್ರಾರಂಭಿಸಿ" : "START SIMPLY"}</span><h2 id="cp-action-center-title">{actionCopy.heading}</h2><p>{actionCopy.intro}</p></div><div className="cp-action-center-language" role="group" aria-label="Action center language"><button type="button" className={actionLanguage === "en" ? "selected" : ""} aria-pressed={actionLanguage === "en"} onClick={() => { setActionLanguage("en"); saveVoiceLanguage("en"); }}>English</button><button type="button" className={actionLanguage === "kn" ? "selected" : ""} aria-pressed={actionLanguage === "kn"} onClick={() => { setActionLanguage("kn"); saveVoiceLanguage("kn"); }}>ಕನ್ನಡ</button></div></div>
       <form className="cp-action-center-form" onSubmit={submitActionQuestion}>
@@ -732,15 +734,36 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
           <button className="cp-button cp-today-primary" type="submit"><Search size={16} /> {useSavedRecords ? actionCopy.showRecords : actionCopy.ask}</button>
           <button className="cp-button quiet" type="button" onClick={onStartVoice}><Mic size={16} /> {actionCopy.speak}</button>
           <label className="cp-button quiet cp-action-upload"><FileUp size={16} /> {actionCopy.upload}<input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onUploadFile(file); }} /></label>
+          <button className="cp-action-center-emergency" type="button" onClick={() => onNavigate("Emergency Help")}><Siren size={15} /> {actionLanguage === "kn" ? "ತುರ್ತು ಸಹಾಯ" : "Emergency help"}</button>
         </div>
         <label className="cp-record-consent"><input type="checkbox" checked={useSavedRecords} onChange={(event) => { setUseSavedRecords(event.target.checked); setRecordAnswer(null); }} /><span><strong>{actionCopy.consent}</strong><small>{actionCopy.consentHint}</small></span></label>
       </form>
+      <div className="cp-home-feature-grid" aria-label={actionLanguage === "kn" ? "ಸಾಮಾನ್ಯ ಕಾರ್ಯಗಳು" : "Quick ways to get started"}>
+        {homeFeatures.map((feature, index) => <button type="button" className={`cp-home-feature cp-home-feature-${index + 1}`} key={feature.title} onClick={() => {
+          setRecordAnswer(null);
+          if (feature.action === "monitor") onOpenMonitor();
+          else if (feature.route) onNavigate(feature.route);
+        }}><span>{feature.icon}</span><strong>{feature.title}</strong><small>{feature.detail}</small><ArrowRight size={14} /></button>)}
+      </div>
       <div className="cp-action-prompts" aria-label="Suggested questions and tasks">
         {actionCopy.prompts.map((prompt) => <button key={prompt} type="button" onClick={() => { setActionQuestion(prompt); setRecordAnswer(null); }}>{prompt}<ArrowRight size={14} /></button>)}
-        <button type="button" onClick={onOpenMonitor}>{actionCopy.readBp} <ArrowRight size={14} /></button>
-        <button type="button" onClick={() => onNavigate("Visit Prep")}>{actionCopy.visit} <ArrowRight size={14} /></button>
       </div>
       {recordAnswer && <article className="cp-record-answer" aria-live="polite"><div><span className="cp-eyebrow">{actionLanguage === "kn" ? "ಸ್ಥಳೀಯ ದಾಖಲೆ ಹುಡುಕಾಟ · ಕಳುಹಿಸಲಾಗಿಲ್ಲ" : "LOCAL RECORD LOOKUP · NOT SENT"}</span><h3>{recordAnswer.title}</h3></div><ul>{recordAnswer.lines.map((line, index) => <li key={`${line}-${index}`}>{line}</li>)}</ul>{recordAnswer.sources.length > 0 && <p>{actionLanguage === "kn" ? "ಆಧಾರ:" : "Based on:"} {recordAnswer.sources.join("; ")}.</p>}<button type="button" className="cp-button quiet" onClick={() => onAskQuestion(actionQuestion.trim())}>{actionCopy.alsoAsk} <ArrowRight size={14} /></button></article>}
+    </section>
+
+    <CareJourneyFlow onNavigate={onNavigate} />
+
+    <section className="cp-home-overview" aria-label="Your care journey overview">
+      <article className="cp-home-overview-main">
+        <div className="cp-home-overview-heading"><div><span className="cp-eyebrow">YOUR STORY · BUILT FROM YOUR ENTRIES</span><h2>Your care journey</h2><p>See the details you have recorded, with their dates and sources.</p></div><button type="button" className="cp-home-view-all" onClick={() => onNavigate("My Journeys")}>Open full journey <ArrowRight size={14} /></button></div>
+        {journeyEvents.length ? <div className="cp-home-timeline">{journeyEvents.map((event) => <article className="cp-home-timeline-event" key={`${event.kind}-${event.id}`}><span className={`cp-home-timeline-icon ${event.kind}`}>{event.kind === "reading" ? <HeartPulse size={16} /> : <Pill size={16} />}</span><div><strong>{event.title}</strong><b>{event.detail}</b><small>{event.date} · {event.source}</small></div></article>)}</div> : <div className="cp-home-overview-empty"><span><FolderHeart size={20} /></span><div><strong>Your story starts when you add something</strong><p>Add a note, report, appointment, or a reading. You review every detail before it is connected.</p></div><button type="button" className="cp-button quiet" onClick={() => onNavigate("My Journeys")}>Start a journey <ArrowRight size={14} /></button></div>}
+        <div className="cp-home-story-foot"><ShieldCheck size={14} /> Only your recorded entries appear here. CARE CONNECTED does not score health risk or interpret values.</div>
+      </article>
+      <aside className="cp-home-overview-side">
+        <div className="cp-home-overview-heading compact"><div><span className="cp-eyebrow">AS YOU ENTERED THEM</span><h2>Health snapshot</h2></div><span className="cp-home-snapshot-badge"><Activity size={13} /> {personalReadings.length} entries</span></div>
+        {latestReadings.length ? <div className="cp-home-snapshot-grid">{latestReadings.map((reading) => <button type="button" className="cp-home-snapshot-card" key={reading.id} onClick={() => onNavigate("Health Tracker")}><span>{reading.metric === "Blood Pressure" ? <HeartPulse size={16} /> : <Activity size={16} />}</span><strong>{reading.metric}</strong><b>{reading.value}{reading.secondValue !== undefined ? ` / ${reading.secondValue}` : ""}<small> {reading.unit}</small></b><small>{reading.date} · {reading.time}</small></button>)}</div> : <div className="cp-home-snapshot-empty"><span><Activity size={19} /></span><strong>No personal readings yet</strong><small>Numbers you add will appear here as recorded, without a risk label.</small><button type="button" className="cp-button quiet" onClick={onOpenMonitor}>Add a reading <Plus size={14} /></button></div>}
+        <button type="button" className="cp-home-snapshot-medicines" onClick={() => onNavigate("My Medicines")}><span><Pill size={15} /> Your medicine list</span><strong>{personalMedicines.length}</strong><small>saved item{personalMedicines.length === 1 ? "" : "s"} · review details on the package</small><ArrowRight size={14} /></button>
+      </aside>
     </section>
 
     <section className="cp-today-grid" aria-label="Today's health workspace">
@@ -764,48 +787,21 @@ function HomeDashboard({ name, medicines, readings, medicationLog, reminders, on
       </article>
     </section>
 
-    <section className="cp-today-actions-section">
-      <div className="cp-today-section-heading"><div><span className="cp-eyebrow">START WITH ONE TAP</span><h2>What would help right now?</h2></div><p>Choose a task. You can always come back here.</p></div>
-      <div className="cp-today-actions-grid">
-        <QuickAction icon={<Search />} label="Ask CARE CONNECTED" detail="Find a clear starting point" tone="violet" onClick={() => onNavigate("ASK CARE CONNECTED")} />
-        <QuickAction icon={<ScanLine />} label="Scan a document" detail="Read and review a file" tone="blue" onClick={() => onNavigate("Scan & Upload")} />
-        <QuickAction icon={<HeartPulse />} label="Add a health reading" detail="Type or speak a value" tone="rose" onClick={onOpenMonitor} />
-        <QuickAction icon={<Pill />} label="My medicines" detail="Review my saved list" tone="mint" onClick={() => onNavigate("My Medicines")} />
-      </div>
-    </section>
-
-    <DiscoverCarousel onNavigate={onNavigate} />
-
-    <section className="cp-today-records">
-      <div className="cp-today-records-heading"><div><span className="cp-eyebrow">YOUR PERSONAL RECORD</span><h2>Recent readings</h2></div>{personalReadings.length > 0 && <button className="cp-today-manage" onClick={() => onNavigate("Health Timeline")}>View timeline <ArrowRight size={14} /></button>}</div>
-      {latestReadings.length ? <div className="cp-today-reading-list">{latestReadings.map((reading) => <button className="cp-today-reading" key={reading.id} onClick={() => onNavigate("Health Tracker")}><span className="cp-today-reading-symbol">{reading.metric === "Blood Pressure" ? <HeartPulse size={18} /> : <Activity size={18} />}</span><span><strong>{reading.metric}</strong><small>{reading.date === today ? "Today" : reading.date} · {reading.time}</small></span><b>{reading.value}{reading.secondValue !== undefined ? " / " + reading.secondValue : ""}<small> {reading.unit}</small></b><ArrowRight size={16} /></button>)}</div> : <div className="cp-today-record-empty"><span className="cp-today-empty-icon"><Activity size={19} /></span><div><strong>No personal readings yet</strong><p>Only values you enter will appear here. CARE CONNECTED will not interpret or label them normal or abnormal.</p></div><button className="cp-button cp-today-outline" onClick={onOpenMonitor}>Add a reading <Plus size={15} /></button></div>}
-    </section>
   </>;
 }
-function DiscoverCarousel({ onNavigate }: { onNavigate: (section: string) => void }) {
-  const cards = [
-    { title: "CARE CONNECTED EASY", text: "A calmer way to use your health workspace", detail: "Large controls, read-aloud support, and clear next steps.", action: "Turn on Easy mode", route: "__easy", icon: <Accessibility size={24} />, tone: "mint" },
-    { title: "ASK CARE CONNECTED", text: "Find information with a safer starting point", detail: "Read curated answers and official sources. Your typed question stays on this device.", action: "Open ASK CARE CONNECTED", route: "ASK CARE CONNECTED", icon: <Search size={24} />, tone: "violet" },
-    { title: "LEARN WITH AUDIO & VIDEO", text: "Play a clip and find the moment you need", detail: "Add a device-local video or audio clip, search its captions, and hear matching lines.", action: "Open learning studio", route: "Learn", icon: <BookOpen size={24} />, tone: "blue" },
-    { title: "SAFETY REVIEW", text: "See what needs a second look", detail: "Review missing notes, repeated names, and questions for a professional.", action: "Review my list", route: "Safety Check", icon: <ShieldCheck size={24} />, tone: "amber" },
-    { title: "HEALTH JOURNEY", text: "Keep the story together", detail: "Bring readings, documents, and personal notes into one timeline.", action: "Open timeline", route: "Health Timeline", icon: <Clock3 size={24} />, tone: "blue" },
-    { title: "CARE CIRCLE", text: "Keep support close", detail: "Save optional care-team and trusted-contact details on this device.", action: "Open Care Circle", route: "Care Circle", icon: <Users size={24} />, tone: "rose" },
-    { title: "VISIT PREP", text: "Walk into conversations prepared", detail: "Build a concise, print-ready brief from your own saved notes.", action: "Build a visit brief", route: "Visit Prep", icon: <Stethoscope size={24} />, tone: "teal" },
-    { title: "SYMPTOM GUIDE", text: "Put what you feel into clear words", detail: "Record a symptom, its timing, and a question for your care team.", action: "Start a symptom note", route: "Symptom Guide", icon: <HeartPulse size={24} />, tone: "rose" },
-    { title: "SCAN · REVIEW · CONFIRM", text: "Keep document details under your control", detail: "Add a document reference and review each detail before saving it.", action: "Open Scan & Upload", route: "Scan & Upload", icon: <ScanLine size={24} />, tone: "blue" },
+function CareJourneyFlow({ onNavigate }: { onNavigate: (section: string) => void }) {
+  const steps = [
+    { number: "01", title: "Capture", detail: "Add a note, measurement, appointment, photo, or PDF.", action: "Add to My Journeys", route: "My Journeys", icon: <FilePlus2 size={18} /> },
+    { number: "02", title: "Review", detail: "Check extracted words against the original source.", action: "Review a document", route: "Scan & Upload", icon: <ScanLine size={18} /> },
+    { number: "03", title: "Connect", detail: "See what matches, what is uncertain, and what needs your decision.", action: "Open your story", route: "My Journeys", icon: <GitBranch size={18} /> },
+    { number: "04", title: "Prepare", detail: "Bring selected notes and questions to a care conversation.", action: "Prepare for a visit", route: "Visit Prep", icon: <Stethoscope size={18} /> },
   ];
-  const [index, setIndex] = useState(() => readStored<number>("carepath_discover_index", 0) % cards.length);
-  const touchStartX = useRef<number | null>(null);
-  const card = cards[index];
-  const move = (offset: number) => setIndex((current) => {
-    const next = (current + offset + cards.length) % cards.length;
-    try { localStorage.setItem("carepath_discover_index", JSON.stringify(next)); } catch { /* Optional preference. */ }
-    return next;
-  });
-  return <section className="cp-discover" aria-roledescription="carousel" aria-label="Discover CARE CONNECTED features" onTouchStart={(event) => { touchStartX.current = event.changedTouches[0]?.screenX ?? null; }} onTouchEnd={(event) => { const startX = touchStartX.current; touchStartX.current = null; const endX = event.changedTouches[0]?.screenX; if (startX === null || endX === undefined) return; const distance = startX - endX; if (Math.abs(distance) > 48) move(distance > 0 ? 1 : -1); }}><div className="cp-discover-copy"><span className="cp-eyebrow">DISCOVER CARE CONNECTED ✨</span><h2 aria-live="polite">{card.text}</h2><p>{card.detail}</p><div className="cp-discover-actions"><button className="cp-button primary" onClick={() => card.route === "__easy" ? document.querySelector<HTMLButtonElement>(".cp-accessibility-bar button")?.click() : onNavigate(card.route)}>{card.action}<ArrowRight size={15} /></button><span>{index + 1} / {cards.length}</span></div></div><div className={`cp-discover-art ${card.tone}`}><span>{card.icon}</span><strong>{card.title}</strong><small>PERSONAL ORGANIZATION · DEMO SAFE</small></div><div className="cp-discover-controls"><button onClick={() => move(-1)} aria-label="Previous CARE CONNECTED feature"><ChevronLeft size={17} /></button><button onClick={() => move(1)} aria-label="Next CARE CONNECTED feature"><ChevronRight size={17} /></button></div><div className="cp-discover-dots" role="tablist" aria-label="Choose a CARE CONNECTED feature">{cards.map((item, itemIndex) => <button key={item.title} className={itemIndex === index ? "active" : ""} role="tab" aria-selected={itemIndex === index} aria-label={`Show ${item.title}`} onClick={() => { setIndex(itemIndex); try { localStorage.setItem("carepath_discover_index", JSON.stringify(itemIndex)); } catch { /* Optional preference. */ } }} />)}</div></section>;
+  return <section className="cp-care-flow" aria-labelledby="cp-care-flow-title">
+    <div className="cp-care-flow-heading"><span className="cp-eyebrow">THE CARE CONNECTED WAY</span><h2 id="cp-care-flow-title">Your care, in four clear steps.</h2><p>Gather what you choose, review it, then decide what to share.</p></div>
+    <ol className="cp-care-flow-steps">{steps.map((step) => <li key={step.number}><span className="cp-care-flow-number">{step.number}</span><span className="cp-care-flow-icon">{step.icon}</span><h3>{step.title}</h3><p>{step.detail}</p><button type="button" onClick={() => onNavigate(step.route)}>{step.action}<ArrowRight size={14} /></button></li>)}</ol>
+    <p className="cp-care-flow-note"><ShieldCheck size={14} /> You decide which details to save or share. The app does not verify a diagnosis or prescribe treatment.</p>
+  </section>;
 }
-
-function QuickAction({ icon, label, detail, tone, onClick }: { icon: ReactNode; label: string; detail: string; tone: string; onClick: () => void }) { return <button className="cp-quick-action" onClick={onClick}><span className={`cp-quick-icon ${tone}`}>{icon}</span><strong>{label}</strong><small>{detail}</small><ArrowRight size={14} /></button>; }
 
 function ModuleLoading({ overlay = false }: { overlay?: boolean }) { return <div className={`cp-loading ${overlay ? "overlay" : ""}`}><span /><strong>Opening your workspace…</strong></div>; }
 
