@@ -14,7 +14,6 @@ import {
   ClipboardList,
   Clock3,
   FileCheck2,
-  FilePlus2,
   FileUp,
   FolderHeart,
   GitBranch,
