@@ -39,6 +39,7 @@ import { getVoiceLanguage, saveVoiceLanguage, speakText, stopReading } from "./v
 import type { VoiceLanguage } from "./voice";
 import { readPersonalMedicines } from "./medicineStorage";
 import "./showcase-interface.css";
+import "./experience.css";
 
 const CarePathModules = lazy(() => import("./components/CarePathModules"));
 const HealthMonitor = lazy(() => import("./components/HealthMonitor"));
@@ -89,7 +90,7 @@ type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Pro
 
 const navItems = [
   { name: "Home", icon: Home },
-  { name: "My Journeys", icon: FolderHeart },
+  { name: "Care Threads", icon: FolderHeart },
   { name: "Care Guide", icon: BookOpen },
   { name: "Symptom Guide", icon: Activity },
   { name: "Official Sources", icon: Search },
@@ -112,7 +113,7 @@ const navItems = [
 ];
 
 const visibleNavItems = navItems.filter((item) => item.name !== "Admin Preview");
-const primaryNavItems = visibleNavItems.filter((item) => ["Home", "My Journeys", "ASK CARE CONNECTED"].includes(item.name));
+const primaryNavItems = visibleNavItems.filter((item) => ["Home", "Care Threads", "ASK CARE CONNECTED"].includes(item.name));
 const everydayNavItems = visibleNavItems.filter((item) => ["My Medicines", "Scan & Upload", "Health Tracker"].includes(item.name));
 const moreNavGroups = [
   { label: "LEARN & UNDERSTAND", names: ["Care Guide", "Symptom Guide", "Official Sources", "Learn"] },
@@ -133,6 +134,7 @@ function sectionFromLocation() {
   try { raw = decodeURIComponent(window.location.hash.replace(/^#/, "")); } catch { raw = ""; }
   raw = raw.replace(/-/g, " ").trim();
   if (raw.toLowerCase() === "ask carepath") raw = "ASK CARE CONNECTED";
+  if (raw.toLowerCase() === "my journeys") raw = "Care Threads";
   const match = ["Home", ...navItems.map((item) => item.name), "Emergency Help", "Settings"].find((item) => item.toLowerCase() === raw.toLowerCase());
   return match || "Home";
 }
@@ -141,7 +143,7 @@ function routeStateFromHistory(): RouteState {
   const state = window.history.state as { carepath?: RouteState } | null;
   if (!state?.carepath) return { section: sectionFromLocation(), overlay: null, scrollY: 0 };
   const route = state.carepath;
-  return { ...route, section: route.section === "ASK CAREPATH" ? "ASK CARE CONNECTED" : route.section };
+  return { ...route, section: route.section === "ASK CAREPATH" ? "ASK CARE CONNECTED" : route.section === "My Journeys" ? "Care Threads" : route.section };
 }
 
 function getToday() {
@@ -751,12 +753,12 @@ function HomeDashboard({ medicines, readings, medicationLog, reminders, onNaviga
       {recordAnswer && <article className="cp-record-answer" aria-live="polite"><div><span className="cp-eyebrow">{actionLanguage === "kn" ? "ಸ್ಥಳೀಯ ದಾಖಲೆ ಹುಡುಕಾಟ · ಕಳುಹಿಸಲಾಗಿಲ್ಲ" : "LOCAL RECORD LOOKUP · NOT SENT"}</span><h3>{recordAnswer.title}</h3></div><ul>{recordAnswer.lines.map((line, index) => <li key={`${line}-${index}`}>{line}</li>)}</ul>{recordAnswer.sources.length > 0 && <p>{actionLanguage === "kn" ? "ಆಧಾರ:" : "Based on:"} {recordAnswer.sources.join("; ")}.</p>}<button type="button" className="cp-button quiet" onClick={() => onAskQuestion(actionQuestion.trim())}>{actionCopy.alsoAsk} <ArrowRight size={14} /></button></article>}
     </section>
 
-    <CareJourneyFlow onNavigate={onNavigate} />
+    <CareThreadExperience onNavigate={onNavigate} onOpenMonitor={onOpenMonitor} onAskQuestion={onAskQuestion} />
 
     <section className="cp-home-overview" aria-label="Your care journey overview">
       <article className="cp-home-overview-main">
-        <div className="cp-home-overview-heading"><div><span className="cp-eyebrow">YOUR STORY · BUILT FROM YOUR ENTRIES</span><h2>Your care journey</h2><p>See the details you have recorded, with their dates and sources.</p></div><button type="button" className="cp-home-view-all" onClick={() => onNavigate("My Journeys")}>Open full journey <ArrowRight size={14} /></button></div>
-        {journeyEvents.length ? <div className="cp-home-timeline">{journeyEvents.map((event) => <article className="cp-home-timeline-event" key={`${event.kind}-${event.id}`}><span className={`cp-home-timeline-icon ${event.kind}`}>{event.kind === "reading" ? <HeartPulse size={16} /> : <Pill size={16} />}</span><div><strong>{event.title}</strong><b>{event.detail}</b><small>{event.date} · {event.source}</small></div></article>)}</div> : <div className="cp-home-overview-empty"><span><FolderHeart size={20} /></span><div><strong>Your story starts when you add something</strong><p>Add a note, report, appointment, or a reading. You review every detail before it is connected.</p></div><button type="button" className="cp-button quiet" onClick={() => onNavigate("My Journeys")}>Start a journey <ArrowRight size={14} /></button></div>}
+        <div className="cp-home-overview-heading"><div><span className="cp-eyebrow">YOUR STORY · BUILT FROM YOUR ENTRIES</span><h2>Your care journey</h2><p>See the details you have recorded, with their dates and sources.</p></div><button type="button" className="cp-home-view-all" onClick={() => onNavigate("Care Threads")}>Open full journey <ArrowRight size={14} /></button></div>
+        {journeyEvents.length ? <div className="cp-home-timeline">{journeyEvents.map((event) => <article className="cp-home-timeline-event" key={`${event.kind}-${event.id}`}><span className={`cp-home-timeline-icon ${event.kind}`}>{event.kind === "reading" ? <HeartPulse size={16} /> : <Pill size={16} />}</span><div><strong>{event.title}</strong><b>{event.detail}</b><small>{event.date} · {event.source}</small></div></article>)}</div> : <div className="cp-home-overview-empty"><span><FolderHeart size={20} /></span><div><strong>Your story starts when you add something</strong><p>Add a note, report, appointment, or a reading. You review every detail before it is connected.</p></div><button type="button" className="cp-button quiet" onClick={() => onNavigate("Care Threads")}>Start a journey <ArrowRight size={14} /></button></div>}
         <div className="cp-home-story-foot"><ShieldCheck size={14} /> Only your recorded entries appear here. CARE CONNECTED does not score health risk or interpret values.</div>
       </article>
       <aside className="cp-home-overview-side">
@@ -789,20 +791,27 @@ function HomeDashboard({ medicines, readings, medicationLog, reminders, onNaviga
 
   </>;
 }
-function CareJourneyFlow({ onNavigate }: { onNavigate: (section: string) => void }) {
+function CareThreadExperience({ onNavigate, onOpenMonitor, onAskQuestion }: { onNavigate: (section: string) => void; onOpenMonitor: () => void; onAskQuestion: (question: string) => void }) {
+  const threadCounts = useMemo(() => {
+    try {
+      const records = JSON.parse(localStorage.getItem("carepath_life_records_v1") || "[]") as Array<{ status?: string }>;
+      const journeys = JSON.parse(localStorage.getItem("carepath_life_journeys_v1") || "[]") as unknown[];
+      return { saved: records.length, review: records.filter((record) => record.status === "review").length, journeys: journeys.length };
+    } catch { return { saved: 0, review: 0, journeys: 0 }; }
+  }, []);
   const steps = [
-    { number: "01", title: "Capture", detail: "Add a note, measurement, appointment, photo, or PDF.", action: "Add to My Journeys", route: "My Journeys", icon: <FilePlus2 size={18} /> },
-    { number: "02", title: "Review", detail: "Check extracted words against the original source.", action: "Review a document", route: "Scan & Upload", icon: <ScanLine size={18} /> },
-    { number: "03", title: "Connect", detail: "See what matches, what is uncertain, and what needs your decision.", action: "Open your story", route: "My Journeys", icon: <GitBranch size={18} /> },
-    { number: "04", title: "Prepare", detail: "Bring selected notes and questions to a care conversation.", action: "Prepare for a visit", route: "Visit Prep", icon: <Stethoscope size={18} /> },
+    { number: "01", title: "Start anywhere", detail: "A symptom, a question, a number, or a page from a report.", action: "Describe a symptom", onClick: () => onNavigate("Symptom Guide"), icon: <Activity size={19} />, tone: "coral" },
+    { number: "02", title: "Keep the evidence", detail: "Review each captured word beside the original source.", action: "Scan a document", onClick: () => onNavigate("Scan & Upload"), icon: <ScanLine size={19} />, tone: "aqua" },
+    { number: "03", title: "Connect the pieces", detail: "You decide what belongs together and what still needs checking.", action: "Open my thread", onClick: () => onNavigate("Care Threads"), icon: <GitBranch size={19} />, tone: "violet" },
+    { number: "04", title: "Take it with you", detail: "Turn the details you confirmed into a short visit handover.", action: "Prepare a handover", onClick: () => onNavigate("Visit Prep"), icon: <Stethoscope size={19} />, tone: "gold" },
   ];
-  return <section className="cp-care-flow" aria-labelledby="cp-care-flow-title">
-    <div className="cp-care-flow-heading"><span className="cp-eyebrow">THE CARE CONNECTED WAY</span><h2 id="cp-care-flow-title">Your care, in four clear steps.</h2><p>Gather what you choose, review it, then decide what to share.</p></div>
-    <ol className="cp-care-flow-steps">{steps.map((step) => <li key={step.number}><span className="cp-care-flow-number">{step.number}</span><span className="cp-care-flow-icon">{step.icon}</span><h3>{step.title}</h3><p>{step.detail}</p><button type="button" onClick={() => onNavigate(step.route)}>{step.action}<ArrowRight size={14} /></button></li>)}</ol>
-    <p className="cp-care-flow-note"><ShieldCheck size={14} /> You decide which details to save or share. The app does not verify a diagnosis or prescribe treatment.</p>
+  return <section className="cc-threadline" aria-labelledby="cc-threadline-title">
+    <div className="cc-threadline-top"><div className="cc-threadline-copy"><span className="cc-threadline-kicker"><GitBranch size={14} /> CARE CONNECTED SIGNATURE WORKFLOW</span><h2 id="cc-threadline-title">From “something feels wrong” to “I know what to ask.”</h2><p>Care Thread keeps your question, the evidence you choose, and your next conversation in one clear line.</p></div><div className="cc-threadline-counts" aria-label="Personal thread status"><div><strong>{threadCounts.journeys}</strong><span>threads</span></div><div><strong>{threadCounts.review}</strong><span>to review</span></div><div><strong>{threadCounts.saved}</strong><span>captured</span></div></div></div>
+    <div className="cc-threadline-rail" aria-hidden="true"><svg viewBox="0 0 1000 96" preserveAspectRatio="none"><defs><linearGradient id="cc-thread-gradient" x1="0" x2="1"><stop offset="0" stopColor="#ff6e61"/><stop offset=".36" stopColor="#14cdb7"/><stop offset=".68" stopColor="#7a5cff"/><stop offset="1" stopColor="#ffbd53"/></linearGradient></defs><path d="M0 50 C100 50 110 18 220 18 S350 82 500 50 S680 18 770 40 S900 70 1000 45" fill="none" stroke="url(#cc-thread-gradient)" strokeWidth="5" strokeLinecap="round"/><path d="M0 50 C100 50 110 18 220 18 S350 82 500 50 S680 18 770 40 S900 70 1000 45" fill="none" stroke="#fff" strokeOpacity=".58" strokeWidth="1.5" strokeDasharray="3 12" strokeLinecap="round"/></svg></div>
+    <ol className="cc-threadline-steps">{steps.map((step) => <li key={step.number} className={`tone-${step.tone}`}><span className="cc-threadline-node">{step.icon}</span><small>{step.number} · CARE THREAD</small><h3>{step.title}</h3><p>{step.detail}</p><button type="button" onClick={step.onClick}>{step.action}<ArrowRight size={14} /></button></li>)}</ol>
+    <div className="cc-threadline-bottom"><span><ShieldCheck size={15} /> Only your confirmed details become part of your handover.</span><button type="button" onClick={() => onAskQuestion("Help me start a Care Thread. I want to describe what is happening and understand what information to gather. Please use plain language, explain uncertainty, and do not diagnose or choose treatment.")}>Start with a conversation <ArrowRight size={14} /></button><button type="button" onClick={onOpenMonitor}>Add a health reading <Plus size={14} /></button></div>
   </section>;
 }
-
 function ModuleLoading({ overlay = false }: { overlay?: boolean }) { return <div className={`cp-loading ${overlay ? "overlay" : ""}`}><span /><strong>Opening your workspace…</strong></div>; }
 
 export default App;

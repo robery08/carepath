@@ -9,10 +9,12 @@ import {
   FilePlus2,
   History,
   Info,
+  LockKeyhole,
   RotateCcw,
   ShieldAlert,
   ShieldCheck,
   Stethoscope,
+  Users,
 } from "lucide-react";
 import {
   getCareContent,
@@ -171,6 +173,8 @@ export default function AdminConsole() {
     <header className="cp-admin-hero"><span className="cp-admin-mark"><ShieldCheck size={24} /></span><div><span className="cp-eyebrow">CONTENT ADMIN · PREVIEW</span><h1>CARE CONNECTED Content Studio</h1><p>Prepare clear, source-linked learning cards and review the changes saved in this browser.</p></div><button className="cp-button light" onClick={() => { setForm(blank); setEditingId(""); setShowForm(true); }}><FilePlus2 size={16} /> New content</button></header>
 
     <div className="cp-admin-security-note" role="note"><ShieldAlert size={20} /><div><strong>This is a local prototype, not a secure admin account.</strong><p>There is no login or server here. Drafts, publications, and history are saved only in this browser; other users and the GitHub website will not receive them. Do not add patient details. A protected team admin and shared publishing need a backend, verified sign-in, and server-side audit storage.</p></div></div>
+
+    <section className="cc-admin-access" aria-labelledby="cc-admin-access-title"><div className="cc-admin-access-head"><span className="cc-admin-lock"><LockKeyhole size={21} /></span><div><span className="cp-eyebrow">TEAM CONTROL · SECURITY SETUP REQUIRED</span><h2 id="cc-admin-access-title">A small, accountable admin team</h2><p>Designed for three named accounts: you as owner, plus two trusted reviewers. No passwords are stored in this public app.</p></div><span className="cc-admin-not-ready"><i /> Sign-in not connected</span></div><div className="cc-admin-seats"><article><span className="cc-admin-seat-number">01</span><span className="cc-admin-seat-icon owner"><ShieldCheck size={17} /></span><div><strong>Project owner</strong><small>Final approval · account owner</small></div><b>Not configured</b></article><article><span className="cc-admin-seat-number">02</span><span className="cc-admin-seat-icon"><Users size={17} /></span><div><strong>Trusted reviewer</strong><small>Checks source and plain-language wording</small></div><b>Not configured</b></article><article><span className="cc-admin-seat-number">03</span><span className="cc-admin-seat-icon"><Users size={17} /></span><div><strong>Trusted reviewer</strong><small>Second reviewer · can be revoked by owner</small></div><b>Not configured</b></article></div><div className="cc-admin-release"><div><span className="cp-eyebrow">SHARED UPDATE PATH · DESIGN PREVIEW</span><strong>Draft → source review → owner approval → publish to everyone</strong><small>Every published change should keep its editor, reviewers, timestamp, and rollback version.</small></div><span className="cc-admin-release-badge"><LockKeyhole size={14} /> Requires protected server</span></div><p className="cc-admin-access-foot"><Info size={14} /> The public GitHub Pages app cannot create secure logins, restrict seats, approve releases, or revoke devices. This preview shows the intended workflow; it is not active access control.</p></section>
 
     <div className="cp-admin-metrics"><article><span><BookOpenCheck size={18} /></span><strong>{publishedCount}</strong><small>Published on this device</small></article><article><span><FilePlus2 size={18} /></span><strong>{draftCount}</strong><small>Drafts awaiting review</small></article><article><span><History size={18} /></span><strong>{history.length}</strong><small>Local change records</small></article><button className="cp-button quiet" onClick={exportHistory}><ArrowDownToLine size={16} /> Export history</button></div>
 
