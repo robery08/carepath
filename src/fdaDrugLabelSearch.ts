@@ -96,12 +96,18 @@ function urlFor(field: "openfda.brand_name" | "openfda.generic_name", term: stri
 }
 
 async function requestLabels(url: string): Promise<LabelRecord[]> {
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
-  // openFDA uses 404 when a valid query has no matches.
-  if (response.status === 404) return [];
-  if (!response.ok) throw new Error(`FDA label lookup returned ${response.status}`);
-  const body = await response.json() as LabelResponse;
-  return Array.isArray(body.results) ? body.results : [];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(url, { headers: { Accept: "application/json" }, signal: controller.signal });
+    // openFDA uses 404 when a valid query has no matches.
+    if (response.status === 404) return [];
+    if (!response.ok) throw new Error(`FDA label lookup returned ${response.status}`);
+    const body = await response.json() as LabelResponse;
+    return Array.isArray(body.results) ? body.results : [];
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**
