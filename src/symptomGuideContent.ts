@@ -174,7 +174,7 @@ export const SYMPTOM_GUIDES: SymptomGuideTopic[] = [
   {
     id: "stomach-pain",
     name: { en: "Stomach pain", kn: "ಹೊಟ್ಟೆ ನೋವು" },
-    aliases: ["stomach pain", "stomache pain", "stomack pain", "belly pain", "tummy pain", "abdominal pain", "ಹೊಟ್ಟೆ ನೋವು"],
+    aliases: ["stomach pain", "stomache pain", "stomack pain", "stomach hurts", "my stomach hurts", "belly pain", "tummy pain", "tummy hurts", "my tummy hurts", "abdominal pain", "ಹೊಟ್ಟೆ ನೋವು"],
     intro: {
       en: "Stomach or belly pain has many possible causes. The wrong medicine can hide an important problem, so this guide does not pick a tablet.",
       kn: "ಹೊಟ್ಟೆ ನೋವಿಗೆ ಹಲವು ಕಾರಣಗಳಿರಬಹುದು. ತಪ್ಪಾದ ಔಷಧಿ ಮುಖ್ಯ ಸಮಸ್ಯೆಯನ್ನು ಮರೆಮಾಡಬಹುದು; ಆದ್ದರಿಂದ ಈ ಮಾರ್ಗದರ್ಶಿ ಮಾತ್ರೆ ಆಯ್ಕೆಮಾಡುವುದಿಲ್ಲ.",
@@ -262,7 +262,8 @@ export function findSymptomGuide(query: string): { guide: SymptomGuideTopic; cor
       if (alias && normalized.includes(alias)) return { guide };
     }
   }
-  const words = normalized.split(" ").filter((word) => word.length >= 4 && !["have", "with", "what", "which", "tablet", "medicine", "should", "take", "please", "tell", "about", "used", "from", "for"].includes(word));
+  const ignored = new Set(["about", "are", "can", "did", "does", "for", "from", "have", "help", "here", "how", "just", "like", "me", "my", "need", "not", "please", "should", "some", "take", "tell", "that", "the", "this", "what", "when", "which", "with", "would", "you"]);
+  const words = normalized.split(" ").filter((word) => word.length >= 3 && !ignored.has(word));
   const distance = (a: string, b: string) => {
     if (Math.abs(a.length - b.length) > 1) return 2;
     let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
@@ -273,20 +274,62 @@ export function findSymptomGuide(query: string): { guide: SymptomGuideTopic; cor
     }
     return previous[b.length];
   };
-  for (const word of words) {
-    for (const guide of SYMPTOM_GUIDES) {
-      for (const rawAlias of guide.aliases) {
-        const aliasWords = rawAlias.toLocaleLowerCase().split(/\s+/);
-        const candidate = aliasWords.find((part) => part.length >= 4 && distance(word, part) === 1);
-        if (candidate) return { guide, correction: candidate };
-      }
+  const scores = SYMPTOM_GUIDES.map((guide) => {
+    let exact = 0;
+    let fuzzy = 0;
+    let correction = "";
+    const aliasWords = guide.aliases.flatMap((alias) => alias.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u)).filter((part) => part.length >= 3);
+    for (const word of words) {
+      if (aliasWords.includes(word)) { exact += 1; continue; }
+      if (word.length < 4 && words.length === 1) continue;
+      const candidate = aliasWords.find((part) => distance(word, part) === 1);
+      if (candidate) { fuzzy += 1; if (!correction) correction = candidate; }
+    }
+    return { guide, exact, fuzzy, correction };
+  }).filter((score) => score.exact > 0 || (score.fuzzy > 0 && words.length === 1 && words[0].length >= 4));
+  scores.sort((a, b) => (b.exact * 3 + b.fuzzy) - (a.exact * 3 + a.fuzzy));
+  const best = scores[0];
+  if (!best) return null;
+  const bestScore = best.exact * 3 + best.fuzzy;
+  const tied = scores.filter((score) => score.exact * 3 + score.fuzzy === bestScore);
+  if (tied.length !== 1) return null;
+  return { guide: best.guide, correction: best.correction || undefined };
+}
+
+const COMMON_MEDICINES = [
+  { name: "Paracetamol", aliases: ["paracetamol", "acetaminophen"] },
+  { name: "Ibuprofen", aliases: ["ibuprofen"] },
+  { name: "Dextromethorphan", aliases: ["dextromethorphan"] },
+];
+
+export function findMedicineSpelling(query: string): { medicine: string; typed: string; correction?: string } | null {
+  const normalized = " " + query.toLocaleLowerCase().normalize("NFC").replace(/[^\p{L}\p{N}]+/gu, " ").trim() + " ";
+  if (normalized.trim().length === 0) return null;
+  for (const item of COMMON_MEDICINES) {
+    for (const alias of item.aliases) {
+      const padded = ` ${alias} `;
+      if (normalized.includes(padded)) return { medicine: item.name, typed: alias };
     }
   }
-  return null;
+  const words = normalized.trim().split(/\s+/).filter((word) => word.length >= 5);
+  const distance = (a: string, b: string) => {
+    if (Math.abs(a.length - b.length) > 1) return 2;
+    let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+    for (let i = 1; i <= a.length; i++) {
+      const row = [i];
+      for (let j = 1; j <= b.length; j++) row[j] = Math.min(row[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = row;
+    }
+    return previous[b.length];
+  };
+  const suggestions = COMMON_MEDICINES.flatMap((item) => item.aliases.map((alias) => ({ item, alias })))
+    .flatMap(({ item, alias }) => words.filter((word) => distance(word, alias) === 1).map((word) => ({ item, alias, word })));
+  if (suggestions.length !== 1) return null;
+  const suggestion = suggestions[0];
+  return { medicine: suggestion.item.name, typed: suggestion.word, correction: suggestion.alias };
 }
 
 export function findMedicineInQuestion(query: string): string | null {
-  const normalized = query.toLocaleLowerCase();
-  const options = ["paracetamol", "acetaminophen", "ibuprofen", "dextromethorphan"];
-  return options.find((name) => normalized.includes(name)) ?? null;
+  return findMedicineSpelling(query)?.medicine ?? null;
 }
+

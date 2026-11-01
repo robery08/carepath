@@ -16,7 +16,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { getVoiceLanguage } from "../voice";
-import { findMedicineInQuestion, findSymptomGuide, SYMPTOM_GUIDES, type GuideLanguage, type SymptomGuideTopic } from "../symptomGuideContent";
+import { findMedicineInQuestion, findMedicineSpelling, findSymptomGuide, SYMPTOM_GUIDES, type GuideLanguage, type SymptomGuideTopic } from "../symptomGuideContent";
 import MedlinePlusLookup from "./MedlinePlusLookup";
 import ReadAloudButton from "./ReadAloudButton";
 
@@ -64,6 +64,11 @@ const copy = {
     medicineLookup: "I know the medicine name",
     medicineHelp: "Look up a tablet or ingredient in this app using NIH MedlinePlus. Only the name is sent, and only after you agree.",
     matched: "We matched the spelling to",
+    medicineCorrection: "This may be a medicine name. Check the package before searching:",
+    useCorrection: "Search this spelling",
+    differentName: "Search a different name",
+    greeting: "Hi! I’m here to help you find reviewed health guides or general medicine information. Try a symptom such as cough, fever, or leg pain, or ask about a medicine name.",
+    greetingAsk: "Ask a broader question",
     notFound: "We don’t have a reviewed guide for those words yet. We won’t guess a cause or tablet. Try a common topic, or send the question to Ask CARE CONNECTED.",
     askFollowUp: "Ask a follow-up",
     visit: "Prepare for a visit",
@@ -112,6 +117,11 @@ const copy = {
     medicineLookup: "ಔಷಧಿಯ ಹೆಸರು ಗೊತ್ತಿದೆ",
     medicineHelp: "NIH MedlinePlus ಬಳಸಿ ಈ ಆಪ್‌ನಲ್ಲೇ ಮಾತ್ರೆ ಅಥವಾ ಪದಾರ್ಥ ಹುಡುಕಿ. ನಿಮ್ಮ ಒಪ್ಪಿಗೆಯ ನಂತರ ಹೆಸರನ್ನು ಮಾತ್ರ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
     matched: "ಕಾಗುಣಿತವನ್ನು ಇದಕ್ಕೆ ಹೊಂದಿಸಿದ್ದೇವೆ",
+    medicineCorrection: "ಇದು ಔಷಧಿಯ ಹೆಸರು ಇರಬಹುದು. ಹುಡುಕುವ ಮೊದಲು ಪ್ಯಾಕೆಟ್ ಪರಿಶೀಲಿಸಿ:",
+    useCorrection: "ಈ ಹೆಸರಿನಿಂದ ಹುಡುಕಿ",
+    differentName: "ಬೇರೆ ಹೆಸರನ್ನು ಹುಡುಕಿ",
+    greeting: "ನಮಸ್ಕಾರ! ಪರಿಶೀಲಿತ ಆರೋಗ್ಯ ಮಾರ್ಗದರ್ಶಿ ಅಥವಾ ಸಾಮಾನ್ಯ ಔಷಧಿ ಮಾಹಿತಿ ಹುಡುಕಲು ನಾನು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ಕೆಮ್ಮು, ಜ್ವರ ಅಥವಾ ಕಾಲಿನ ನೋವಿನಂತಹ ಲಕ್ಷಣವನ್ನು ಬರೆಯಿರಿ ಅಥವಾ ಔಷಧಿಯ ಹೆಸರನ್ನು ಕೇಳಿ.",
+    greetingAsk: "ಇನ್ನೊಂದು ಪ್ರಶ್ನೆ ಕೇಳಿ",
     notFound: "ಈ ಪದಗಳಿಗೆ ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ ಇಲ್ಲ. ನಾವು ಕಾರಣ ಅಥವಾ ಮಾತ್ರೆ ಊಹಿಸುವುದಿಲ್ಲ. ಸಾಮಾನ್ಯ ವಿಷಯ ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ CARE CONNECTED ಗೆ ಪ್ರಶ್ನೆ ಕಳುಹಿಸಿ.",
     askFollowUp: "ಮುಂದಿನ ಪ್ರಶ್ನೆ ಕೇಳಿ",
     visit: "ವೈದ್ಯರನ್ನು ಭೇಟಿಯಾಗಲು ಸಿದ್ಧರಾಗಿ",
@@ -170,11 +180,38 @@ function guideText(guide: SymptomGuideTopic, language: GuideLanguage) {
   return [guide.name[language], guide.intro[language], ...guide.selfCare[language], ...guide.medicines?.flatMap((medicine) => [medicine.name, medicine.helps[language], medicine.cautions[language]]) ?? [], ...guide.urgent[language], guide.followUp[language]].join(". ");
 }
 
+function isGreeting(value: string) {
+  const normalized = value.normalize("NFC").toLocaleLowerCase().replace(/[.!?,]+/gu, " ").replace(/\s+/gu, " ").trim();
+  return /^(?:(?:hi|hello|hey|namaste|ನಮಸ್ಕಾರ|ಹಾಯ್|ಹಲೋ)(?:\s+there)?\s*)?(?:how are you(?: doing)?|how is it going|what is up|what's up|are you there|ನೀವು ಹೇಗಿದ್ದೀರಿ|ಹೇಗಿದ್ದೀರಿ|ನೀವು ಚೆನ್ನಾಗಿದ್ದೀರಾ)?$/u.test(normalized)
+    || /^(?:good morning|good afternoon|good evening)$/u.test(normalized);
+}
+
+function extractMedicineQuestionTerm(value: string) {
+  const text = value.trim().replace(/[?.!]+$/g, "").trim();
+  const patterns = [
+    /^(?:what is|what's|tell me about|explain)\s+(.+?)\s+(?:used for|for|purpose|benefits?|side effects?)$/i,
+    /^(?:what does)\s+(.+?)\s+do$/i,
+    /^(?:what are|tell me)\s+(?:the\s+)?(?:side effects?|benefits?|uses?|purpose)\s+of\s+(.+)$/i,
+    /^(?:purpose|use|uses|side effects?|benefits?)\s+of\s+(.+)$/i,
+    /^(.+?)\s+(?:uses?|purpose|side effects?|benefits?)$/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const candidate = match?.[match.length - 1]?.trim().replace(/^(?:the\s+)?(?:medicine|tablet|drug|capsule|pill)\s+/i, "");
+    if (!candidate || candidate.length > 70 || /^(?:this|my|the|a|any)\s*(?:medicine|tablet|drug|capsule|pill)?$/i.test(candidate)) continue;
+    if (/\b(?:for|with|and|or)\s+(?:cough|fever|headache|leg pain|stomach pain|nausea|rash)\b/i.test(candidate)) continue;
+    return candidate;
+  }
+  return null;
+}
+
 export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate: (section: string) => void; onAskQuestion: (question: string) => void }) {
   const [language, setLanguage] = useState<GuideLanguage>(() => getVoiceLanguage());
   const [query, setQuery] = useState("");
   const [selectedGuide, setSelectedGuide] = useState<SymptomGuideTopic | null>(null);
   const [matchedCorrection, setMatchedCorrection] = useState("");
+  const [medicineCorrection, setMedicineCorrection] = useState<{ typed: string; corrected: string; medicine: string } | null>(null);
+  const [greeting, setGreeting] = useState(false);
   const [noMatch, setNoMatch] = useState(false);
   const [emergencyPhrase, setEmergencyPhrase] = useState(false);
   const [showMedicineLookup, setShowMedicineLookup] = useState(false);
@@ -193,15 +230,15 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
 
   const setConcern = (value: string) => {
     setQuery(value);
+    setSelectedGuide(null);
     setNoMatch(false);
     setEmergencyPhrase(false);
     setMatchedCorrection("");
+    setMedicineCorrection(null);
+    setGreeting(false);
+    setShowMedicineLookup(false);
+    setMedicineLookupTerm("");
     setStatus("");
-    const medicine = findMedicineInQuestion(value);
-    if (medicine && /(medicine|tablet|drug|pill|used|use|side effect|benefit|purpose)/i.test(value)) {
-      setMedicineLookupTerm(medicine);
-      setShowMedicineLookup(true);
-    }
   };
 
   const submitSearch = () => {
@@ -210,13 +247,16 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
     setStatus("");
     setError("");
     setShowMedicineLookup(false);
-    setEmergencyPhrase(IMMEDIATE_HELP_WORDS.test(value));
-    const medicine = findMedicineInQuestion(value);
-    if (medicine && /(medicine|tablet|drug|pill|used|use|side effect|benefit|purpose)/i.test(value)) {
-      setSelectedGuide(null);
-      setNoMatch(false);
-      setMedicineLookupTerm(medicine);
-      setShowMedicineLookup(true);
+    setSelectedGuide(null);
+    setMatchedCorrection("");
+    setMedicineCorrection(null);
+    setNoMatch(false);
+    const urgent = IMMEDIATE_HELP_WORDS.test(value);
+    setEmergencyPhrase(urgent);
+    setGreeting(false);
+    if (urgent) return;
+    if (isGreeting(value)) {
+      setGreeting(true);
       return;
     }
     const result = findSymptomGuide(value);
@@ -225,9 +265,20 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
       setMatchedCorrection(result.correction ?? "");
       setNoMatch(false);
     } else {
-      setSelectedGuide(null);
-      setMatchedCorrection("");
-      setNoMatch(true);
+      const medicineMatch = findMedicineSpelling(value);
+      if (medicineMatch?.correction) {
+        setMedicineCorrection({ typed: medicineMatch.typed, corrected: medicineMatch.correction, medicine: medicineMatch.medicine });
+        setNoMatch(false);
+        return;
+      }
+      const knownMedicine = findMedicineInQuestion(value);
+      const questionTerm = extractMedicineQuestionTerm(value);
+      if (knownMedicine || questionTerm) {
+        setMedicineLookupTerm(knownMedicine ?? questionTerm ?? "");
+        setShowMedicineLookup(true);
+      } else {
+        setNoMatch(true);
+      }
     }
   };
 
@@ -235,6 +286,8 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
     setQuery(guide.name[language]);
     setSelectedGuide(guide);
     setMatchedCorrection("");
+    setMedicineCorrection(null);
+    setGreeting(false);
     setNoMatch(false);
     setEmergencyPhrase(false);
     setShowMedicineLookup(false);
@@ -327,7 +380,7 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
         </div>
         <form className="cc-symptom-search-form" onSubmit={(event) => { event.preventDefault(); submitSearch(); }}>
           <Search size={19} aria-hidden="true" />
-          <input value={query} onChange={(event) => { setQuery(event.target.value); setNoMatch(false); setMatchedCorrection(""); }} placeholder={t.searchPlaceholder} aria-label={t.searchPlaceholder} maxLength={180} />
+          <input value={query} onChange={(event) => setConcern(event.target.value)} placeholder={t.searchPlaceholder} aria-label={t.searchPlaceholder} maxLength={180} />
           <button type="button" className={`cc-symptom-mic ${listening ? "listening" : ""}`} onClick={startVoice} aria-label={listening ? t.listening : t.listen} disabled={listening}>{listening ? <Volume2 size={18} /> : <Mic size={18} />}<span>{listening ? t.listening : t.listen}</span></button>
           <button className="cc-symptom-submit" type="submit" disabled={!query.trim()}><span>{t.getGuide}</span><ArrowRight size={17} /></button>
         </form>
@@ -342,6 +395,8 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
         <div><strong>{language === "kn" ? "ತುರ್ತು ಲಕ್ಷಣ ಇರಬಹುದು" : "This may need emergency help"}</strong><p>{language === "kn" ? "ಈಗಲೇ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಗೆ ಕರೆ ಮಾಡಿ ಅಥವಾ ಹತ್ತಿರದ ತುರ್ತು ಚಿಕಿತ್ಸಾ ಕೇಂದ್ರಕ್ಕೆ ಹೋಗಿ. ಆಪ್‌ನ ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಬೇಡಿ." : "Call your local emergency service now or go to the nearest emergency department. Do not wait for an app reply."}</p></div>
         <button type="button" onClick={() => onNavigate("Emergency Help")}>{t.openEmergency}<ArrowRight size={15} /></button>
       </section>}
+
+      {greeting && <section className="cc-symptom-no-match cc-symptom-greeting" role="status"><span><HeartHandshake size={20} /></span><div><strong>{language === "kn" ? "ನಮಸ್ಕಾರ! ನಿಮಗೆ ಏನು ತಿಳಿಯಬೇಕು?" : "Hi! What would you like help with?"}<p>{t.greeting}</p></strong><button type="button" className="cp-button primary" onClick={() => onAskQuestion(query.trim())}>{t.greetingAsk}<ArrowRight size={15} /></button></div></section>}
 
       {matchedCorrection && selectedGuide && <div className="cc-symptom-match" role="status"><CheckCircle2 size={17} /><span>{t.matched} <strong>{selectedGuide.name[language]}</strong>. {language === "kn" ? "ತಪ್ಪಿದ್ದರೆ ಬೇರೆ ವಿಷಯ ಆಯ್ಕೆಮಾಡಿ." : "If that is not right, choose another topic."}</span></div>}
 
@@ -389,6 +444,8 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
         {selectedGuide.sources.length > 0 && <footer className="cc-symptom-sources"><strong>{t.sourceTitle}</strong><div>{selectedGuide.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.label}<ArrowRight size={13} /></a>)}</div><small>{t.sourceLanguage}</small></footer>}
       </article>}
 
+      {medicineCorrection && <section className="cc-symptom-match cc-medicine-correction" role="status"><CheckCircle2 size={17} /><div><span>{t.medicineCorrection} <strong>{medicineCorrection.typed}</strong> → <strong>{medicineCorrection.medicine}</strong></span><p>{language === "kn" ? "ಔಷಧಿಯ ಹೆಸರು ಅಥವಾ ಸಂಖ್ಯೆಯಲ್ಲಿ ತಪ್ಪಿದ್ದರೆ ಪ್ಯಾಕೆಟ್ ನೋಡಿ; ಖಚಿತವಾಗಿಲ್ಲದಿದ್ದರೆ ಹುಡುಕಬೇಡಿ." : "If a medicine name or strength may be wrong, check the package. Do not continue if you are unsure."}</p><button type="button" className="cp-button primary" onClick={() => { setMedicineLookupTerm(medicineCorrection.corrected); setShowMedicineLookup(true); setMedicineCorrection(null); }}>{t.useCorrection}<ArrowRight size={14} /></button><button type="button" className="cp-button quiet" onClick={() => { setMedicineLookupTerm(""); setShowMedicineLookup(true); setMedicineCorrection(null); }}>{t.differentName}</button></div></section>}
+
       {showMedicineLookup && <section className="cc-symptom-lookup-panel" aria-label={t.medicineLookup}>
         <button type="button" className="cc-symptom-lookup-close" onClick={() => setShowMedicineLookup(false)}>{language === "kn" ? "ಮುಚ್ಚಿ" : "Close"}</button>
         <MedlinePlusLookup key={medicineLookupTerm || "medicine-search"} question="" initialTerm={medicineLookupTerm} language={language} />
@@ -428,3 +485,4 @@ export default function SymptomGuide({ onNavigate, onAskQuestion }: { onNavigate
     </div>
   );
 }
+
