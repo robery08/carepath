@@ -335,30 +335,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: #3ddbd4; }
 .cp-modal-backdrop, .cp-guide-backdrop { background: rgba(1,5,14,.8) !important; backdrop-filter: blur(9px); }
 .cp-reminder-modal, .cp-guide-modal, .cp-modal, .cp-dialog { color: var(--fx-ink) !important; border-color: rgba(100,178,214,.29) !important; background: linear-gradient(145deg,#111e37,#0a142a) !important; box-shadow: 0 30px 80px rgba(0,0,0,.52) !important; }
 
-@keyframes fx-core-glow { 50% { box-shadow: 0 0 36px rgba(57,208,232,.58), inset 0 1px rgba(255,255,255,.54); } }
-@media (max-width: 760px) {
-  .cc-graph-canvas { height: 430px; margin-inline: -7px; }
-  .cc-graph-node { width: clamp(102px, 32vw, 146px); min-height: 49px; gap: 6px; padding: 6px; }
-  .cc-graph-node-icon { flex-basis: 28px; width: 28px; height: 28px; }
-  .cc-graph-node-copy strong { font-size: 8px; }
-  .cc-graph-node-copy small { font-size: 6px; }
-  .cc-graph-detail { grid-template-columns: 34px minmax(0,1fr); }
-  .cc-graph-detail button { grid-column: 2; justify-self: start; }
-  .cp-home-feature-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-}
-@media (max-width: 440px) {
-  .cc-graph-canvas { height: 390px; }
-  .cc-graph-canvas::before { inset: 17% 17%; }
-  .cc-graph-node { width: 112px; min-height: 45px; }
-  .cc-graph-node:nth-of-type(5), .cc-graph-node:nth-of-type(6) { width: 103px; }
-  .cc-graph-heading { align-items: center; }
-  .cp-action-center { padding: 22px 16px !important; }
-  .cc-threadline-steps { grid-template-columns: 1fr !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}
-
 /* Health tracker: keep personal readings calm, legible, and clearly user-entered. */
 .health-monitor-overlay { background: rgba(1,5,14,.82) !important; backdrop-filter: blur(9px); }
 .health-monitor-panel { color: var(--fx-ink) !important; border: 1px solid rgba(102,180,216,.29) !important; background: linear-gradient(145deg,#101d36,#091428) !important; box-shadow: 0 30px 90px rgba(0,0,0,.56) !important; }
@@ -422,3 +398,77 @@ input[type="checkbox"], input[type="radio"] { accent-color: #3ddbd4; }
 @media (max-width: 400px) {
   .health-summary-grid, .cp-metric-grid { grid-template-columns: 1fr !important; }
 }
+
+@keyframes fx-core-glow { 50% { box-shadow: 0 0 36px rgba(57,208,232,.58), inset 0 1px rgba(255,255,255,.54); } }
+@media (max-width: 760px) {
+  .cc-graph-canvas { height: 430px; margin-inline: -7px; }
+  .cc-graph-node { width: clamp(102px, 32vw, 146px); min-height: 49px; gap: 6px; padding: 6px; }
+  .cc-graph-node-icon { flex-basis: 28px; width: 28px; height: 28px; }
+  .cc-graph-node-copy strong { font-size: 8px; }
+  .cc-graph-node-copy small { font-size: 6px; }
+  .cc-graph-detail { grid-template-columns: 34px minmax(0,1fr); }
+  .cc-graph-detail button { grid-column: 2; justify-self: start; }
+  .cp-home-feature-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width: 440px) {
+  .cc-graph-canvas { height: 390px; }
+  .cc-graph-canvas::before { inset: 17% 17%; }
+  .cc-graph-node { width: 112px; min-height: 45px; }
+  .cc-graph-node:nth-of-type(5), .cc-graph-node:nth-of-type(6) { width: 103px; }
+  .cc-graph-heading { align-items: center; }
+  .cp-action-center { padding: 22px 16px !important; }
+  .cc-threadline-steps { grid-template-columns: 1fr !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* Search-first medicine catalogue: source choice, result list, then label detail. */
+.cp-live-med-search {
+  color: #e8f5ff !important;
+  border-color: rgba(92,184,219,.28) !important;
+  background: radial-gradient(ellipse at 92% 0%,rgba(96,81,218,.13),transparent 36%),linear-gradient(145deg,rgba(13,27,50,.98),rgba(8,17,34,.98)) !important;
+  box-shadow: 0 15px 36px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.035);
+}
+.cp-live-med-search>strong { color:#eaf7ff !important;font-size:15px !important; }
+.cp-live-med-search>p { color:#a5bad2 !important;font-size:12px !important;line-height:1.65 !important; }
+.cp-live-med-search>label:first-of-type { color:#b8cde2 !important; }
+.cp-live-med-search>label:first-of-type input { color:#eff9ff !important;border-color:rgba(120,173,212,.3) !important;background:rgba(5,13,29,.88) !important; }
+.cp-live-med-consent { color:#b7cbe0 !important;border:1px solid rgba(114,160,198,.2);background:rgba(8,17,34,.72) !important; }
+.cp-med-source-actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px; }
+.cp-med-source-actions .cp-button { min-height:46px;justify-content:center;text-align:center; }
+.cp-fda-search-results { display:grid;gap:12px;margin-top:15px;padding:14px;border:1px solid rgba(91,185,210,.28);border-radius:16px;background:linear-gradient(150deg,rgba(14,29,53,.96),rgba(9,18,36,.97)); }
+.cp-fda-result-heading { display:flex;align-items:center;gap:10px;padding-bottom:11px;border-bottom:1px solid rgba(115,160,198,.16); }
+.cp-fda-result-heading>span { display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(82,221,227,.23);border-radius:12px;color:var(--fx-cyan);background:rgba(30,129,162,.15); }
+.cp-fda-result-heading>div { display:grid;gap:3px; }
+.cp-fda-result-heading strong { color:#eef9ff;font-size:13px; }
+.cp-fda-result-heading small { color:#91a8c5;font-size:10px; }
+.cp-fda-product-layout { display:grid;grid-template-columns:minmax(190px,.78fr) minmax(0,1.45fr);gap:12px;align-items:start; }
+.cp-fda-product-list { display:grid;gap:7px;max-height:590px;overflow:auto; }
+.cp-fda-product-list button { display:grid;gap:4px;min-width:0;padding:11px;text-align:left;border:1px solid rgba(113,160,198,.17);border-radius:12px;color:#c4d7e9;background:rgba(7,17,34,.68);cursor:pointer;transition:border-color .17s ease,background .17s ease,transform .17s ease; }
+.cp-fda-product-list button:hover { border-color:rgba(84,231,240,.42);background:rgba(26,73,101,.32);transform:translateY(-1px); }
+.cp-fda-product-list button.selected { border-color:rgba(84,231,240,.65);background:linear-gradient(120deg,rgba(19,132,154,.23),rgba(89,70,175,.2));box-shadow:inset 0 0 0 1px rgba(84,231,240,.12); }
+.cp-fda-product-list button strong { overflow-wrap:anywhere;color:#eef9ff;font-size:12px; }
+.cp-fda-product-list button span,.cp-fda-product-list button small { color:#a1b6ce;font-size:10px;line-height:1.45;overflow-wrap:anywhere; }
+.cp-fda-product-detail { display:grid;gap:9px;min-width:0;padding:14px;border:1px solid rgba(105,166,208,.23);border-radius:14px;background:rgba(6,15,31,.68); }
+.cp-fda-product-detail header { display:grid;gap:5px;padding-bottom:9px;border-bottom:1px solid rgba(115,160,198,.16); }
+.cp-fda-product-detail header h3 { margin:0;color:#f0f9ff;font-size:17px; }
+.cp-fda-product-detail header p { margin:0;color:#9fb5ce;font-size:10px;line-height:1.5;overflow-wrap:anywhere; }
+.cp-fda-product-detail details { padding:9px 10px;border:1px solid rgba(109,157,196,.16);border-radius:10px;background:rgba(17,31,55,.62); }
+.cp-fda-product-detail summary { color:#d9f2ff;font-size:11px;font-weight:800;cursor:pointer; }
+.cp-fda-product-detail details p { margin:8px 0 1px;color:#b4c8dc;font-size:11px;line-height:1.65;overflow-wrap:anywhere; }
+.cp-fda-product-detail>a { display:flex;align-items:center;gap:7px;width:max-content;max-width:100%;min-height:38px;color:#77e4eb;font-size:11px;font-weight:800;text-decoration:none; }
+.cp-fda-caveat { display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid rgba(245,191,100,.2);border-radius:10px;color:#f2d6a1;background:rgba(94,65,25,.17); }
+.cp-fda-caveat svg { flex:0 0 15px;margin-top:2px; }
+.cp-fda-caveat p { margin:0;color:#ddc9a4;font-size:10px;line-height:1.55; }
+.cp-fda-product-detail .cp-read-aloud-button { width:max-content;max-width:100%; }
+@media(max-width:720px) {
+  .cp-med-source-actions,.cp-fda-product-layout { grid-template-columns:1fr; }
+  .cp-fda-product-list { grid-template-columns:repeat(2,minmax(0,1fr));max-height:360px; }
+}
+@media(max-width:460px) {
+  .cp-fda-product-list { grid-template-columns:1fr; }
+  .cp-fda-search-results { padding:10px; }
+  .cp-fda-product-detail { padding:11px; }
+}
+
