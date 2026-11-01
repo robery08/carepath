@@ -66,8 +66,8 @@ export default function MedlinePlusLookup({ question, language, initialTerm }: P
     {fdaResults.length > 0 && <section className="cp-fda-search-results" aria-label="U.S. FDA submitted medicine product labels">
       <div className="cp-fda-result-heading"><span><FileSearch size={17} /></span><div><strong>{fdaResults.length} product label{fdaResults.length === 1 ? "" : "s"} found</strong><small>U.S. FDA submitted labeling · product records may differ</small></div></div>
       <div className="cp-fda-product-layout">
-        <div className="cp-fda-product-list" role="list" aria-label="Matching product labels">
-          {fdaResults.map((label) => <button type="button" role="listitem" key={label.id} className={selectedLabelId === label.id ? "selected" : ""} aria-pressed={selectedLabelId === label.id} onClick={() => setSelectedLabelId(label.id)}><strong>{label.brandName}</strong><span>{label.genericName || "Generic name not listed"}</span><small>{[label.productType, label.route, label.manufacturer].filter(Boolean).join(" · ") || "Product details not listed"}</small></button>)}
+        <div className="cp-fda-product-list" role="group" aria-label="Matching product labels">
+          {fdaResults.map((label) => <button type="button" key={label.id} className={selectedLabelId === label.id ? "selected" : ""} aria-pressed={selectedLabelId === label.id} onClick={() => setSelectedLabelId(label.id)}><strong>{label.brandName}</strong><span>{label.genericName || "Generic name not listed"}</span><small>{[label.productType, label.route, label.manufacturer].filter(Boolean).join(" · ") || "Product details not listed"}</small></button>)}
         </div>
         {selectedLabel && <article className="cp-fda-product-detail">
           <header><span className="cp-eyebrow">PRODUCT LABEL DETAILS · ENGLISH SOURCE</span><h3>{selectedLabel.brandName}</h3><p>{[selectedLabel.genericName, selectedLabel.productType, selectedLabel.route, selectedLabel.manufacturer].filter(Boolean).join(" · ")}</p></header>
