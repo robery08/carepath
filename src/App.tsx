@@ -151,25 +151,6 @@ function getToday() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-function getDateOffset(offset: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + offset);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-const SAMPLE_READINGS: HealthReading[] = [
-  { id: "demo-1", metric: "Blood Pressure", value: 128, secondValue: 82, unit: "mmHg", date: getDateOffset(0), time: "08:30", note: "Morning reading" },
-  { id: "demo-2", metric: "Blood Pressure", value: 124, secondValue: 80, unit: "mmHg", date: getDateOffset(-1), time: "08:20", note: "Morning reading" },
-  { id: "demo-3", metric: "Blood Pressure", value: 130, secondValue: 84, unit: "mmHg", date: getDateOffset(-2), time: "08:45", note: "Morning reading" },
-  { id: "demo-4", metric: "Blood Pressure", value: 126, secondValue: 81, unit: "mmHg", date: getDateOffset(-3), time: "09:00", note: "Morning reading" },
-  { id: "demo-5", metric: "Blood Glucose", value: 96, unit: "mg/dL", date: getDateOffset(0), time: "07:45", note: "Fasting" },
-  { id: "demo-6", metric: "Pulse", value: 74, unit: "bpm", date: getDateOffset(0), time: "08:35", note: "Resting" },
-  { id: "demo-7", metric: "SpO₂", value: 98, unit: "%", date: getDateOffset(0), time: "08:40", note: "Resting" },
-  { id: "demo-8", metric: "Temperature", value: 36.7, unit: "°C", date: getDateOffset(0), time: "08:42", note: "Morning" },
-  { id: "demo-9", metric: "Weight", value: 68.4, unit: "kg", date: getDateOffset(0), time: "07:30", note: "Morning" },
-  { id: "demo-10", metric: "Steps", value: 4200, unit: "steps", date: getDateOffset(0), time: "08:45", note: "Illustrative daily count" },
-];
-
 function readStored<T>(key: string, fallback: T): T {
   try {
     const value = localStorage.getItem(key);
@@ -209,10 +190,10 @@ function App() {
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [pendingAskQuestion, setPendingAskQuestion] = useState("");
   const medicines = useMemo(() => readPersonalMedicines<Medicine>(), [medicineCount, refresh]);
-  const healthReadings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", SAMPLE_READINGS), [refresh]);
+  const healthReadings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", []).filter((reading) => !reading.id.startsWith("demo-")), [refresh]);
   const medicationLog = useMemo(() => readStored<MedicationEvent[]>("carepath_medication_log", []), [refresh]);
   const profile = useMemo(() => readStored<{ name?: string; allergies?: string }>("carepath_profile", {}), [refresh]);
-  const name = profile.name?.trim() || "Demo User";
+  const name = profile.name?.trim() || "My profile";
 
 
   const refreshApp = useCallback(() => setRefresh((current) => current + 1), []);

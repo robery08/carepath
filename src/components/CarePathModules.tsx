@@ -85,6 +85,7 @@ type HealthReading = {
   date: string;
   time: string;
   note: string;
+  sourceLabel?: string;
 };
 
 type Profile = {
@@ -142,7 +143,7 @@ type Props = {
 };
 
 const DEFAULT_PROFILE: Profile = {
-  name: "Demo User",
+  name: "",
   age: "",
   bloodType: "Not provided",
   allergies: "",
@@ -156,28 +157,6 @@ const DEFAULT_PROFILE: Profile = {
   pharmacyPhone: "",
   locationHint: "",
 };
-
-function sampleReadings(): HealthReading[] {
-  const date = (offset: number) => {
-    const value = new Date();
-    value.setDate(value.getDate() + offset);
-    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-  };
-  return [
-    { id: "demo-1", metric: "Blood Pressure", value: 128, secondValue: 82, unit: "mmHg", date: date(0), time: "08:30", note: "Morning reading" },
-    { id: "demo-2", metric: "Blood Pressure", value: 124, secondValue: 80, unit: "mmHg", date: date(-1), time: "08:20", note: "Morning reading" },
-    { id: "demo-3", metric: "Blood Pressure", value: 130, secondValue: 84, unit: "mmHg", date: date(-2), time: "08:45", note: "Morning reading" },
-    { id: "demo-4", metric: "Blood Pressure", value: 126, secondValue: 81, unit: "mmHg", date: date(-3), time: "09:00", note: "Morning reading" },
-    { id: "demo-5", metric: "Blood Glucose", value: 96, unit: "mg/dL", date: date(0), time: "07:45", note: "Fasting" },
-    { id: "demo-6", metric: "Pulse", value: 74, unit: "bpm", date: date(0), time: "08:35", note: "Resting" },
-    { id: "demo-7", metric: "SpO₂", value: 98, unit: "%", date: date(0), time: "08:40", note: "Resting" },
-    { id: "demo-8", metric: "Temperature", value: 36.7, unit: "°C", date: date(0), time: "08:42", note: "Morning" },
-    { id: "demo-9", metric: "Weight", value: 68.4, unit: "kg", date: date(0), time: "07:30", note: "Morning" },
-    { id: "demo-10", metric: "Steps", value: 4200, unit: "steps", date: date(0), time: "08:45", note: "Illustrative daily count" },
-  ];
-}
-
-const DEFAULT_READINGS = sampleReadings();
 
 const todayISO = () => {
   const date = new Date();
@@ -246,7 +225,7 @@ function Notice({ children, tone = "info" }: { children: ReactNode; tone?: "info
 export default function CarePathModules({ active, medicineCount, initialQuestion, onQuestionConsumed, initialFile, onInitialFileHandled, onOpenMedicines, onOpenMonitor, onScheduleReview, onNavigate, onAskQuestion, onInstallApp }: Props) {
   const [refresh, setRefresh] = useState(0);
   const medicines = useMemo(() => readPersonalMedicines<Medicine>(), [medicineCount, refresh]);
-  const readings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", DEFAULT_READINGS), [refresh]);
+  const readings = useMemo(() => readStored<HealthReading[]>("carepath_health_readings", []).filter((reading) => !reading.id.startsWith("demo-")), [refresh]);
   const documents = useMemo(() => readStored<DocumentRecord[]>("carepath_documents", []), [refresh]);
   const profile = useMemo(() => ({ ...DEFAULT_PROFILE, ...readStored<Profile>("carepath_profile", DEFAULT_PROFILE) }), [refresh]);
   const medEvents = useMemo(() => readStored<MedicationEvent[]>("carepath_medication_log", []), [refresh]);
@@ -1000,14 +979,30 @@ function HealthTracker({ readings, onOpenMonitor, onNavigate }: Shared) {
     { name: "SpO₂", unit: "%", icon: <Activity />, tone: "violet" },
     { name: "Temperature", unit: "°C", icon: <Activity />, tone: "rose" },
     { name: "Weight", unit: "kg", icon: <Activity />, tone: "green" },
+    { name: "Height", unit: "cm", icon: <Activity />, tone: "violet" },
+    { name: "Sleep", unit: "hours", icon: <Clock3 />, tone: "blue" },
     { name: "Steps", unit: "steps", icon: <Activity />, tone: "blue" },
   ];
-  const counts = metrics.map((item) => readings.filter((reading) => reading.metric === item.name).length);
-  const hasOnlyExamples = readings.length > 0 && readings.every((reading) => reading.id.startsWith("demo-"));
   return <>
     <PageHeader eyebrow="YOUR MEASUREMENTS" title="Health Tracker" description="Record readings with context and review how your saved values change over time." icon={<HeartPulse size={24} />} action={<button className="cp-button primary" onClick={onOpenMonitor}><Plus size={16} /> Add a reading</button>} />
-    {hasOnlyExamples && <Notice>Example values are included so you can explore the tracker. Add your own readings to replace these examples.</Notice>}
-    <div className="cp-metric-grid">{metrics.map((metric, index) => { const current = latestByMetric.get(metric.name); return <button className={`cp-metric-tile ${metric.tone}`} key={metric.name} onClick={onOpenMonitor}><span className="cp-metric-icon">{metric.icon}</span><span className="cp-metric-label">{metric.name}</span><strong>{current ? `${current.value}${current.secondValue === undefined ? "" : ` / ${current.secondValue}`}` : "—"}<small>{current?.unit || metric.unit}</small></strong><em>{current ? `${current.id.startsWith("demo-") ? "Example · " : ""}${dateLabel(current.date)} · ${current.time}` : "No saved reading"}</em><span className="cp-mini-bars" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => <i key={i} style={{ height: `${18 + ((i * 17 + counts[index] * 9) % 37)}px` }} />)}</span></button>; })}</div>
+    <div className="cp-metric-grid">{metrics.map((metric) => {
+      const current = latestByMetric.get(metric.name);
+      const bars = Array.from({ length: 7 }, (_, index) => {
+        const day = new Date();
+        day.setHours(12, 0, 0, 0);
+        day.setDate(day.getDate() - (6 - index));
+        const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+        const count = readings.filter((reading) => reading.metric === metric.name && reading.date === dayKey).length;
+        return { dayKey, count };
+      });
+      return <button className={`cp-metric-tile ${metric.tone}`} key={metric.name} onClick={onOpenMonitor}>
+        <span className="cp-metric-icon">{metric.icon}</span>
+        <span className="cp-metric-label">{metric.name}</span>
+        <strong>{current ? `${current.value}${current.secondValue === undefined ? "" : ` / ${current.secondValue}`}` : "—"}<small>{current?.unit || metric.unit}</small></strong>
+        <em>{current ? `${dateLabel(current.date)} · ${current.time} · entered by you` : "No saved reading"}</em>
+        <span className="cp-mini-bars" aria-label={`Number of ${metric.name} readings recorded on each of the last seven days`}>{bars.map((bar) => <i key={bar.dayKey} title={`${bar.dayKey}: ${bar.count} recorded`} style={{ height: `${bar.count ? Math.min(41, 8 + bar.count * 7) : 2}px`, opacity: bar.count ? 1 : 0.22 }} />)}</span>
+      </button>;
+    })}</div>
     <div className="cp-two-column"><Panel title="Recent readings" eyebrow={`${readings.length} TOTAL`}><div className="cp-reading-list">{readings.length ? readings.slice().sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`)).slice(0, 6).map((reading) => <div className="cp-reading-line" key={reading.id}><span className="cp-reading-dot" /><span><strong>{reading.metric}</strong><small>{dateLabel(reading.date)} · {reading.time} · {reading.id.startsWith("demo-") ? "Sample" : "Entered by you"}{reading.note ? ` · ${reading.note}` : ""}</small></span><b>{reading.value}{reading.secondValue !== undefined ? ` / ${reading.secondValue}` : ""} <small>{reading.unit}</small></b></div>) : <EmptyState icon={<Activity />} title="Your tracker is ready" text="Add a reading with its date and context to begin building a useful record." />}</div></Panel><Panel title="Bring context to a reading" eyebrow="A USEFUL HABIT"><div className="cp-coach-card"><div className="cp-coach-icon"><Sparkles size={20} /></div><div><strong>Capture how and when</strong><p>Record the time, what was happening, and any symptoms or notes. Consistent context makes records easier to discuss at an appointment.</p></div></div><Notice>Values are for personal tracking. CARE CONNECTED does not interpret measurements or replace medical advice.</Notice><button className="cp-text-link" onClick={() => onNavigate("Health Timeline")}>View health timeline <ArrowRight size={15} /></button></Panel></div>
   </>;
 }
@@ -1016,7 +1011,7 @@ function Timeline({ readings, documents, medEvents, onNavigate }: Shared) {
   const labResults = readStored<ReportResult[]>("carepath_lab_results", []);
   const symptomNotes = readStored<SymptomEntry[]>("carepath_symptom_notes", []);
   const entries = [
-    ...readings.map((item) => ({ id: `reading-${item.id}`, date: item.date, time: item.time, title: item.metric, text: `${item.value}${item.secondValue !== undefined ? ` / ${item.secondValue}` : ""} ${item.unit}${item.note ? ` · ${item.note}` : ""}`, icon: <Activity size={16} />, kind: item.id.startsWith("demo-") ? "Example health reading" : "Health reading" })),
+    ...readings.map((item) => ({ id: `reading-${item.id}`, date: item.date, time: item.time, title: item.metric, text: `${item.value}${item.secondValue !== undefined ? ` / ${item.secondValue}` : ""} ${item.unit}${item.note ? ` · ${item.note}` : ""}${item.sourceLabel ? ` · ${item.sourceLabel}` : ""}`, icon: <Activity size={16} />, kind: "Health reading · entered by you" })),
     ...labResults.map((item) => ({ id: item.id, date: item.date, time: "12:00", title: item.test, text: `${item.value} ${item.unit}`, icon: <FileCheck2 size={16} />, kind: "Lab result · entered by you" })),
     ...documents.map((item) => ({ id: item.id, date: item.date, time: "12:00", title: item.name, text: `${item.kind} · ${item.status}`, icon: <FileCheck2 size={16} />, kind: "Document" })),
     ...medEvents.map((item) => ({ id: item.id, date: item.date, time: item.time, title: item.medicine, text: `Dose marked ${item.status.toLowerCase()}`, icon: <Pill size={16} />, kind: "Medicine note" })),
@@ -1331,7 +1326,7 @@ function SettingsPage({ profile, bump, medicines, readings, documents, onNavigat
   const restoreDemo = () => {
     const id = `CP-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     saveStored("carepath_emergency_id", id);
-    if (!localStorage.getItem("carepath_profile")) saveStored("carepath_profile", { ...DEFAULT_PROFILE, name: "Demo User" });
+    if (!localStorage.getItem("carepath_profile")) saveStored("carepath_profile", { ...DEFAULT_PROFILE, name: "" });
     setNotice("Your personal CARE CONNECTED reference is ready. Add your own details when you are comfortable.");
     bump();
     window.dispatchEvent(new Event("carepath:refresh"));

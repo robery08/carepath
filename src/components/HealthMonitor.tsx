@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
   Clock3,
   Droplets,
   HeartPulse,
   Mic,
+  Pencil,
   Plus,
   Thermometer,
   Weight,
@@ -33,6 +33,8 @@ type HealthMetric =
   | "SpO₂"
   | "Temperature"
   | "Weight"
+  | "Height"
+  | "Sleep"
   | "Steps";
 
 type HealthReading = {
@@ -45,6 +47,7 @@ type HealthReading = {
   time: string;
   note: string;
   source?: "voice" | "typed";
+  sourceLabel?: string;
 };
 
 type Props = {
@@ -72,103 +75,6 @@ function getDateOffset(offset: number) {
   date.setDate(date.getDate() + offset);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
-
-const demoReadings: HealthReading[] = [
-  {
-    id: "demo-1",
-    metric: "Blood Pressure",
-    value: 128,
-    secondValue: 82,
-    unit: "mmHg",
-    date: getDateOffset(0),
-    time: "08:30",
-    note: "Morning reading",
-  },
-  {
-    id: "demo-2",
-    metric: "Blood Pressure",
-    value: 124,
-    secondValue: 80,
-    unit: "mmHg",
-    date: getDateOffset(-1),
-    time: "08:20",
-    note: "Morning reading",
-  },
-  {
-    id: "demo-3",
-    metric: "Blood Pressure",
-    value: 130,
-    secondValue: 84,
-    unit: "mmHg",
-    date: getDateOffset(-2),
-    time: "08:45",
-    note: "Morning reading",
-  },
-  {
-    id: "demo-4",
-    metric: "Blood Pressure",
-    value: 126,
-    secondValue: 81,
-    unit: "mmHg",
-    date: getDateOffset(-3),
-    time: "09:00",
-    note: "Morning reading",
-  },
-  {
-    id: "demo-5",
-    metric: "Blood Glucose",
-    value: 96,
-    unit: "mg/dL",
-    date: getDateOffset(0),
-    time: "07:45",
-    note: "Fasting",
-  },
-  {
-    id: "demo-6",
-    metric: "Pulse",
-    value: 74,
-    unit: "bpm",
-    date: getDateOffset(0),
-    time: "08:35",
-    note: "Resting",
-  },
-  {
-    id: "demo-7",
-    metric: "SpO₂",
-    value: 98,
-    unit: "%",
-    date: getDateOffset(0),
-    time: "08:40",
-    note: "Resting",
-  },
-  {
-    id: "demo-8",
-    metric: "Temperature",
-    value: 36.7,
-    unit: "°C",
-    date: getDateOffset(0),
-    time: "08:42",
-    note: "Morning",
-  },
-  {
-    id: "demo-9",
-    metric: "Weight",
-    value: 68.4,
-    unit: "kg",
-    date: getDateOffset(0),
-    time: "07:30",
-    note: "Morning",
-  },
-  {
-    id: "demo-10",
-    metric: "Steps",
-    value: 4200,
-    unit: "steps",
-    date: getDateOffset(0),
-    time: "08:45",
-    note: "Illustrative daily count",
-  },
-];
 
 const metricOptions: Array<{
   name: HealthMetric;
@@ -206,6 +112,16 @@ const metricOptions: Array<{
     icon: Weight,
   },
   {
+    name: "Height",
+    unit: "cm",
+    icon: Activity,
+  },
+  {
+    name: "Sleep",
+    unit: "hours",
+    icon: Clock3,
+  },
+  {
     name: "Steps",
     unit: "steps",
     icon: Activity,
@@ -220,14 +136,28 @@ function getInitialReadings(): HealthReading[] {
       const parsed = JSON.parse(saved);
 
       if (Array.isArray(parsed)) {
-        return parsed;
+        return parsed.filter((item): item is HealthReading => {
+          if (!item || typeof item !== "object") return false;
+          const reading = item as Partial<HealthReading>;
+          return typeof reading.id === "string"
+            && !reading.id.startsWith("demo-")
+            && metricOptions.some((option) => option.name === reading.metric)
+            && typeof reading.value === "number"
+            && Number.isFinite(reading.value)
+            && typeof reading.unit === "string"
+            && typeof reading.date === "string"
+            && /^\d{4}-\d{2}-\d{2}$/u.test(reading.date)
+            && typeof reading.time === "string"
+            && /^\d{2}:\d{2}$/u.test(reading.time)
+            && typeof reading.note === "string";
+        });
       }
     }
   } catch {
-    // Use demo data when local storage is unavailable.
+    // Never substitute demonstration values for a user's own records.
   }
 
-  return demoReadings;
+  return [];
 }
 
 function getCurrentDate() {
@@ -267,7 +197,7 @@ function parseSpokenNumber(phrase: string): number | null {
     const parsed = Number(direct[0].replace(",", "."));
     return Number.isFinite(parsed) ? parsed : null;
   }
-  const unitWords = /\b(?:my|the|reading|is|was|show|shows|value|blood|pressure|systolic|diastolic|glucose|sugar|pulse|heart|rate|temperature|oxygen|saturation|weight|steps|millimeters?|millimetres?|mercury|mmhg|degrees?|celsius|fahrenheit|percent|bpm|mg|dl|kg|per|of)\b/g;
+  const unitWords = /\b(?:my|the|reading|is|was|show|shows|value|blood|pressure|systolic|diastolic|glucose|sugar|pulse|heart|rate|temperature|oxygen|saturation|weight|height|sleep|steps|hours?|minutes?|centimeters?|centimetres?|meters?|metres?|inches?|millimeters?|millimetres?|mercury|mmhg|degrees?|celsius|fahrenheit|percent|bpm|mg|dl|kg|per|of)\b/g;
   const tokens = normalized.replace(unitWords, " ").replace(/[^a-z0-9.\s\u0C80-\u0CFF]/g, " ").split(/\s+/).filter(Boolean);
   let total = 0;
   let current = 0;
@@ -315,9 +245,11 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
     useState<HealthMetric>("Blood Pressure");
 
   const [period, setPeriod] =
-    useState<"7D" | "30D">("7D");
+    useState<"7D" | "30D" | "90D" | "ALL">("7D");
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [reviewReading, setReviewReading] = useState<HealthReading | null>(null);
 
   const [metric, setMetric] =
     useState<HealthMetric>("Blood Pressure");
@@ -327,6 +259,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
   const [date, setDate] = useState(getCurrentDate);
   const [time, setTime] = useState(getCurrentTime);
   const [note, setNote] = useState("");
+  const [sourceLabel, setSourceLabel] = useState("My device reading (entered by me)");
   const [voiceLanguage, setVoiceLanguage] = useState<VoiceLanguage>(getVoiceLanguage);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceNotice, setVoiceNotice] = useState("");
@@ -349,7 +282,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
 
   const filteredReadings = useMemo(() => {
     const now = new Date();
-    const days = period === "7D" ? 7 : 30;
+    const days = period === "7D" ? 7 : period === "30D" ? 30 : period === "90D" ? 90 : Infinity;
 
     return readings
       .filter((reading) => {
@@ -361,11 +294,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
           (now.getTime() - readingDate.getTime()) /
           (1000 * 60 * 60 * 24);
 
-        return (
-          reading.metric === selectedMetric &&
-          difference >= -1 &&
-          difference <= days
-        );
+        return reading.metric === selectedMetric && difference >= 0 && difference <= days;
       })
       .sort((a, b) =>
         `${a.date} ${a.time}`.localeCompare(
@@ -395,24 +324,31 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
   }, [readings, selectedMetric]);
 
   const averageValue = useMemo(() => {
-    const values = filteredReadings.map(
-      (item) => item.value,
-    );
-
-    if (!values.length) {
-      return "--";
+    if (filteredReadings.length < 2) return "—";
+    const average = (values: number[]) => values.reduce((total, current) => total + current, 0) / values.length;
+    const digits = selectedMetric === "Temperature" || selectedMetric === "Weight" || selectedMetric === "Height" || selectedMetric === "Sleep" ? 1 : 0;
+    const primary = average(filteredReadings.map((item) => item.value)).toFixed(digits);
+    if (selectedMetric === "Blood Pressure") {
+      const diastolic = average(filteredReadings.map((item) => item.secondValue ?? 0)).toFixed(0);
+      return `${primary}/${diastolic}`;
     }
-
-    const average =
-      values.reduce(
-        (total, current) => total + current,
-        0,
-      ) / values.length;
-
-    return average.toFixed(
-      selectedMetric === "Temperature" ? 1 : 0,
-    );
+    return primary;
   }, [filteredReadings, selectedMetric]);
+
+  const latestHeight = readings.filter((reading) => reading.metric === "Height").sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`))[0];
+  const latestWeight = readings.filter((reading) => reading.metric === "Weight").sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`))[0];
+  const calculatedBmi = latestHeight && latestWeight && latestHeight.value > 0
+    ? (latestWeight.value / ((latestHeight.value / 100) ** 2)).toFixed(1)
+    : null;
+
+  const previousReading = readings
+    .filter((reading) => reading.metric === selectedMetric)
+    .sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`))[1];
+  const recordedChange = latestReading && previousReading
+    ? selectedMetric === "Blood Pressure"
+      ? `${latestReading.value - previousReading.value >= 0 ? "+" : ""}${latestReading.value - previousReading.value}/${(latestReading.secondValue ?? 0) - (previousReading.secondValue ?? 0)} ${latestReading.unit}`
+      : `${latestReading.value - previousReading.value >= 0 ? "+" : ""}${(latestReading.value - previousReading.value).toFixed(selectedMetric === "Temperature" || selectedMetric === "Weight" || selectedMetric === "Height" || selectedMetric === "Sleep" ? 1 : 0)} ${latestReading.unit}`
+    : "Add another reading to compare";
 
   function persist(nextReadings: HealthReading[]) {
     try {
@@ -431,11 +367,14 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
     setDate(getCurrentDate());
     setTime(getCurrentTime());
     setNote("");
+    setSourceLabel("My device reading (entered by me)");
     setMetric("Blood Pressure");
     setVoiceTranscript("");
     setVoiceNotice("");
     setFormError("");
     setEntrySource("typed");
+    setEditingId(null);
+    setReviewReading(null);
   }
 
   function startVoiceEntry() {
@@ -484,8 +423,8 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
     const numericValue = Number(value);
     const numericSecondValue = Number(secondValue);
 
-    if (!value.trim() || !Number.isFinite(numericValue) || numericValue <= 0) {
-      setFormError("Enter a number greater than zero, then check it against your device.");
+    if (!value.trim() || !Number.isFinite(numericValue) || (numericValue <= 0 && metric !== "Steps")) {
+      setFormError(metric === "Steps" ? "Enter zero or a positive step count, then check it against your device." : "Enter a number greater than zero, then check it against your device.");
       return;
     }
 
@@ -497,9 +436,25 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
       return;
     }
     if (!date || !time) { setFormError("Choose the date and time for this reading."); return; }
+    const currentDateTime = `${getCurrentDate()}T${getCurrentTime()}`;
+    if (`${date}T${time}` > currentDateTime) { setFormError("A health measurement cannot be dated in the future. Check the date and time."); return; }
+
+    const ranges: Record<HealthMetric, [number, number]> = {
+      "Blood Pressure": [1, 400], "Blood Glucose": [1, 3000], Pulse: [1, 350],
+      "SpO₂": [1, 100], Temperature: [10, 50], Weight: [0.1, 700],
+      Height: [30, 280], Sleep: [0.1, 24], Steps: [0, 300000],
+    };
+    const [minimum, maximum] = ranges[metric];
+    if (numericValue < minimum || numericValue > maximum || (metric === "Blood Pressure" && (numericSecondValue < 1 || numericSecondValue > 400))) {
+      setFormError(`Check the ${metric.toLowerCase()} value and its unit. The number is outside the entry range.`);
+      return;
+    }
+
+    const duplicate = readings.some((item) => item.id !== editingId && item.metric === metric && item.date === date && item.time === time && item.value === numericValue && item.secondValue === (metric === "Blood Pressure" ? numericSecondValue : undefined));
+    if (duplicate) { setFormError("The same value is already saved for this date and time. Open that entry to edit it, or check the date and numbers."); return; }
 
     const newReading: HealthReading = {
-      id: `${Date.now()}`,
+      id: editingId ?? `${Date.now()}`,
       metric,
       value: numericValue,
       secondValue:
@@ -509,21 +464,49 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
       unit: selectedMetricInfo?.unit ?? "",
       date,
       time,
-      note: [note.trim(), entrySource === "voice" ? "Entered using voice · user verified" : ""].filter(Boolean).join(" · "),
+      note: note.trim(),
       source: entrySource,
+      sourceLabel,
     };
 
-    if (!persist([newReading, ...readings])) return;
+    setReviewReading(newReading);
+    setFormError("");
+  }
+
+  function saveReviewedReading() {
+    if (!reviewReading) return;
+    const nextReadings = editingId
+      ? readings.map((reading) => reading.id === editingId ? reviewReading : reading)
+      : [reviewReading, ...readings];
+    if (!persist(nextReadings)) return;
     try { localStorage.setItem("carepath_last_local_save", new Date().toISOString()); } catch { /* Keep the session useful if storage is restricted. */ }
     window.dispatchEvent(new Event("carepath:refresh"));
 
-    setSelectedMetric(metric);
+    setSelectedMetric(reviewReading.metric);
     setShowForm(false);
     resetForm();
   }
 
+  function startEditReading(reading: HealthReading) {
+    setEditingId(reading.id);
+    setReviewReading(null);
+    setMetric(reading.metric);
+    setValue(String(reading.value));
+    setSecondValue(reading.secondValue === undefined ? "" : String(reading.secondValue));
+    setDate(reading.date);
+    setTime(reading.time);
+    setNote(reading.note || "");
+    setSourceLabel(reading.sourceLabel || "Entered by me");
+    setEntrySource(reading.source || "typed");
+    setFormError("");
+    setVoiceNotice("");
+    setShowForm(true);
+  }
+
   function deleteReading(id: string) {
-    persist(readings.filter((reading) => reading.id !== id));
+    const reading = readings.find((item) => item.id === id);
+    if (!reading || !window.confirm(`Delete the ${reading.metric} entry from ${reading.date} ${reading.time}?`)) return;
+    if (persist(readings.filter((item) => item.id !== id))) window.dispatchEvent(new Event("carepath:refresh"));
   }
 
   return (
@@ -579,10 +562,10 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
 
           <button
             className="health-add-btn"
-            onClick={() => setShowForm(true)}
+            onClick={() => { resetForm(); setShowForm(true); }}
           >
             <Plus size={18} />
-            Add reading
+            Log a reading
           </button>
         </div>
 
@@ -604,12 +587,12 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
           </div>
 
           <div className="health-summary-card">
-            <span>{period} average</span>
+            <span>{period === "ALL" ? "All-time average" : `${period} average`}</span>
 
             <strong>{averageValue}</strong>
 
             <small>
-              {latestReading?.unit ?? ""}
+              {filteredReadings.length < 2 ? "Needs at least 2 readings" : latestReading?.unit ?? ""}
             </small>
           </div>
 
@@ -619,23 +602,19 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
             <strong>{filteredReadings.length}</strong>
 
             <small>
-              {period === "7D"
-                ? "Last 7 days"
-                : "Last 30 days"}
+              {period === "ALL" ? "All saved dates" : `Last ${period.slice(0, -1)} days`}
             </small>
           </div>
 
           <div className="health-summary-card">
-            <span>Data status</span>
-
-            <strong className="status-good">
-              <CheckCircle2 size={20} />
-              Organized
-            </strong>
-
-            <small>
-              Review readings with a professional when needed
-            </small>
+            <span>Latest vs previous</span>
+            <strong>{recordedChange}</strong>
+            <small>Recorded difference only · no clinical interpretation</small>
+          </div>
+          <div className="health-summary-card health-bmi-card">
+            <span>Body mass index · derived</span>
+            <strong>{calculatedBmi ?? "—"}</strong>
+            <small>{calculatedBmi ? `From your latest height (${latestHeight?.value} cm) and weight (${latestWeight?.value} kg)` : "Add a height and weight entry to calculate it"}</small>
           </div>
         </section>
 
@@ -651,23 +630,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
             </div>
 
             <div className="period-toggle">
-              <button
-                className={
-                  period === "7D" ? "active" : ""
-                }
-                onClick={() => setPeriod("7D")}
-              >
-                7D
-              </button>
-
-              <button
-                className={
-                  period === "30D" ? "active" : ""
-                }
-                onClick={() => setPeriod("30D")}
-              >
-                30D
-              </button>
+              {(["7D", "30D", "90D", "ALL"] as const).map((range) => <button key={range} className={period === range ? "active" : ""} aria-pressed={period === range} onClick={() => setPeriod(range)}>{range === "ALL" ? "All" : range}</button>)}
             </div>
           </div>
 
@@ -690,7 +653,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                     width={42}
                   />
 
-                  <Tooltip />
+                  <Tooltip formatter={(chartValue) => [`${chartValue} ${latestReading?.unit ?? ""}`, selectedMetric]} labelFormatter={(label) => `Recorded ${label}`} />
 
                   <Line
                     type="monotone"
@@ -717,12 +680,13 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
               <div className="empty-health-chart">
                 <Activity size={30} />
 
-                <strong>No readings yet</strong>
+                <strong>{readings.some((reading) => reading.metric === selectedMetric) ? `No ${selectedMetric.toLowerCase()} readings in this range` : `No ${selectedMetric.toLowerCase()} readings yet`}</strong>
 
                 <span>
                   Add a measurement to start building
                   your trend.
                 </span>
+                <button type="button" className="health-empty-add" onClick={() => { resetForm(); setShowForm(true); }}>Add your first reading</button>
               </div>
             )}
           </div>
@@ -797,7 +761,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                               {reading.note}
                             </span>
                           )}
-                          <span>{reading.id.startsWith("demo-") ? "Sample data · example only" : reading.source === "voice" ? "Voice entered · not verified" : "Entered on this device · not verified"}</span>
+                          <span>{reading.sourceLabel || "Entered by you"} · {reading.source === "voice" ? "voice entry" : "manual entry"} · not clinically verified</span>
                         </div>
                       </div>
 
@@ -812,12 +776,16 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                           {status}
                         </span>
 
+                        <button type="button" onClick={() => startEditReading(reading)} title="Edit reading" aria-label={`Edit ${reading.metric} reading from ${reading.date}`}>
+                          <Pencil size={16} />
+                        </button>
                         <button
+                          type="button"
                           onClick={() =>
                             deleteReading(reading.id)
                           }
                           title="Delete reading"
-                          aria-label="Delete reading"
+                          aria-label={`Delete ${reading.metric} reading from ${reading.date}`}
                         >
                           <X size={16} />
                         </button>
@@ -863,9 +831,9 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
             <div className="health-form-modal">
               <div className="health-form-header">
                 <div>
-                  <span>NEW HEALTH READING</span>
+                  <span>{editingId ? "EDIT YOUR ENTRY" : "YOUR HEALTH RECORD"}</span>
 
-                  <h3>Add a measurement</h3>
+                  <h3>{editingId ? "Review an existing measurement" : "Add a measurement"}</h3>
                 </div>
 
                 <button
@@ -880,8 +848,17 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                 </button>
               </div>
 
+              {reviewReading && <section className="health-reading-review" role="status">
+                <span>CHECK BEFORE SAVING</span>
+                <strong>{formatMetricValue(reviewReading)} {reviewReading.unit}</strong>
+                <p>{reviewReading.metric} · {reviewReading.date} at {reviewReading.time} · {reviewReading.sourceLabel || "Entered by you"}</p>
+                {reviewReading.note && <small>Note: {reviewReading.note}</small>}
+                <p>This is a record of what you entered. CARE CONNECTED does not verify the measurement or assign a risk label.</p>
+              </section>}
+
+              <fieldset className="health-measurement-fields" disabled={Boolean(reviewReading)}>
               <div className="health-voice-entry">
-                <div className="health-voice-entry-copy"><strong>Say the numbers instead</strong><span>For blood pressure, say “128 over 82”. Review before anything is saved.</span></div>
+                <div className="health-voice-entry-copy"><strong>Speak or type your reading</strong><span>For blood pressure, say “128 over 82”. Review recognized numbers before saving.</span></div>
                 <label className="health-voice-language">Voice language<select value={voiceLanguage} onChange={(event) => { const next = event.target.value as VoiceLanguage; setVoiceLanguage(next); saveVoiceLanguage(next); }}><option value="en">English</option><option value="kn">Kannada</option></select></label>
                 <button type="button" className="health-voice-button" onClick={startVoiceEntry} disabled={!voiceEnabled || listening}><Mic size={17} />{listening ? "Listening…" : voiceEnabled ? "Speak reading" : "Voice off"}</button>
                 {voiceTranscript && <div className="health-voice-transcript"><span><strong>Heard:</strong> {voiceTranscript}</span><button type="button" onClick={useVoiceNumbers}>Use numbers</button></div>}
@@ -927,7 +904,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                 <label>
                   {metric === "Blood Pressure"
                     ? "Systolic"
-                    : "Value"}
+                    : `Value (${selectedMetricInfo?.unit ?? ""})`}
 
                   <input
                     type="number"
@@ -966,6 +943,15 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                 )}
               </div>
 
+              <label className="health-source-label">Where did this reading come from?
+                <select value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)}>
+                  <option>My device reading (entered by me)</option>
+                  <option>Copied from a report</option>
+                  <option>Entered manually</option>
+                  <option>Other source</option>
+                </select>
+              </label>
+
               <div className="health-input-grid two">
                 <label>
                   Date
@@ -973,6 +959,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                   <input
                     type="date"
                     value={date}
+                    max={getCurrentDate()}
                     onChange={(event) =>
                       setDate(event.target.value)
                     }
@@ -1004,6 +991,7 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                   rows={3}
                 />
               </label>
+              </fieldset>
 
               <div className="health-form-actions">
                 <button
@@ -1016,13 +1004,10 @@ export default function HealthMonitor({ onClose, voiceEnabled }: Props) {
                   Cancel
                 </button>
 
-                <button
-                  className="primary"
-                  onClick={handleAddReading}
-                >
-                  <Plus size={17} />
-                  Save reading
-                </button>
+                {reviewReading ? <>
+                  <button type="button" className="secondary" onClick={() => setReviewReading(null)}>Edit entry</button>
+                  <button type="button" className="primary" onClick={saveReviewedReading}><Plus size={17} /> Confirm & save</button>
+                </> : <button type="button" className="primary" onClick={handleAddReading}><Plus size={17} /> Review reading</button>}
               </div>
             </div>
           </div>
