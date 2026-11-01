@@ -39,6 +39,7 @@ import type { VoiceLanguage } from "./voice";
 import { readPersonalMedicines } from "./medicineStorage";
 import "./showcase-interface.css";
 import "./experience.css";
+import "./futuristic.css";
 
 const CarePathModules = lazy(() => import("./components/CarePathModules"));
 const HealthMonitor = lazy(() => import("./components/HealthMonitor"));
