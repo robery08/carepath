@@ -29,7 +29,7 @@ export default function MedlinePlusLookup({ question, language, initialTerm }: P
   const search = async () => {
     if (!consent) { setMessage(language === "en" ? "Please agree before sending the medicine name." : "ಔಷಧಿ ಹೆಸರನ್ನು ಕಳುಹಿಸುವ ಮೊದಲು ಒಪ್ಪಿಗೆ ನೀಡಿ."); return; }
     if (!term.trim() || /[\u0C80-\u0CFF]/u.test(term)) { setMessage(language === "en" ? "Type the medicine name in English as printed on the package." : "ಪ್ಯಾಕೆಟ್‌ನಲ್ಲಿರುವಂತೆ ಔಷಧಿಯ ಹೆಸರನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಬರೆಯಿರಿ."); return; }
-    setLoading(true); setLoadingSource("medlineplus"); setMessage(""); setResults([]);
+    setLoading(true); setLoadingSource("medlineplus"); setMessage(""); setResults([]); setRxNormResults([]);
     try {
       const found = await searchMedlinePlusDrug(term);
       setResults(found);
@@ -42,7 +42,7 @@ export default function MedlinePlusLookup({ question, language, initialTerm }: P
   const searchLabels = async () => {
     if (!consent) { setMessage(language === "en" ? "Please agree before sending the medicine name." : "ಔಷಧಿ ಹೆಸರನ್ನು ಕಳುಹಿಸುವ ಮೊದಲು ಒಪ್ಪಿಗೆ ನೀಡಿ."); return; }
     if (!term.trim() || /[\u0C80-\u0CFF]/u.test(term)) { setMessage(language === "en" ? "Type the medicine name in English as printed on the package." : "ಪ್ಯಾಕೆಟ್‌ನಲ್ಲಿರುವಂತೆ ಔಷಧಿಯ ಹೆಸರನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಬರೆಯಿರಿ."); return; }
-    setLoading(true); setLoadingSource("fda"); setMessage(""); setFdaResults([]); setSelectedLabelId("");
+    setLoading(true); setLoadingSource("fda"); setMessage(""); setFdaResults([]); setSelectedLabelId(""); setRxNormResults([]);
     try {
       const found = await searchFdaDrugLabels(term);
       setFdaResults(found);
@@ -82,7 +82,7 @@ export default function MedlinePlusLookup({ question, language, initialTerm }: P
     <strong>{language === "en" ? "Medicine information, searched inside CARE CONNECTED" : "CARE CONNECTED ಒಳಗೆ ಔಷಧಿ ಮಾಹಿತಿ ಹುಡುಕಿ"}</strong>
     <p>{language === "en" ? "MedlinePlus offers plain-language information. FDA submitted labels can show product-specific uses, warnings, side effects, and interactions. Neither source is a complete worldwide catalogue or personal treatment advice." : "MedlinePlus ಸರಳ ಭಾಷೆಯ ಮಾಹಿತಿ ನೀಡುತ್ತದೆ. FDA ಸಲ್ಲಿಸಿದ ಲೇಬಲ್ ಉತ್ಪನ್ನದ ಬಳಕೆ, ಎಚ್ಚರಿಕೆ, ಅಡ್ಡಪರಿಣಾಮ ಮತ್ತು ಪರಸ್ಪರ ಕ್ರಿಯೆ ತೋರಿಸಬಹುದು. ಇವು ವಿಶ್ವದ ಸಂಪೂರ್ಣ ಪಟ್ಟಿ ಅಥವಾ ವೈಯಕ್ತಿಕ ಚಿಕಿತ್ಸಾ ಸಲಹೆ ಅಲ್ಲ."}</p>
     <label>{language === "en" ? "Search by brand or generic name" : "ಬ್ರ್ಯಾಂಡ್ ಅಥವಾ ಜೆನೆರಿಕ್ ಹೆಸರಿನಿಂದ ಹುಡುಕಿ"}<input value={term} maxLength={100} onChange={(event) => { setTerm(event.target.value); setConsent(false); setResults([]); setFdaResults([]); setSelectedLabelId(""); setRxNormResults([]); setMessage(""); }} /></label>
-    <label className="cp-live-med-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>{language === "en" ? "I agree to send only this medicine name to the source I select (U.S. NIH MedlinePlus, U.S. FDA openFDA, or NLM RxNorm name matching). My saved medicines, allergies, profile, and the rest of my question are not sent." : "ನಾನು ಆಯ್ಕೆಮಾಡಿದ ಮೂಲಕ್ಕೆ ಈ ಔಷಧಿ ಹೆಸರನ್ನು ಮಾತ್ರ ಕಳುಹಿಸಲು ಒಪ್ಪುತ್ತೇನೆ (U.S. NIH MedlinePlus ಅಥವಾ U.S. FDA openFDA ಲೇಬಲ್ ಸೇವೆ). ನನ್ನ ಉಳಿಸಿದ ಔಷಧಿ, ಅಲರ್ಜಿ, ಪ್ರೊಫೈಲ್ ಅಥವಾ ಉಳಿದ ಪ್ರಶ್ನೆ ಕಳುಹಿಸುವುದಿಲ್ಲ."}</span></label>
+    <label className="cp-live-med-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>{language === "en" ? "I agree to send only this medicine name to the source I select (U.S. NIH MedlinePlus, U.S. FDA openFDA, or NLM RxNorm name matching). My saved medicines, allergies, profile, and the rest of my question are not sent." : "ನಾನು ಆಯ್ಕೆಮಾಡಿದ ಮೂಲಕ್ಕೆ ಈ ಔಷಧಿ ಹೆಸರನ್ನು ಮಾತ್ರ ಕಳುಹಿಸಲು ಒಪ್ಪುತ್ತೇನೆ (U.S. NIH MedlinePlus, U.S. FDA openFDA ಅಥವಾ NLM RxNorm ಹೆಸರು ಹೊಂದಾಣಿಕೆ). ನನ್ನ ಉಳಿಸಿದ ಔಷಧಿ, ಅಲರ್ಜಿ, ಪ್ರೊಫೈಲ್ ಅಥವಾ ಉಳಿದ ಪ್ರಶ್ನೆ ಕಳುಹಿಸುವುದಿಲ್ಲ."}</span></label>
     <div className="cp-med-source-actions">
       <button className="cp-button primary" type="button" onClick={search} disabled={loading}>{loading && loadingSource === "medlineplus" ? <LoaderCircle size={16} className="cp-spin" /> : <Search size={16} />}{language === "en" ? "Plain-language guide · MedlinePlus" : "ಸರಳ ಮಾಹಿತಿ · MedlinePlus"}</button>
       <button className="cp-button quiet" type="button" onClick={searchLabels} disabled={loading}>{loading && loadingSource === "fda" ? <LoaderCircle size={16} className="cp-spin" /> : <FileSearch size={16} />}{language === "en" ? "Product label · U.S. FDA data" : "ಉತ್ಪನ್ನ ಲೇಬಲ್ · U.S. FDA ಮಾಹಿತಿ"}</button>
