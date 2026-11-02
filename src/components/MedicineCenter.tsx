@@ -9,8 +9,6 @@ import {
 } from "lucide-react";
 import MedlinePlusLookup from "./MedlinePlusLookup";
 import MedicineLibrary from "./MedicineLibrary";
-import { fdaLabelUrl } from "../fdaDrugLabelSearch";
-import type { FdaDrugLabel } from "../fdaDrugLabelSearch";
 import { medicineProductForm, medicineProductStrength, type RxNormMedicineProduct } from "../medicineLibrary";
 import { readExampleMedicineArchive, readPersonalMedicines, saveExampleMedicineArchive } from "../medicineStorage";
 import type { VoiceLanguage } from "../voice";
@@ -27,7 +25,7 @@ type Medicine = {
   unitsPerDay?: number;
   expiryDate?: string;
   source?: "sample" | "demo-extraction" | "user";
-  reference?: { source: string; url: string; genericName: string; manufacturer: string; dosageForm: string };
+  reference?: { source: string; url: string; genericName: string; manufacturer: string; details: string };
 };
 
 type Props = {
@@ -161,25 +159,6 @@ export default function MedicineCenter({
     setShowForm(true);
   };
 
-  const prepareFromLabel = (label: FdaDrugLabel) => {
-    setForm({
-      name: label.brandName === "Name not listed" ? label.genericName : label.brandName,
-      strength: "",
-      form: formFromLabel(label.dosageForm),
-      schedule: "",
-      instructions: "",
-      reason: "",
-      remainingUnits: "",
-      unitsPerDay: "",
-      expiryDate: "",
-    });
-    setDraftReference({ source: "U.S. FDA submitted label", url: fdaLabelUrl(label), genericName: label.genericName, manufacturer: label.manufacturer, dosageForm: label.dosageForm });
-    setReviewingExampleId(null);
-    setShowMedicineLookup(false);
-    setShowForm(true);
-    setActiveMedicineTab("cabinet");
-  };
-
   const prepareFromCatalog = (product: RxNormMedicineProduct) => {
     const savedName = product.brandName || product.genericName || product.name;
     const productForm = medicineProductForm(product.name);
@@ -199,7 +178,7 @@ export default function MedicineCenter({
       url: `https://rxnav.nlm.nih.gov/REST/rxcui/${encodeURIComponent(product.rxcui)}.json`,
       genericName: product.genericName,
       manufacturer: "Not listed in RxNorm",
-      dosageForm: productForm,
+      details: productForm,
     });
     setReviewingExampleId(null);
     setShowMedicineLookup(false);
@@ -277,7 +256,7 @@ export default function MedicineCenter({
             <Search size={16} /> {showMedicineLookup ? "Close lookup" : "Look up medicine info"}
           </button>
         </div>
-        {showMedicineLookup && <div className="medicine-info-panel" id="medicine-info-lookup"><MedlinePlusLookup key={lookupTerm || "medicine-lookup"} question={lookupTerm ? `What is ${lookupTerm} used for?` : ""} initialTerm={lookupTerm} language={language === "kn" ? "kn" : "en"} onPrepareMedicine={prepareFromLabel} /></div>}
+        {showMedicineLookup && <div className="medicine-info-panel" id="medicine-info-lookup"><MedlinePlusLookup key={lookupTerm || "medicine-lookup"} question={lookupTerm ? `What is ${lookupTerm} used for?` : ""} initialTerm={lookupTerm} language={language === "kn" ? "kn" : "en"} /></div>}
 
         <div className="medicine-toolbar">
           <div className="medicine-search">
@@ -304,7 +283,7 @@ export default function MedicineCenter({
               <div>
                 <p>{reviewingExampleId ? "Review an old example before adding it" : "Add a medicine"}</p>
                 <span>
-                  {reviewingExampleId ? "This was sample data. Check every field against your own current package or prescription. Save only if this medicine is yours." : draftReference ? "A label lookup prefilled the name and form as a candidate only. Check the exact package, enter its strength and only your own prescribed instructions, then save if this is your medicine." : "Enter the information from your package or supplied prescription instructions."}
+                  {reviewingExampleId ? "This was sample data. Check every field against your own current package or prescription. Save only if this medicine is yours." : draftReference ? "A catalogue record prefilled a candidate only. Check the exact package, enter its strength and only your own prescribed instructions, then save if this is your medicine." : "Enter the information from your package or supplied prescription instructions."}
                 </span>
               </div>
 
@@ -386,7 +365,7 @@ export default function MedicineCenter({
                 />
               </label>
 
-              {draftReference && <div className="medicine-draft-reference wide-field"><strong>Source candidate · not package verification</strong><span>{[draftReference.genericName, draftReference.dosageForm, draftReference.manufacturer].filter(Boolean).join(" · ") || "Details not listed by source"}</span><a href={draftReference.url} target="_blank" rel="noreferrer">Open selected U.S. FDA submitted label</a></div>}
+              {draftReference && <div className="medicine-draft-reference wide-field"><strong>Source candidate · not package verification</strong><span>{[draftReference.genericName, draftReference.details, draftReference.manufacturer].filter(Boolean).join(" · ") || "Details not listed by source"}</span><a href={draftReference.url} target="_blank" rel="noreferrer">Open selected NLM record</a></div>}
 
               <label className="wide-field">
                 Why did your care team prescribe it? (optional)
@@ -476,7 +455,7 @@ export default function MedicineCenter({
 
                 <span>{medicine.instructions}</span>
                   {medicine.reason && <span className="medicine-reason"><strong>Reason recorded from your care team:</strong> {medicine.reason}</span>}
-                  {medicine.reference && <span className="medicine-saved-reference"><strong>Lookup reference saved:</strong> {medicine.reference.source} · verify against your exact package. <a href={medicine.reference.url} target="_blank" rel="noreferrer">Open label</a></span>}
+                  {medicine.reference && <span className="medicine-saved-reference"><strong>Lookup reference saved:</strong> {medicine.reference.source} · verify against your exact package. <a href={medicine.reference.url} target="_blank" rel="noreferrer">Open source record</a></span>}
 
                 <details className="medicine-supply">
                   <summary>Supply watch</summary>
