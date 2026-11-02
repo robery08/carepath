@@ -1,0 +1,152 @@
+.cc-med-library{--ml-navy:#091729;--ml-ink:#132640;--ml-muted:#6a7890;--ml-cyan:#27d8d1;--ml-violet:#8e6cff;display:grid;gap:15px;margin:14px 0 5px;color:var(--ml-ink)}
+.cc-med-library *{box-sizing:border-box}
+.cc-med-center-tabs{display:flex;gap:7px;margin:13px 0 0;padding:5px;border:1px solid #dfe8f1;border-radius:13px;background:#eff4f7}
+.cc-med-center-tabs button{display:flex;align-items:center;gap:7px;min-height:38px;padding:0 13px;border:1px solid transparent;border-radius:9px;color:#6e8290;background:transparent;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.cc-med-center-tabs button.active{border-color:#d4e2ed;color:#1b5461;background:#fff;box-shadow:0 4px 10px rgba(34,70,97,.07)}
+.cc-med-center-tabs button>span{padding:3px 6px;border-radius:99px;color:#7887a1;background:#f1f4fa;font-size:8px;font-weight:700}
+.cc-med-center-tabs button.active>span{color:#3d69b3;background:#eef1ff}
+.cc-med-library-hero{position:relative;overflow:hidden;display:grid;gap:15px;padding:22px;border:1px solid #263d65;border-radius:22px;background:radial-gradient(ellipse at 82% 3%,rgba(96,101,255,.27),transparent 32%),radial-gradient(ellipse at 23% 0,rgba(0,207,219,.13),transparent 38%),linear-gradient(125deg,#091626 0%,#101d3a 58%,#1b1741 100%);box-shadow:0 18px 48px rgba(12,26,52,.18)}
+.cc-med-library-hero:after{position:absolute;right:-62px;top:-120px;width:315px;height:315px;border:1px solid rgba(63,213,223,.15);border-radius:50%;box-shadow:0 0 0 28px rgba(69,124,220,.035),0 0 0 58px rgba(69,124,220,.035);content:"";pointer-events:none}
+.cc-med-library-hero-top{position:relative;z-index:1;display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:13px}
+.cc-med-library-mark{display:grid;place-items:center;width:46px;height:46px;border:1px solid rgba(80,229,225,.32);border-radius:15px;color:#d9fffd;background:linear-gradient(145deg,#0ebeb8,#5367ec);box-shadow:0 8px 22px rgba(10,194,192,.23)}
+.cc-med-library-eyebrow{display:block;color:#54e2dd;font-size:9px;font-weight:850;letter-spacing:1.3px}
+.cc-med-library-hero h2{margin:4px 0;color:#f8fbff;font-size:clamp(19px,2.5vw,27px);line-height:1.15;letter-spacing:-.55px}
+.cc-med-library-hero p{margin:0;color:#bac9e4;font-size:12px;line-height:1.55}
+.cc-med-live-badge{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid rgba(77,227,196,.25);border-radius:999px;color:#b5efe7;background:rgba(12,127,125,.14);font-size:10px;font-weight:800;white-space:nowrap}
+.cc-med-live-badge i{width:7px;height:7px;border-radius:50%;background:#3de0b2;box-shadow:0 0 11px #3de0b2}
+.cc-med-library-search{position:relative;z-index:1;display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 8px 7px 13px;border:1px solid rgba(163,191,241,.4);border-radius:15px;background:#f8fbff;box-shadow:0 10px 28px rgba(2,9,20,.18)}
+.cc-med-library-search>svg{color:#7288a7}
+.cc-med-library-search input{width:100%;min-width:0;min-height:39px;border:0;outline:0;color:#18334f;background:transparent;font:inherit;font-size:13px}
+.cc-med-library-search input::placeholder{color:#8798b0}
+.cc-med-library-search button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:39px;padding:0 14px;border:0;border-radius:10px;color:white;background:linear-gradient(100deg,#0bbeb8,#4c78ed 68%,#8a61ed);font-size:11px;font-weight:850;box-shadow:0 7px 15px rgba(43,122,224,.22);cursor:pointer}
+.cc-med-library-search button:disabled{opacity:.7;cursor:progress}
+.cc-med-consent{position:relative;z-index:1;display:flex;align-items:flex-start;gap:8px;color:#b9c8df;font-size:10px;line-height:1.5;cursor:pointer}
+.cc-med-consent input{flex:0 0 auto;width:16px;height:16px;margin:1px 0 0;accent-color:#19c9be}
+.cc-med-library-trust{display:flex;flex-wrap:wrap;gap:8px 15px;color:#9eb4d4;font-size:10px}
+.cc-med-library-trust span{display:flex;align-items:center;gap:5px}
+.cc-med-library-trust svg{color:#54dfd0}
+.cc-med-library-shell{display:grid;grid-template-columns:minmax(190px,235px) minmax(0,1fr);align-items:start;gap:13px}
+.cc-med-categories{position:sticky;top:10px;display:grid;gap:9px;max-height:calc(100vh - 32px);overflow:hidden;padding:13px;border:1px solid #dce5f2;border-radius:17px;background:linear-gradient(160deg,#fff,#f4f7ff);box-shadow:0 9px 24px rgba(34,53,86,.05)}
+.cc-med-category-heading{display:flex;align-items:center;justify-content:space-between;padding:1px 3px 5px}
+.cc-med-category-heading .cc-med-library-eyebrow{color:#7382a3;font-size:8px;letter-spacing:.8px}
+.cc-med-category-heading h3{margin:3px 0 0;color:#172b4b;font-size:15px}
+.cc-med-category-heading>span{display:grid;place-items:center;width:25px;height:25px;border-radius:9px;color:#5267ac;background:#e9edff;font-size:10px;font-weight:900}
+.cc-med-category-list{display:grid;gap:4px;overflow:auto;padding:0 2px 5px 0;scrollbar-color:#c9d4e6 transparent;scrollbar-width:thin}
+.cc-med-category-list button{display:grid;grid-template-columns:28px minmax(0,1fr) 14px;align-items:center;gap:8px;min-height:39px;padding:5px 8px;border:1px solid transparent;border-radius:10px;color:#4a5c78;background:transparent;text-align:left;font:inherit;font-size:10px;font-weight:700;cursor:pointer;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.cc-med-category-list button:hover{transform:translateX(2px);border-color:#d9e4f6;background:#f6f9ff}
+.cc-med-category-list button.active{border-color:#cbd8ff;color:#273d74;background:linear-gradient(100deg,#eaf8ff,#eceeff);box-shadow:inset 3px 0 #29c9cb}
+.cc-med-category-list button>svg{color:#9aa9be}
+.cc-med-category-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;color:#fff;background:linear-gradient(145deg,#1cc6c8,#4f74e9);font-size:16px;font-weight:800;box-shadow:0 4px 10px rgba(54,112,210,.13)}
+.cc-med-category-icon.cancer,.cc-med-category-icon.mental-health{background:linear-gradient(145deg,#ca67e2,#755df0)}
+.cc-med-category-icon.heart,.cc-med-category-icon.blood-pressure{background:linear-gradient(145deg,#ff7b9b,#e94c78)}
+.cc-med-category-icon.diabetes,.cc-med-category-icon.kidney{background:linear-gradient(145deg,#53d8a2,#16a99e)}
+.cc-med-category-icon.emergency{background:linear-gradient(145deg,#ffb45b,#f26c5e)}
+.cc-med-category-icon.womens-health,.cc-med-category-icon.pediatrics{background:linear-gradient(145deg,#e78abb,#9c6de9)}
+.cc-med-category-icon.large{flex:0 0 52px;width:52px;height:52px;border-radius:17px;font-size:26px}
+.cc-med-category-note{margin:2px 2px 0;padding:9px 10px;border-radius:10px;color:#7a879e;background:#f4f6fb;font-size:9px;line-height:1.5}
+.cc-med-catalog-main{display:grid;align-content:start;gap:12px;min-width:0}
+.cc-med-catalog-welcome,.cc-med-selected-category{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;padding:15px;border:1px solid #dae4f3;border-radius:16px;background:radial-gradient(ellipse at 95% 0,rgba(126,143,245,.1),transparent 42%),linear-gradient(110deg,#fff,#f6faff)}
+.cc-med-welcome-orb{display:grid;place-items:center;width:47px;height:47px;border:1px solid #d8dcff;border-radius:16px;color:#5365e5;background:linear-gradient(145deg,#ebfffb,#edf0ff);box-shadow:0 7px 14px rgba(80,111,194,.1)}
+.cc-med-catalog-welcome .cc-med-library-eyebrow,.cc-med-selected-category .cc-med-library-eyebrow{color:#7285ab;font-size:8px}
+.cc-med-catalog-welcome h3,.cc-med-selected-category h3{margin:4px 0;color:#182c4b;font-size:16px;line-height:1.35}
+.cc-med-catalog-welcome p,.cc-med-selected-category p{margin:0;color:#708099;font-size:10px;line-height:1.55}
+.cc-med-welcome-side{display:grid;gap:5px;min-width:91px;padding:9px 11px;border-left:1px solid #e3eaf5;color:#8290a5;font-size:9px}
+.cc-med-welcome-side span{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cc-med-welcome-side strong{color:#5368ae;font-size:10px}
+.cc-med-selected-category{grid-template-columns:minmax(0,1fr) auto;align-items:start;background:linear-gradient(110deg,#effbff,#f3f2ff 85%)}
+.cc-med-topic-chips{display:flex;align-items:center;flex-wrap:wrap;gap:6px;grid-column:1/-1;padding-top:10px;border-top:1px solid #dce6f5}
+.cc-med-topic-chips>span{margin-right:2px;color:#8492a7;font-size:9px;font-weight:750}
+.cc-med-topic-chips button,.cc-med-recent-searches button{min-height:30px;padding:5px 10px;border:1px solid #d8e3f4;border-radius:999px;color:#54668b;background:#fff;font:inherit;font-size:9px;font-weight:750;cursor:pointer;transition:all .16s ease}
+.cc-med-topic-chips button:hover,.cc-med-recent-searches button:hover{border-color:#73d5d1;color:#176f83;background:#f3ffff}
+.cc-med-topic-chips button:disabled{opacity:.5;cursor:not-allowed}
+.cc-med-recent-searches{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:0 2px}
+.cc-med-recent-searches>span{margin-right:3px;color:#8894a7;font-size:9px}
+.cc-med-library-message{display:flex;align-items:flex-start;gap:8px;padding:12px 13px;border:1px solid #efdcba;border-radius:12px;color:#805a2c;background:#fff9ed;font-size:10px;line-height:1.55}
+.cc-med-library-message svg{flex:0 0 16px;margin-top:1px}
+.cc-med-library-message.info{border-color:#dbe5f4;color:#5e6f8c;background:#f4f8ff}
+.cc-med-catalog-results{display:grid;gap:10px;padding:13px;border:1px solid #dce4ef;border-radius:17px;background:#f8faff;box-shadow:0 10px 25px rgba(35,54,89,.045)}
+.cc-med-catalog-results-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cc-med-catalog-results-heading .cc-med-library-eyebrow{color:#13a8ad;font-size:8px}
+.cc-med-catalog-results-heading h3{margin:4px 0;color:#172a46;font-size:15px}
+.cc-med-catalog-results-heading p{margin:0;color:#7a879c;font-size:9px;line-height:1.5}
+.cc-med-saved-filter{display:flex;align-items:center;gap:6px;min-height:33px;padding:0 10px;border:1px solid #e0e6f0;border-radius:9px;color:#7c8496;background:#fff;font:inherit;font-size:9px;font-weight:750;cursor:pointer}
+.cc-med-saved-filter.active{border-color:#f1d2dd;color:#bf4d71;background:#fff5f8}
+.cc-med-saved-filter b{color:inherit}
+.cc-med-library-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;border:1px solid #e2e9f4;border-radius:11px;background:#fff}
+.cc-med-result-count{display:flex;align-items:center;gap:5px;color:#79869d;font-size:10px}
+.cc-med-result-count strong{color:#223b62;font-size:14px}
+.cc-med-result-count small{color:#9aa5b5;font-size:8px}
+.cc-med-control-group{display:flex;align-items:center;gap:6px}
+.cc-med-control-group label{display:flex;align-items:center;gap:4px;color:#8390a4;font-size:8px}
+.cc-med-control-group select{min-height:29px;max-width:110px;padding:0 7px;border:1px solid #e2e7ef;border-radius:7px;outline:0;color:#566784;background:#fff;font:inherit;font-size:9px}
+.cc-med-view-toggle{display:flex;gap:2px;padding:2px;border:1px solid #e3e8f0;border-radius:8px;background:#f6f8fb}
+.cc-med-view-toggle button{display:grid;place-items:center;width:28px;height:26px;border:0;border-radius:6px;color:#8d9aae;background:transparent;cursor:pointer}
+.cc-med-view-toggle button.active{color:#fff;background:#4f73e9;box-shadow:0 3px 8px rgba(75,110,227,.22)}
+.cc-med-product-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.cc-med-product-card{display:grid;align-content:start;gap:8px;min-width:0;padding:11px;border:1px solid #e1e8f2;border-radius:13px;background:#fff;box-shadow:0 5px 15px rgba(36,57,92,.035);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.cc-med-product-card:hover{transform:translateY(-2px);border-color:#b9d8e9;box-shadow:0 10px 22px rgba(36,57,92,.075)}
+.cc-med-product-card-top{display:flex;align-items:center;justify-content:space-between}
+.cc-med-product-art{display:grid;place-items:center;gap:4px;width:53px;height:51px;border:1px solid #deebf8;border-radius:12px;color:#5270d8;background:radial-gradient(circle at 30% 15%,#fff,transparent 50%),linear-gradient(145deg,#ecfbff,#f0edff)}
+.cc-med-product-art svg{transform:rotate(-35deg);filter:drop-shadow(0 3px 4px rgba(66,107,201,.18))}
+.cc-med-product-art span{color:#8693aa;font-size:7px;font-weight:800;letter-spacing:.3px}
+.cc-med-save{display:grid;place-items:center;width:30px;height:30px;border:1px solid #edf0f5;border-radius:9px;color:#a1a9b6;background:#fff;cursor:pointer}
+.cc-med-save.active{border-color:#f4d4e0;color:#d85e82;background:#fff4f8}
+.cc-med-product-kind{width:max-content;padding:4px 7px;border:1px solid #e4e7f4;border-radius:999px;color:#697c9f;background:#f5f7ff;font-size:7px;font-weight:900;letter-spacing:.65px}
+.cc-med-product-kind.brand{border-color:#eadcfb;color:#8059c5;background:#fbf5ff}
+.cc-med-product-kind.generic{border-color:#d7f0e6;color:#218775;background:#f1fcf8}
+.cc-med-product-card h4{display:-webkit-box;overflow:hidden;min-height:34px;margin:0;color:#1c2f4c;font-size:11px;line-height:1.5;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.cc-med-product-meta{display:grid;gap:4px;color:#728098;font-size:9px}
+.cc-med-product-meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-med-product-foot{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:4px;padding-top:8px;border-top:1px solid #edf0f4}
+.cc-med-product-foot>span{display:flex;align-items:center;gap:4px;color:#7f91a7;font-size:7px;line-height:1.35}
+.cc-med-product-foot>span svg{flex:0 0 13px;color:#20a99f}
+.cc-med-product-foot button,.cc-med-product-row>button{display:flex;align-items:center;justify-content:center;gap:3px;min-height:28px;padding:0 7px;border:1px solid #dce4f2;border-radius:7px;color:#536cb3;background:#f8faff;font:inherit;font-size:8px;font-weight:850;white-space:nowrap;cursor:pointer}
+.cc-med-product-list{display:grid;gap:0;overflow:hidden;border:1px solid #e2e8f1;border-radius:11px;background:#fff}
+.cc-med-table-head,.cc-med-product-row{display:grid;grid-template-columns:minmax(180px,2.2fr) minmax(120px,1.4fr) minmax(95px,.8fr) minmax(90px,.7fr) minmax(94px,.8fr) 58px;align-items:center;gap:9px;padding:9px 10px}
+.cc-med-table-head{color:#8995aa;background:#f2f5fa;font-size:7px;font-weight:900;letter-spacing:.65px}
+.cc-med-product-row{min-height:61px;border-top:1px solid #edf0f5;color:#65748b;font-size:9px}
+.cc-med-row-name{display:flex;align-items:center;gap:8px;min-width:0}
+.cc-med-row-pill{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;color:#5971d5;background:#f0f4ff}
+.cc-med-row-name>div{display:grid;gap:3px;min-width:0}
+.cc-med-row-name strong{overflow:hidden;color:#253a5b;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.cc-med-row-name small{color:#919db0;font-size:8px}
+.cc-med-product-row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-med-product-row .cc-med-row-status{color:#13897f;font-size:8px;font-weight:800}
+.cc-med-product-row>button{width:max-content}
+.cc-med-no-products{display:grid;place-items:center;gap:7px;min-height:130px;padding:18px;border:1px dashed #d7e0ed;border-radius:12px;color:#77849b;background:#fff;text-align:center}
+.cc-med-no-products>svg{color:#7389de}
+.cc-med-no-products strong{color:#445776;font-size:12px}
+.cc-med-no-products span{max-width:360px;font-size:9px;line-height:1.5}
+.cc-med-nlm-attribution{padding:9px 2px 1px;border-top:1px solid #e8edf5;color:#8995a5;font-size:8px;line-height:1.5}
+.cc-med-category-next{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid #e6e1f6;border-radius:11px;color:#6e6790;background:linear-gradient(110deg,#faf8ff,#f4fbff);font-size:9px;line-height:1.5}
+.cc-med-category-next svg{flex:0 0 17px;color:#9169d9}
+.cc-med-category-next span{display:grid;gap:2px}
+.cc-med-category-next strong{color:#5c5085;font-size:10px}
+.cc-med-detail-backdrop{position:fixed;z-index:150;inset:0;display:flex;justify-content:flex-end;background:rgba(7,16,33,.52);backdrop-filter:blur(5px)}
+.cc-med-detail-panel{display:grid;align-content:start;gap:15px;width:min(660px,100%);height:100%;overflow:auto;padding:23px;background:#f7f9fd;box-shadow:-18px 0 50px rgba(5,17,36,.22);animation:cc-med-slide-in .22s ease-out}
+@keyframes cc-med-slide-in{from{transform:translateX(25px);opacity:.5}to{transform:translateX(0);opacity:1}}
+.cc-med-detail-head{display:grid;grid-template-columns:44px minmax(0,1fr) 37px;align-items:start;gap:11px;padding-bottom:14px;border-bottom:1px solid #e1e8f1}
+.cc-med-detail-icon{display:grid;place-items:center;width:43px;height:43px;border:1px solid #d9e2ff;border-radius:14px;color:#5570e1;background:linear-gradient(145deg,#e9fbfb,#f0eeff)}
+.cc-med-detail-head .cc-med-library-eyebrow{color:#4d74d6;font-size:8px}
+.cc-med-detail-head h2{margin:4px 0;color:#1b2e4d;font-size:19px;line-height:1.4;overflow-wrap:anywhere}
+.cc-med-detail-head p{margin:0;color:#7c8ba1;font-size:9px}
+.cc-med-detail-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid #dde5ef;border-radius:10px;color:#70819b;background:#fff;cursor:pointer}
+.cc-med-detail-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cc-med-detail-facts>div{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid #e2e8f1;border-radius:11px;background:#fff}
+.cc-med-detail-facts span{color:#8a97aa;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.cc-med-detail-facts strong{color:#314664;font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.cc-med-detail-notice{display:flex;align-items:flex-start;gap:8px;padding:11px;border:1px solid #ecdcbc;border-radius:11px;color:#82643a;background:#fff9ed;font-size:9px;line-height:1.55}
+.cc-med-detail-notice svg{flex:0 0 16px;margin-top:1px}
+.cc-med-detail-actions{display:flex;flex-wrap:wrap;gap:8px}
+.cc-med-detail-actions a,.cc-med-detail-actions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 11px;border:1px solid #d8e2f1;border-radius:9px;color:#546caa;background:#fff;font:inherit;font-size:9px;font-weight:850;text-decoration:none;cursor:pointer}
+.cc-med-detail-actions button{border:0;color:#fff;background:linear-gradient(100deg,#08aaa9,#5b6be4)}
+.cc-med-detail-label{display:grid;gap:8px;padding-top:6px}
+.cc-med-detail-label h3{margin:0;color:#263b59;font-size:14px}
+.cc-med-detail-label>p{margin:0;color:#76849a;font-size:9px;line-height:1.55}
+.cc-med-detail-label .cp-live-med-consent{font-size:10px;line-height:1.5}
+.cc-med-spin{animation:cc-med-rotate .8s linear infinite}
+@keyframes cc-med-rotate{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.cc-med-library *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(max-width:900px){.cc-med-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cc-med-library-shell{grid-template-columns:190px minmax(0,1fr)}.cc-med-table-head,.cc-med-product-row{grid-template-columns:minmax(155px,2fr) minmax(100px,1.3fr) minmax(85px,.8fr) minmax(80px,.7fr) 75px 54px;gap:6px;padding-right:7px;padding-left:7px}}
+@media(max-width:680px){.cc-med-center-tabs{margin-top:10px}.cc-med-center-tabs button{flex:1;justify-content:center;gap:5px;padding:0 5px;font-size:9px}.cc-med-center-tabs button>span{display:none}.cc-med-library{gap:10px}.cc-med-library-hero{gap:12px;padding:15px;border-radius:17px}.cc-med-library-hero-top{grid-template-columns:40px minmax(0,1fr);gap:10px}.cc-med-library-mark{width:39px;height:39px;border-radius:13px}.cc-med-library-hero h2{font-size:18px}.cc-med-library-hero p{font-size:10px}.cc-med-live-badge{grid-column:2;justify-self:start;padding:6px 8px;font-size:8px}.cc-med-library-search{grid-template-columns:20px minmax(0,1fr) auto;gap:6px;padding:6px 6px 6px 10px}.cc-med-library-search input{font-size:11px}.cc-med-library-search button{min-height:36px;padding:0 9px;font-size:9px}.cc-med-library-search button span{display:none}.cc-med-library-trust{gap:6px 10px;font-size:8px}.cc-med-library-shell{grid-template-columns:minmax(0,1fr);gap:9px}.cc-med-categories{position:static;gap:7px;max-height:none;padding:9px}.cc-med-category-heading{padding:0 2px}.cc-med-category-heading h3{font-size:13px}.cc-med-category-list{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 5px}.cc-med-category-list button{flex:0 0 auto;grid-template-columns:23px auto;min-height:34px;padding:4px 7px;border:1px solid #e5eaf3;border-radius:999px;background:#fff;font-size:8px;white-space:nowrap}.cc-med-category-list button>svg{display:none}.cc-med-category-icon{width:23px;height:23px;border-radius:50%;font-size:12px}.cc-med-category-note{padding:7px 9px;font-size:8px}.cc-med-catalog-welcome{grid-template-columns:39px minmax(0,1fr);gap:9px;padding:12px}.cc-med-welcome-orb{width:37px;height:37px;border-radius:12px}.cc-med-catalog-welcome h3,.cc-med-selected-category h3{font-size:13px}.cc-med-welcome-side{display:none}.cc-med-selected-category{padding:12px}.cc-med-category-icon.large{flex-basis:42px;width:42px;height:42px;border-radius:14px}.cc-med-topic-chips{gap:5px}.cc-med-topic-chips>span{flex-basis:100%}.cc-med-topic-chips button{min-height:29px;font-size:8px}.cc-med-catalog-results{padding:10px}.cc-med-library-controls{align-items:flex-start;flex-direction:column}.cc-med-control-group{width:100%;flex-wrap:wrap}.cc-med-control-group label{flex:1 1 30%;justify-content:space-between}.cc-med-control-group select{max-width:none;min-width:78px;flex:1}.cc-med-view-toggle{margin-left:auto}.cc-med-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.cc-med-product-card{gap:7px;padding:9px}.cc-med-product-card h4{font-size:10px}.cc-med-product-meta{font-size:8px}.cc-med-product-foot>span{font-size:7px}.cc-med-table-head{display:none}.cc-med-product-row{grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;padding:10px}.cc-med-row-name{grid-column:1/-1}.cc-med-product-row>span:nth-child(2),.cc-med-product-row>span:nth-child(3),.cc-med-product-row>span:nth-child(4),.cc-med-product-row>span:nth-child(5){font-size:8px}.cc-med-product-row>span:nth-child(2)::before{content:"Generic · "}.cc-med-product-row>span:nth-child(3)::before{content:"Strength · "}.cc-med-product-row>span:nth-child(4)::before{content:"Form · "}.cc-med-product-row>span:nth-child(5){grid-column:1}.cc-med-product-row>button{grid-column:2;grid-row:2/5;align-self:center}.cc-med-detail-panel{padding:15px}.cc-med-detail-head h2{font-size:16px}.cc-med-detail-facts{gap:6px}.cc-med-detail-facts>div{padding:9px}.cc-med-detail-facts strong{font-size:9px}}
+
