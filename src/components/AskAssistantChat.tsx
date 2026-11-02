@@ -17,13 +17,13 @@ const QUICK_PROMPTS: Record<AskLanguage, string[]> = {
 const CHAT_FEATURES = {
   en: [
     { title: "Explain simply", detail: "Put a health topic into plain language", prompt: "Explain this health topic in simple language.", icon: <BookOpen size={18} /> },
-    { title: "Find trusted sources", detail: "Look for official information when available", prompt: "Where can I find official information about this health topic?", icon: <Search size={18} /> },
+    { title: "Check official sources", detail: "Learn where to verify current health information", prompt: "Where can I verify official information about this health topic?", icon: <Search size={18} /> },
     { title: "Understand a document", detail: "Choose a reviewed file before sharing", prompt: "Help me understand the details in my selected health document.", icon: <FileText size={18} /> },
     { title: "Medicine information", detail: "Learn what to check on the label", prompt: "What information should I check on a medicine label?", icon: <Pill size={18} /> },
   ],
   kn: [
     { title: "ಸರಳವಾಗಿ ವಿವರಿಸಿ", detail: "ಆರೋಗ್ಯ ವಿಷಯವನ್ನು ಸುಲಭ ಪದಗಳಲ್ಲಿ ತಿಳಿಯಿರಿ", prompt: "ಈ ಆರೋಗ್ಯ ವಿಷಯವನ್ನು ಸರಳ ಕನ್ನಡದಲ್ಲಿ ವಿವರಿಸಿ.", icon: <BookOpen size={18} /> },
-    { title: "ನಂಬಿಕಸ್ಥ ಮೂಲಗಳು", detail: "ಅಧಿಕೃತ ಮಾಹಿತಿ ಲಭ್ಯವಿದ್ದರೆ ಹುಡುಕಿ", prompt: "ಈ ಆರೋಗ್ಯ ವಿಷಯದ ಅಧಿಕೃತ ಮಾಹಿತಿಯನ್ನು ಎಲ್ಲಿ ನೋಡಬಹುದು?", icon: <Search size={18} /> },
+    { title: "ಅಧಿಕೃತ ಮೂಲ ಪರಿಶೀಲಿಸಿ", detail: "ಇತ್ತೀಚಿನ ಆರೋಗ್ಯ ಮಾಹಿತಿಯನ್ನು ಎಲ್ಲಿ ದೃಢೀಕರಿಸಬಹುದು ತಿಳಿಯಿರಿ", prompt: "ಈ ಆರೋಗ್ಯ ವಿಷಯದ ಅಧಿಕೃತ ಮಾಹಿತಿಯನ್ನು ಎಲ್ಲಿ ದೃಢೀಕರಿಸಬಹುದು?", icon: <Search size={18} /> },
     { title: "ದಾಖಲೆ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ", detail: "ಹಂಚುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿದ ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ", prompt: "ನಾನು ಆಯ್ಕೆಮಾಡಿದ ಆರೋಗ್ಯ ದಾಖಲೆಯ ವಿವರಗಳನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಹಾಯ ಮಾಡಿ.", icon: <FileText size={18} /> },
     { title: "ಔಷಧಿ ಮಾಹಿತಿ", detail: "ಲೇಬಲ್‌ನಲ್ಲಿ ಏನು ಪರಿಶೀಲಿಸಬೇಕು ತಿಳಿಯಿರಿ", prompt: "ಔಷಧಿ ಲೇಬಲ್‌ನಲ್ಲಿ ಯಾವ ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಬೇಕು?", icon: <Pill size={18} /> },
   ],
