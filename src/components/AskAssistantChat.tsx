@@ -63,6 +63,68 @@ function cleanMessages(value: unknown): Message[] {
     }));
 }
 
+function renderInline(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+?\*\*|__.+?__|\x60[^\x60]+\x60)/g);
+  return parts.filter(Boolean).map((part, index) => {
+    if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("\x60") && part.endsWith("\x60")) {
+      return <code key={index}>{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
+function formatAssistantAnswer(text: string): ReactNode {
+  const blocks: ReactNode[] = [];
+  let paragraph: string[] = [];
+  let items: string[] = [];
+  let ordered = false;
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    blocks.push(<p key={blocks.length}>{renderInline(paragraph.join(" "))}</p>);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!items.length) return;
+    const List = ordered ? "ol" : "ul";
+    blocks.push(<List key={blocks.length}>{items.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</List>);
+    items = [];
+  };
+
+  for (const rawLine of text.replace(/\r/g, "").split("\n")) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push(<h3 key={blocks.length}>{renderInline(heading[1])}</h3>);
+      continue;
+    }
+    const listItem = line.match(/^(?:[-*•]\s+|(\d+)[.)]\s+)(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      const isOrdered = Boolean(listItem[1]);
+      if (items.length && ordered !== isOrdered) flushList();
+      ordered = isOrdered;
+      items.push(listItem[2]);
+      continue;
+    }
+    flushList();
+    paragraph.push(line);
+  }
+  flushParagraph();
+  flushList();
+  return <div className="cp-assistant-answer-content">{blocks}</div>;
+}
+
 function createConversation(): Conversation {
   return { id: newId(), title: "New conversation", updatedAt: Date.now(), messages: [] };
 }
@@ -376,7 +438,7 @@ export default function AskAssistantChat({ language, onLanguageChange, documents
         {messages.map((message, index) => <article key={message.id} className={`cp-assistant-message ${message.role}`}>
           <div className="cp-assistant-bubble">
             <strong>{message.role === "user" ? (language === "en" ? "You" : "ನೀವು") : message.error ? (language === "en" ? "CARE CONNECTED · connection status" : "CARE CONNECTED · ಸಂಪರ್ಕ ಸ್ಥಿತಿ") : !ASSISTANT_ENDPOINT && message.sources?.length ? (language === "en" ? "CARE CONNECTED · reviewed guide" : "CARE CONNECTED · ಪರಿಶೀಲಿತ ಮಾರ್ಗದರ್ಶಿ") : !ASSISTANT_ENDPOINT ? (language === "en" ? "CARE CONNECTED · offline reply" : "CARE CONNECTED · ಆಫ್‌ಲೈನ್ ಉತ್ತರ") : (language === "en" ? "CARE CONNECTED · AI answer" : "CARE CONNECTED · AI ಉತ್ತರ")}</strong>
-            {message.pending ? <span className="cp-assistant-thinking"><LoaderCircle size={15} />{copy.sending}</span> : <p>{message.text}</p>}
+            {message.pending ? <span className="cp-assistant-thinking"><LoaderCircle size={15} />{copy.sending}</span> : {formatAssistantAnswer(message.text)}}
             {message.error && retry?.responseId === message.id && <button type="button" className="cp-button quiet" onClick={() => retryQuestion(retry)} disabled={busy}><RotateCcw size={14} />{copy.retry}</button>}
             {message.role === "assistant" && message.error && !ASSISTANT_ENDPOINT && onTryOfflineGuide && <div className="cp-assistant-offline-actions"><button type="button" className="cp-button primary" onClick={() => { const question = messages.slice(0, index).reverse().find((item) => item.role === "user")?.text; if (question) onTryOfflineGuide(question); }}><ArrowDown size={15} />{copy.offlineGuide}</button><small>{copy.offlineGuideHint}</small></div>}
             {message.role === "assistant" && !message.pending && !message.error && <div className="cp-assistant-answer-tools"><ReadAloudButton text={message.text} label={language === "en" ? "Listen to this answer" : "ಈ ಉತ್ತರವನ್ನು ಕೇಳಿ"} language={language === "kn" ? "kn" : "en"} /><button type="button" className="cp-answer-tool" onClick={() => void copyAnswer(message.text)}><Copy size={14} />{copy.copyAnswer}</button>{index === messages.length - 1 && <button type="button" className="cp-answer-tool" onClick={regenerateLast} disabled={busy}><RotateCcw size={14} />{copy.regenerate}</button>}</div>}
