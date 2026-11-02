@@ -8,6 +8,10 @@ import {
   X,
 } from "lucide-react";
 import MedlinePlusLookup from "./MedlinePlusLookup";
+import MedicineLibrary from "./MedicineLibrary";
+import { fdaLabelUrl } from "../fdaDrugLabelSearch";
+import type { FdaDrugLabel } from "../fdaDrugLabelSearch";
+import { medicineProductForm, medicineProductStrength, type RxNormMedicineProduct } from "../medicineLibrary";
 import { readExampleMedicineArchive, readPersonalMedicines, saveExampleMedicineArchive } from "../medicineStorage";
 import type { VoiceLanguage } from "../voice";
 
@@ -23,6 +27,7 @@ type Medicine = {
   unitsPerDay?: number;
   expiryDate?: string;
   source?: "sample" | "demo-extraction" | "user";
+  reference?: { source: string; url: string; genericName: string; manufacturer: string; dosageForm: string };
 };
 
 type Props = {
@@ -41,6 +46,21 @@ function toTimeInput(value: string) {
   return `${String(hours).padStart(2, "0")}:${minutes}`;
 }
 
+function formFromLabel(label: string) {
+  const text = label.toLowerCase();
+  if (/tablet|caplet|lozenge/.test(text)) return "Tablet";
+  if (/capsule/.test(text)) return "Capsule";
+  if (/suspension/.test(text)) return "Suspension";
+  if (/solution|syrup|elixir/.test(text)) return "Oral solution";
+  if (/injection|injectable/.test(text)) return "Injection";
+  if (/ointment/.test(text)) return "Ointment";
+  if (/cream/.test(text)) return "Cream";
+  if (/eye|otic|ophthalmic|otic solution|drops/.test(text)) return "Eye/Ear drops";
+  if (/inhaler|inhalation/.test(text)) return "Inhaler";
+  if (/patch|transdermal/.test(text)) return "Patch";
+  return "Other";
+}
+
 export default function MedicineCenter({
   onClose,
   onCountChange,
@@ -52,8 +72,10 @@ export default function MedicineCenter({
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [showMedicineLookup, setShowMedicineLookup] = useState(false);
+  const [activeMedicineTab, setActiveMedicineTab] = useState<"library" | "cabinet">("library");
   const [lookupTerm, setLookupTerm] = useState("");
   const [reviewingExampleId, setReviewingExampleId] = useState<string | null>(null);
+  const [draftReference, setDraftReference] = useState<Medicine["reference"]>();
 
   const [form, setForm] = useState({
     name: "",
@@ -77,8 +99,8 @@ export default function MedicineCenter({
   }, [medicines, onCountChange]);
 
   const resetForm = () => setForm({ name: "", strength: "", form: "Tablet", schedule: "", instructions: "", reason: "", remainingUnits: "", unitsPerDay: "", expiryDate: "" });
-  const openNewMedicineForm = () => { resetForm(); setReviewingExampleId(null); setShowForm(true); };
-  const closeMedicineForm = () => { setShowForm(false); setReviewingExampleId(null); resetForm(); };
+  const openNewMedicineForm = () => { resetForm(); setDraftReference(undefined); setReviewingExampleId(null); setShowForm(true); };
+  const closeMedicineForm = () => { setShowForm(false); setReviewingExampleId(null); setDraftReference(undefined); resetForm(); };
 
   const addMedicine = () => {
     if (!form.name.trim() || !form.strength.trim()) {
@@ -105,11 +127,13 @@ export default function MedicineCenter({
       unitsPerDay,
       expiryDate: form.expiryDate || undefined,
       source: "user",
+      reference: draftReference,
     };
 
     setMedicines((current) => [newMedicine, ...current]);
 
     resetForm();
+    setDraftReference(undefined);
 
     if (reviewingExampleId) {
       const remainingExamples = exampleMedicines.filter((item) => item.id !== reviewingExampleId);
@@ -121,6 +145,7 @@ export default function MedicineCenter({
   };
 
   const reviewExample = (medicine: Medicine) => {
+    setDraftReference(undefined);
     setForm({
       name: medicine.name,
       strength: medicine.strength,
@@ -134,6 +159,52 @@ export default function MedicineCenter({
     });
     setReviewingExampleId(medicine.id);
     setShowForm(true);
+  };
+
+  const prepareFromLabel = (label: FdaDrugLabel) => {
+    setForm({
+      name: label.brandName === "Name not listed" ? label.genericName : label.brandName,
+      strength: "",
+      form: formFromLabel(label.dosageForm),
+      schedule: "",
+      instructions: "",
+      reason: "",
+      remainingUnits: "",
+      unitsPerDay: "",
+      expiryDate: "",
+    });
+    setDraftReference({ source: "U.S. FDA submitted label", url: fdaLabelUrl(label), genericName: label.genericName, manufacturer: label.manufacturer, dosageForm: label.dosageForm });
+    setReviewingExampleId(null);
+    setShowMedicineLookup(false);
+    setShowForm(true);
+    setActiveMedicineTab("cabinet");
+  };
+
+  const prepareFromCatalog = (product: RxNormMedicineProduct) => {
+    const savedName = product.brandName || product.genericName || product.name;
+    const productForm = medicineProductForm(product.name);
+    setForm({
+      name: savedName,
+      strength: medicineProductStrength(product.name) === "Strength not listed" ? "" : medicineProductStrength(product.name),
+      form: formFromLabel(productForm),
+      schedule: "",
+      instructions: "",
+      reason: "",
+      remainingUnits: "",
+      unitsPerDay: "",
+      expiryDate: "",
+    });
+    setDraftReference({
+      source: "U.S. NLM RxNorm medicine concept",
+      url: `https://rxnav.nlm.nih.gov/REST/rxcui/${encodeURIComponent(product.rxcui)}.json`,
+      genericName: product.genericName,
+      manufacturer: "Not listed in RxNorm",
+      dosageForm: productForm,
+    });
+    setReviewingExampleId(null);
+    setShowMedicineLookup(false);
+    setShowForm(true);
+    setActiveMedicineTab("cabinet");
   };
 
   const removeMedicine = (id: string) => {
@@ -180,10 +251,10 @@ export default function MedicineCenter({
             </div>
 
             <div>
-              <p>CARE CONNECTED</p>
-              <h2>My Medicines</h2>
+              <p>CARE CONNECTED · EVERYDAY MEDICINE</p>
+              <h2>Medicine Centre</h2>
               <span>
-                Keep your confirmed medicine information organized.
+                Explore official medicine records or manage your personal list.
               </span>
             </div>
           </div>
@@ -193,13 +264,20 @@ export default function MedicineCenter({
           </button>
         </div>
 
+        <div className="cc-med-center-tabs" role="tablist" aria-label="Medicine centre views">
+          <button type="button" role="tab" aria-selected={activeMedicineTab === "library"} className={activeMedicineTab === "library" ? "active" : ""} onClick={() => setActiveMedicineTab("library")}><Search size={16} /> Medicine library <span>Live records</span></button>
+          <button type="button" role="tab" aria-selected={activeMedicineTab === "cabinet"} className={activeMedicineTab === "cabinet" ? "active" : ""} onClick={() => setActiveMedicineTab("cabinet")}><Pill size={16} /> My medicines <span>{medicines.length} saved</span></button>
+        </div>
+
+        {activeMedicineTab === "library" ? <MedicineLibrary language={language} onAddMedicine={prepareFromCatalog} /> : <>
+
         <div className="medicine-info-strip">
           <div><strong>Want to know what a medicine is generally used for?</strong><span>Search U.S. NIH MedlinePlus here. Only the medicine name is sent, and only after you agree.</span></div>
           <button type="button" className="medicine-info-toggle" aria-expanded={showMedicineLookup} aria-controls="medicine-info-lookup" onClick={() => { setLookupTerm(search.trim()); setShowMedicineLookup((open) => !open); }}>
             <Search size={16} /> {showMedicineLookup ? "Close lookup" : "Look up medicine info"}
           </button>
         </div>
-        {showMedicineLookup && <div className="medicine-info-panel" id="medicine-info-lookup"><MedlinePlusLookup key={lookupTerm || "medicine-lookup"} question={lookupTerm ? `What is ${lookupTerm} used for?` : ""} initialTerm={lookupTerm} language={language === "kn" ? "kn" : "en"} /></div>}
+        {showMedicineLookup && <div className="medicine-info-panel" id="medicine-info-lookup"><MedlinePlusLookup key={lookupTerm || "medicine-lookup"} question={lookupTerm ? `What is ${lookupTerm} used for?` : ""} initialTerm={lookupTerm} language={language === "kn" ? "kn" : "en"} onPrepareMedicine={prepareFromLabel} /></div>}
 
         <div className="medicine-toolbar">
           <div className="medicine-search">
@@ -226,7 +304,7 @@ export default function MedicineCenter({
               <div>
                 <p>{reviewingExampleId ? "Review an old example before adding it" : "Add a medicine"}</p>
                 <span>
-                  {reviewingExampleId ? "This was sample data. Check every field against your own current package or prescription. Save only if this medicine is yours." : "Enter the information from your package or supplied prescription instructions."}
+                  {reviewingExampleId ? "This was sample data. Check every field against your own current package or prescription. Save only if this medicine is yours." : draftReference ? "A label lookup prefilled the name and form as a candidate only. Check the exact package, enter its strength and only your own prescribed instructions, then save if this is your medicine." : "Enter the information from your package or supplied prescription instructions."}
                 </span>
               </div>
 
@@ -271,10 +349,14 @@ export default function MedicineCenter({
                 >
                   <option>Tablet</option>
                   <option>Capsule</option>
-                  <option>Syrup</option>
+                  <option>Oral solution</option>
+                  <option>Suspension</option>
                   <option>Cream</option>
-                  <option>Drops</option>
+                  <option>Ointment</option>
+                  <option>Eye/Ear drops</option>
+                  <option>Inhaler</option>
                   <option>Injection</option>
+                  <option>Patch</option>
                   <option>Other</option>
                 </select>
               </label>
@@ -303,6 +385,8 @@ export default function MedicineCenter({
                   placeholder="Example: After food"
                 />
               </label>
+
+              {draftReference && <div className="medicine-draft-reference wide-field"><strong>Source candidate · not package verification</strong><span>{[draftReference.genericName, draftReference.dosageForm, draftReference.manufacturer].filter(Boolean).join(" · ") || "Details not listed by source"}</span><a href={draftReference.url} target="_blank" rel="noreferrer">Open selected U.S. FDA submitted label</a></div>}
 
               <label className="wide-field">
                 Why did your care team prescribe it? (optional)
@@ -392,6 +476,7 @@ export default function MedicineCenter({
 
                 <span>{medicine.instructions}</span>
                   {medicine.reason && <span className="medicine-reason"><strong>Reason recorded from your care team:</strong> {medicine.reason}</span>}
+                  {medicine.reference && <span className="medicine-saved-reference"><strong>Lookup reference saved:</strong> {medicine.reference.source} · verify against your exact package. <a href={medicine.reference.url} target="_blank" rel="noreferrer">Open label</a></span>}
 
                 <details className="medicine-supply">
                   <summary>Supply watch</summary>
@@ -452,8 +537,10 @@ export default function MedicineCenter({
             package or professional instructions.
           </span>
         </div>
+        </>}
       </div>
     </div>
   );
 }
+
 
