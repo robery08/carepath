@@ -142,3 +142,11 @@
 @media (max-width:680px) {
   .cp-assistant-offline-actions .cp-button { width:100%;justify-content:center; }
 }
+
+.cp-assistant-answer-content { color:#425f60;font-size:13px;line-height:1.7;overflow-wrap:anywhere; }
+.cp-assistant-answer-content p { margin:0 0 8px;white-space:normal; }
+.cp-assistant-answer-content p:last-child { margin-bottom:0; }
+.cp-assistant-answer-content h3 { margin:8px 0 3px;color:#24484c;font-size:13px;line-height:1.5; }
+.cp-assistant-answer-content ul,.cp-assistant-answer-content ol { margin:3px 0 9px;padding-left:22px; }
+.cp-assistant-answer-content li { margin:3px 0;padding-left:2px; }
+.cp-assistant-answer-content code { padding:1px 4px;border-radius:4px;background:#f0f6f3;font-family:monospace;font-size:.94em; }
